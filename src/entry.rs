@@ -24,7 +24,7 @@ struct Entry<'a> {
     problems: Vec<String>,
 }
 
-fn parse(line: &str) -> Result<Entry, EntryError> {
+fn parse(config: Config, line: &str) -> Result<Entry, EntryError> {
     let mut regex_string = r"^(?P<ws0>\s*)-(?P<ws1>\s*)\((?P<category>[a-zA-Z0-9\-]+)\)".to_string();
     regex_string.push_str(r"(?P<ws2>\s*)\[(?P<bs>\\)?#(?P<pr>\d+)]");
     regex_string.push_str(r"(?P<ws3>\s*)\((?P<link>[^)]*)\)(?P<ws4>\s*)(?P<desc>.+)$");
@@ -50,15 +50,34 @@ fn parse(line: &str) -> Result<Entry, EntryError> {
         matches.name("ws4").unwrap().as_str(),
     ];
 
-    // TODO: check individual parts for problems like category, etc.
     let mut problems: Vec<String> = Vec::new();
     for whitespace_problem in check_whitespace(spaces) {
         problems.push(whitespace_problem)
     }
 
+    let (fixed_category, category_problems) = check_category(category);
+    for category_problem in category_problems {
+        problems.push(category_problem)
+    }
+
+    match matches.name("bs") {
+        Some(_) => problems.push("There should be no backslash in front of the # in the PR link".to_string()),
+        _ => ()
+    }
+
+    let (fixed_link, link_problems) = check_link(link, pr_number);
+    for link_problem in link_problems {
+        problems.push(link_problem)
+    }
+
+    let (fixed_desc, desc_problems) = check_description(config, description);
+    for desc_problem in desc_problems {
+        problems.push(desc_problem)
+    }
+
     let fixed = format!(
         "- ({}) [#{}]({}) {}",
-        category, pr_number, link, description,
+        fixed_category, pr_number, fixed_link, fixed_desc,
     );
 
     Ok(Entry {
@@ -112,7 +131,7 @@ fn check_link(link: &str, pr_number: u16) -> (String, Vec<String>) {
 
     if contained_pr_number != pr_number {
         problems.push(format!(
-            "PR link is not matching PR number {}: {}",
+            "PR link is not matching PR number {}: '{}'",
             pr_number, link
         ));
     }
@@ -262,7 +281,7 @@ mod entry_tests {
             "- (cli) [#1](https://github.com/MalteHerrmann/changelog-utils/pull/1) ",
             "Add initial Python implementation."
         );
-        let entry_res = parse(example);
+        let entry_res = parse(load_test_config(), example);
         assert!(entry_res.is_ok());
         let entry = entry_res.unwrap();
         assert_eq!(entry.line, example);
@@ -278,7 +297,7 @@ mod entry_tests {
     fn test_fail_has_backslash_in_link() {
         let example =
             r"- (cli) [\#1](https://github.com/MalteHerrmann/changelog-utils/pull/1) Test.";
-        let entry_res = parse(example);
+        let entry_res = parse(load_test_config(), example);
         // TODO: should this actually return an error? Not really, because parsing has worked??
         assert!(entry_res.is_ok());
         let entry = entry_res.unwrap();
@@ -289,19 +308,18 @@ mod entry_tests {
         assert_eq!(entry.link, "https://github.com/MalteHerrmann/changelog-utils/pull/1");
         assert_eq!(entry.description, "Test.");
         assert_eq!(entry.problems.len(), 1);
-        assert_eq!(entry.problems[0], "there should be no backslash in front of the # in the PR link");
+        assert_eq!(entry.problems[0], "There should be no backslash in front of the # in the PR link");
     }
 
     #[test]
     fn test_fail_wrong_pr_link_and_missing_dot() {
         let example = r"- (cli) [#2](https://github.com/MalteHerrmann/changelog-utils/pull/1) Test";
-        let mut expected_fixed = example.replace(r"\", "");
-        expected_fixed.push(".".parse().unwrap());
-        let entry_res = parse(example);
+        let fixed = r"- (cli) [#2](https://github.com/MalteHerrmann/changelog-utils/pull/2) Test.";
+        let entry_res = parse(load_test_config(), example);
         assert!(entry_res.is_ok());
         let entry = entry_res.unwrap();
         assert_eq!(entry.line, example);
-        assert_eq!(entry.fixed, expected_fixed);
+        assert_eq!(entry.fixed, fixed);
         assert_eq!(entry.category, "cli");
         assert_eq!(entry.pr_number, 2);
         assert_eq!(entry.link, "https://github.com/MalteHerrmann/changelog-utils/pull/1");
@@ -320,25 +338,26 @@ mod entry_tests {
     fn test_malformed_entry() {
         let example = r"- (cli) [#13tps://github.com/Ma/2";
         // TODO: figure how to still return an entry but with the corresponding array of problems filled
-        assert!(parse(example).is_err());
+        assert!(parse(load_test_config(), example).is_err());
     }
 
     #[test]
     fn test_fail_wrong_whitespace() {
         let example = r"- (cli)   [#1] (https://github.com/MalteHerrmann/changelog-utils/pull/1) Run test.";
-        let entry_res = parse(example);
+        let expected = r"- (cli) [#1](https://github.com/MalteHerrmann/changelog-utils/pull/1) Run test.";
+        let entry_res = parse(load_test_config(), example);
         assert!(entry_res.is_ok());
         let entry = entry_res.unwrap();
         assert_eq!(entry.line, example);
-        assert_eq!(entry.fixed, Regex::new(r"\s*").unwrap().replace(example, " "));
+        assert_eq!(entry.fixed, expected);
         assert_eq!(entry.category, "cli");
         assert_eq!(entry.pr_number, 1);
         assert_eq!(entry.link, "https://github.com/MalteHerrmann/changelog-utils/pull/1");
         assert_eq!(entry.description, "Run test.");
         assert_eq!(entry.problems.len(), 2);
         assert_eq!(entry.problems, vec![
-            "There should be exactly one space between the PR link and the description",
-            "There should be no whitespace inside of the markdown link"
+            "There should be exactly one space between the category and the PR link",
+            "There should be no whitespace inside of the markdown link",
         ]);
     }
 }
@@ -395,7 +414,7 @@ mod link_tests {
         let (fixed, problems) = check_link(example, 1);
         assert_eq!(fixed, example.replace("2", "1"));
         assert_eq!(problems, vec![format!(
-            "PR link is not matching PR number {}: {}",
+            "PR link is not matching PR number {}: '{}'",
             1, example
         )]);
     }
