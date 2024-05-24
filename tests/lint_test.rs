@@ -8,7 +8,7 @@ fn it_should_pass_for_correct_changelogs() {
     let parse_res = lint::lint(correct_changelog);
     assert!(parse_res.is_ok());
     let changelog = parse_res.unwrap();
-    assert!(changelog.releases.len() == 3);
+    assert_eq!(changelog.releases.len(), 3);
 }
 
 #[test]

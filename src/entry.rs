@@ -223,12 +223,12 @@ mod entry_tests {
         let entry_res = parse(example);
         assert!(entry_res.is_ok());
         let entry = entry_res.unwrap();
-        assert!(entry.line == example);
-        assert!(entry.fixed == example); // NOTE: since line is okay there are no changes to it in the fixed version
-        assert!(entry.category == "cli");
-        assert!(entry.pr_number == 1);
-        assert!(entry.link == "https://github.com/MalteHerrmann/changelog-utils/pull/1");
-        assert!(entry.description == "Add initial Python implementation.");
+        assert_eq!(entry.line, example);
+        assert_eq!(entry.fixed, example); // NOTE: since line is okay there are no changes to it in the fixed version
+        assert_eq!(entry.category, "cli");
+        assert_eq!(entry.pr_number, 1);
+        assert_eq!(entry.link, "https://github.com/MalteHerrmann/changelog-utils/pull/1");
+        assert_eq!(entry.description, "Add initial Python implementation.");
         assert!(entry.problems.is_empty());
     }
 
@@ -240,16 +240,14 @@ mod entry_tests {
         // TODO: should this actually return an error? Not really, because parsing has worked??
         assert!(entry_res.is_err());
         let entry = entry_res.unwrap();
-        assert!(entry.line == example);
-        assert!(entry.fixed == example.replace(r"\", ""));
-        assert!(entry.category == "cli");
-        assert!(entry.pr_number == 1851);
-        assert!(entry.link == "https://github.com/MalteHerrmann/changelog-utils/pull/1");
-        assert!(entry.description == "Test.");
-        assert!(entry.problems.len() == 1);
-        assert!(
-            entry.problems[0] == "there should be no backslash in front of the # in the PR link"
-        );
+        assert_eq!(entry.line, example);
+        assert_eq!(entry.fixed, example.replace(r"\", ""));
+        assert_eq!(entry.category, "cli");
+        assert_eq!(entry.pr_number, 1851);
+        assert_eq!(entry.link, "https://github.com/MalteHerrmann/changelog-utils/pull/1");
+        assert_eq!(entry.description, "Test.");
+        assert_eq!(entry.problems.len(), 1);
+        assert_eq!(entry.problems[0], "there should be no backslash in front of the # in the PR link");
     }
 
     #[test]
@@ -258,23 +256,20 @@ mod entry_tests {
         let entry_res = parse(example);
         assert!(entry_res.is_err());
         let entry = entry_res.unwrap();
-        assert!(entry.line == example);
-        assert!(entry.fixed == example.replace(r"\", ""));
-        assert!(entry.category == "cli");
-        assert!(entry.pr_number == 1851);
-        assert!(entry.link == "https://github.com/MalteHerrmann/changelog-utils/pull/1");
-        assert!(entry.description == "Test.");
-        assert!(entry.problems.len() == 2);
-        assert!(
-            entry.problems
-                == vec![
-                    concat!(
-                        r"PR link is not matching PR number 2: ",
-                        "'https://github.com/MalteHerrmann/changelog-utils/pull/1'"
-                    ),
-                    "PR description should end with a dot: 'Test'"
-                ]
-        );
+        assert_eq!(entry.line, example);
+        assert_eq!(entry.fixed, example.replace(r"\", ""));
+        assert_eq!(entry.category, "cli");
+        assert_eq!(entry.pr_number, 1851);
+        assert_eq!(entry.link, "https://github.com/MalteHerrmann/changelog-utils/pull/1");
+        assert_eq!(entry.description, "Test.");
+        assert_eq!(entry.problems.len(), 2);
+        assert_eq!(entry.problems, vec![
+            concat!(
+            r"PR link is not matching PR number 2: ",
+            "'https://github.com/MalteHerrmann/changelog-utils/pull/1'"
+            ),
+            "PR description should end with a dot: 'Test'"
+        ]);
     }
 
     #[test]
@@ -292,22 +287,22 @@ mod category_tests {
     #[test]
     fn test_pass() {
         let (fixed, problems) = check_category("cli");
-        assert!(fixed == "cli");
+        assert_eq!(fixed, "cli");
         assert!(problems.is_empty());
     }
 
     #[test]
     fn test_fail_invalid_category() {
         let (fixed, problems) = check_category("invalid");
-        assert!(fixed == "invalid");
-        assert!(problems == vec!["invalid change category: (invalid)"]);
+        assert_eq!(fixed, "invalid");
+        assert_eq!(problems, vec!["invalid change category: (invalid)"]);
     }
 
     #[test]
     fn test_fail_non_lower_category() {
         let (fixed, problems) = check_category("cLi");
-        assert!(fixed == "cli");
-        assert!(problems == vec!["category should be lowercase: (cLi)"]);
+        assert_eq!(fixed, "cli");
+        assert_eq!(problems, vec!["category should be lowercase: (cLi)"]);
     }
 }
 
@@ -319,7 +314,7 @@ mod link_tests {
     fn test_pass() {
         let example = r"https://github.com/MalteHerrmann/changelog-utils/pull/1";
         let (fixed, problems) = check_link(example, 1);
-        assert!(fixed == example);
+        assert_eq!(fixed, example);
         assert!(problems.is_empty());
     }
 
@@ -327,7 +322,7 @@ mod link_tests {
     fn test_wrong_base_url() {
         let example = r"https://github.com/MalteHerrmann/changelg-utils/pull/1";
         let (fixed, problems) = check_link(example, 1);
-        assert!(fixed == example.replace("changelg", "changelog"));
+        assert_eq!(fixed, example.replace("changelg", "changelog"));
         assert_eq!(problems, vec![format!("PR link points to wrong repository: {}", example)]);
     }
 
@@ -335,7 +330,7 @@ mod link_tests {
     fn test_wrong_pr_number() {
         let example = r"https://github.com/MalteHerrmann/changelog-utils/pull/2";
         let (fixed, problems) = check_link(example, 1);
-        assert!(fixed == example.replace("2", "1"));
+        assert_eq!(fixed, example.replace("2", "1"));
         assert_eq!(problems, vec![format!(
             "PR link is not matching PR number {}: {}",
             1, example
