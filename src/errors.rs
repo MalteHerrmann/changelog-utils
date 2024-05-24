@@ -1,5 +1,5 @@
+use serde_json;
 use std::io;
-
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -33,4 +33,11 @@ pub enum MatchError {
     InvalidRegex(#[from] regex::Error),
     #[error("no match found")]
     NoMatchFound,
+}
+
+
+#[derive(Error, Debug)]
+pub enum ConfigError {
+    #[error("failed to parse configuration")]
+    FailedToParse(#[from] serde_json::Error)
 }

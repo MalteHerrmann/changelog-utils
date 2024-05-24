@@ -1,5 +1,8 @@
-use crate::errors::{EntryError, MatchError};
-use regex::{Regex, RegexBuilder};
+use crate::{
+    config::Config,
+    errors::{EntryError, MatchError},
+};
+use regex::{Error, Regex, RegexBuilder};
 
 /// Represents an individual entry in the changelog.
 struct Entry<'a> {
@@ -126,49 +129,73 @@ fn check_description(desc: &str) -> (String, Vec<String>) {
         .expect("no characters found in description");
     if last_letter.to_string() != ".".to_string() {
         fixed = desc.to_string() + ".";
-        problems.push(format!(
-            "PR description should end with a dot: '{}'",
-            desc
-        ))
+        problems.push(format!("PR description should end with a dot: '{}'", desc))
     }
 
     (fixed, problems)
 }
 
-// /// Checks the spelling of entries according to the given configuration.
-// fn check_spelling() -> (String, Vec<String>) {
-//     // TODO: continue here
-// }
+/// Checks the spelling of entries according to the given configuration.
+fn check_spelling(config: Config, text: &str) -> (String, Vec<String>) {
+    let mut fixed = text.to_string();
+    let mut problems: Vec<String> = Vec::new();
+
+    for (correct_spelling, pattern) in config.expected_spellings.iter() {
+        match get_spelling_match(pattern, text) {
+            Ok(m) => {
+                if m.eq(correct_spelling) {
+                    continue;
+                };
+
+                fixed = compile_regex(pattern)
+                    .expect("failed to compile regex") // TODO: return Result rather than use expect here?
+                    .replace(fixed.as_str(), correct_spelling)
+                    .to_string();
+
+                problems.push(format!(
+                    "'{correct_spelling}' should be used instead of '{m}'",
+                ))
+            }
+            Err(_) => continue,
+        }
+    }
+
+    (fixed, problems)
+}
+
+/// Compiles the regular expression pattern with the common settings
+/// used in this crate.
+fn compile_regex(pattern: &str) -> Result<Regex, Error> {
+    RegexBuilder::new(pattern).case_insensitive(true).build()
+}
 
 /// Returns the first match of the given pattern in the text.
 /// Matching patterns inside of code blocks, links or within another word are ignored.
 fn get_spelling_match(pattern: &str, text: &str) -> Result<String, MatchError> {
     // Check if pattern is inside a code block
-    match RegexBuilder::new(
-        format!(r"`[^`]*({pattern})[^`]*`").as_str()
-    )
+    match RegexBuilder::new(format!(r"`[^`]*({pattern})[^`]*`").as_str())
         .case_insensitive(true)
         .build()?
-        .find(text) {
+        .find(text)
+    {
         Some(_) => return Err(MatchError::MatchInCodeblock),
         None => (),
     }
 
     // Check isolated words (i.e. pattern is not included in another word)
-    let found = match RegexBuilder::new(
-        format!(r"(^|\s)({pattern})($|[\s.])").as_str()
-    )
+    let found = match RegexBuilder::new(format!(r"(^|\s)({pattern})($|[\s.])").as_str())
         .case_insensitive(true)
         .build()?
-        .captures(text) {
+        .captures(text)
+    {
         Some(m) => m,
-        None => return Err(MatchError::NoMatchFound)
+        None => return Err(MatchError::NoMatchFound),
     };
 
     // TODO: merge with match above to avoid double matching?
     match found.get(2) {
         Some(m) => Ok(m.as_str().to_string()),
-        None => return Err(MatchError::NoMatchFound)
+        None => return Err(MatchError::NoMatchFound),
     }
 }
 
@@ -290,7 +317,7 @@ mod link_tests {
         let example = r"https://github.com/MalteHerrmann/changelg-utils/pull/1";
         let (fixed, problems) = check_link(example, 1);
         assert!(fixed == example.replace("changelg", "changelog"));
-        assert!(problems == vec![format!("PR link points to wrong repository: {}", example)]);
+        assert_eq!(problems, vec![format!("PR link points to wrong repository: {}", example)]);
     }
 
     #[test]
@@ -298,13 +325,10 @@ mod link_tests {
         let example = r"https://github.com/MalteHerrmann/changelog-utils/pull/2";
         let (fixed, problems) = check_link(example, 1);
         assert!(fixed == example.replace("2", "1"));
-        assert!(
-            problems
-                == vec![format!(
-                    "PR link is not matching PR number {}: {}",
-                    1, example
-                )]
-        );
+        assert_eq!(problems, vec![format!(
+            "PR link is not matching PR number {}: {}",
+            1, example
+        )]);
     }
 }
 
@@ -333,10 +357,13 @@ mod description_tests {
         let example = "add Python implementation.";
         let (fixed, problems) = check_description(example);
         assert_eq!(fixed, "Add Python implementation.");
-        assert_eq!(problems, vec![format!(
-            "PR description should start with capital letter: '{}'",
-            example
-        )]);
+        assert_eq!(
+            problems,
+            vec![format!(
+                "PR description should start with capital letter: '{}'",
+                example
+            )]
+        );
     }
 
     #[test]
@@ -344,63 +371,69 @@ mod description_tests {
         let example = "Add Python implementation";
         let (fixed, problems) = check_description(example);
         assert_eq!(fixed, example.to_string() + ".");
-        assert_eq!(problems, vec![format!("PR description should end with a dot: '{}'", example)]);
+        assert_eq!(
+            problems,
+            vec![format!(
+                "PR description should end with a dot: '{}'",
+                example
+            )]
+        );
     }
 }
 
-// #[cfg(test)]
-// mod spelling_tests {
-//     use super::*;
-//
-//     #[test]
-//     fn test_pass() {
-//         let example = "Fix API.";
-//         let (fixed, problems) = check_spelling(CONFIG, example)
-//             .expect("unexpected error during spell check");
-//         assert_eq!(fixed, example);
-//         assert!(problems.is_empty());
-//     }
-//
-//     #[test]
-//     fn test_wrong_spelling() {
-//         let example = "Fix aPi.";
-//         let (fixed, problems) = check_spelling(CONFIG, example)
-//             .expect("unexpected error during spell check");
-//         assert_eq!(fixed, "Fix API.");
-//         assert_eq!(problems, vec!["'API' should be used instead of 'aPi'"])
-//     }
-//
-//     #[test]
-//     fn test_multiple_problems() {
-//         let example = "Fix aPi and ClI.";
-//         let (fixed, problems) = check_spelling(CONFIG, example)
-//             .expect("unexpected error during spell check");
-//         assert_eq!(fixed, "Fix API and CLI.");
-//         assert_eq!(problems, vec![
-//             "'API' should be used instead of 'aPi'",
-//             "'CLI' should be used instead of 'ClI'",
-//         ])
-//     }
-//
-//     #[test]
-//     fn test_pass_codeblocks() {
-//         let example = "Fix `ApI in codeblocks`.";
-//         let (fixed, problems) = check_spelling(CONFIG, example)
-//             .expect("unexpected error during spell check");
-//         assert_eq!(fixed, example);
-//         assert!(problems.is_empty());
-//     }
-//
-//     #[test]
-//     fn test_pass_nested_word() {
-//         let example = "FixApI in another word.";
-//         let (fixed, problems) = check_spelling(CONFIG, example)
-//             .expect("unexpected error during spell check");
-//         assert_eq!(fixed, example);
-//         assert!(problems.is_empty());
-//     }
-// }
-//
+#[cfg(test)]
+mod spelling_tests {
+    use super::*;
+
+    fn load_test_config() -> Config {
+        Config::load(include_str!("testdata/example_config.json"))
+            .expect("failed to load example config")
+    }
+
+    #[test]
+    fn test_pass() {
+        let example = "Fix API.";
+        let (fixed, problems) = check_spelling(load_test_config(), example);
+        assert_eq!(fixed, example);
+        assert!(problems.is_empty());
+    }
+
+    #[test]
+    fn test_wrong_spelling() {
+        let example = "Fix web--SdK.";
+        let (fixed, problems) = check_spelling(load_test_config(), example);
+        assert_eq!(fixed, "Fix Web-SDK.");
+        assert_eq!(problems, vec!["'Web-SDK' should be used instead of 'web--SdK'"])
+    }
+
+    #[test]
+    fn test_multiple_problems() {
+        let example = "Fix aPi and ClI.";
+        let (fixed, problems) = check_spelling(load_test_config(), example);
+        assert_eq!(fixed, "Fix API and CLI.");
+        assert_eq!(problems.len(), 2);
+        // TODO: this is currently not deterministically in the same order
+        assert!(problems.contains(&"'API' should be used instead of 'aPi'".to_string()));
+        assert!(problems.contains(&"'CLI' should be used instead of 'ClI'".to_string()));
+    }
+
+    #[test]
+    fn test_pass_codeblocks() {
+        let example = "Fix `ApI in codeblocks`.";
+        let (fixed, problems) = check_spelling(load_test_config(), example);
+        assert_eq!(fixed, example);
+        assert!(problems.is_empty());
+    }
+
+    #[test]
+    fn test_pass_nested_word() {
+        let example = "FixApI in another word.";
+        let (fixed, problems) = check_spelling(load_test_config(), example);
+        assert_eq!(fixed, example);
+        assert!(problems.is_empty());
+    }
+}
+
 #[cfg(test)]
 mod match_tests {
     use super::*;
