@@ -1,0 +1,7 @@
+{
+  "expected_spellings": {
+    "API": "api",
+    "CLI": "cli",
+    "Web-SDK": "web[-\\s]*sdk"
+  }
+}
