@@ -1,5 +1,5 @@
-use crate::errors::EntryError;
-use regex::Regex;
+use crate::errors::{EntryError, MatchError};
+use regex::{Regex, RegexBuilder};
 
 /// Represents an individual entry in the changelog.
 struct Entry<'a> {
@@ -16,7 +16,9 @@ struct Entry<'a> {
     /// The link to the PR
     link: &'a str,
     /// The list of problems with the given line.
-    problems: Vec<&'a str>,
+    ///
+    /// TODO: Should this rather be a Vec<a' str>?
+    problems: Vec<String>,
 }
 
 fn parse(line: &str) -> Result<Entry, EntryError> {
@@ -39,6 +41,7 @@ fn parse(line: &str) -> Result<Entry, EntryError> {
     // TODO: check whitespace in matches
 
     // TODO: check individual parts for problems like category, etc.
+    let mut problems: Vec<String> = Vec::new();
 
     let fixed = format!(
         "- ({}) [#{}]({}) {}",
@@ -53,7 +56,7 @@ fn parse(line: &str) -> Result<Entry, EntryError> {
         link,
         pr_number,
         // TODO: implement describing problems in line
-        problems: vec![],
+        problems,
     })
 }
 
@@ -105,14 +108,68 @@ fn check_link(link: &str, pr_number: u16) -> (String, Vec<String>) {
 }
 
 fn check_description(desc: &str) -> (String, Vec<String>) {
-    let mut fixed: String;
+    let mut fixed = desc.to_string();
     let mut problems: Vec<String> = Vec::new();
 
     let first_letter = desc.chars().next().expect("no character in description");
-    if !first_letter.is_uppercase() {
-        fixed = desc.to_owned()[1..];
+    if first_letter.is_alphabetic() && !first_letter.is_uppercase() {
+        fixed = first_letter.to_ascii_uppercase().to_string() + desc.to_owned()[1..].as_ref();
+        problems.push(format!(
+            "PR description should start with capital letter: '{}'",
+            desc
+        ))
     }
-    println!("fixed: ", fixed)
+
+    let last_letter = desc
+        .chars()
+        .last()
+        .expect("no characters found in description");
+    if last_letter.to_string() != ".".to_string() {
+        fixed = desc.to_string() + ".";
+        problems.push(format!(
+            "PR description should end with a dot: '{}'",
+            desc
+        ))
+    }
+
+    (fixed, problems)
+}
+
+// /// Checks the spelling of entries according to the given configuration.
+// fn check_spelling() -> (String, Vec<String>) {
+//     // TODO: continue here
+// }
+
+/// Returns the first match of the given pattern in the text.
+/// Matching patterns inside of code blocks, links or within another word are ignored.
+fn get_spelling_match(pattern: &str, text: &str) -> Result<String, MatchError> {
+    // Check if pattern is inside a code block
+    match RegexBuilder::new(
+        format!(r"`[^`]*({pattern})[^`]*`").as_str()
+    )
+        .case_insensitive(true)
+        .build()?
+        .find(text) {
+        Some(_) => return Err(MatchError::MatchInCodeblock),
+        None => (),
+    }
+
+    // Check isolated words (i.e. pattern is not included in another word)
+    let found = match RegexBuilder::new(
+        format!(r"(^|\s)({pattern})($|[\s.])").as_str()
+    )
+        .case_insensitive(true)
+        .build()?
+        .captures(text) {
+        Some(m) => m,
+        None => return Err(MatchError::NoMatchFound)
+    };
+
+    // TODO: merge with match above to avoid double matching?
+    match found.get(2) {
+        Some(m) => Ok(m.as_str().to_string()),
+        None => return Err(MatchError::NoMatchFound)
+    }
 }
 
 #[cfg(test)]
@@ -259,37 +316,121 @@ mod description_tests {
     fn test_pass() {
         let example = "Add Python implementation.";
         let (fixed, problems) = check_description(example);
-        assert!(fixed == example);
+        assert_eq!(fixed, example);
         assert!(problems.is_empty());
-    }
-
-    #[test]
-    fn test_fail_start_with_lowercase() {
-        let example = "add Python implementation.";
-        let (fixed, problems) = check_description(example);
-        assert!(fixed == "Add Python implementation.");
-        assert!(
-            problems
-                == vec![format!(
-                    "PR description should start with capital letter: '{}'",
-                    example
-                )]
-        );
-    }
-
-    #[test]
-    fn test_fail_does_not_end_with_dot() {
-        let example = "Add Python implementation";
-        let (fixed, problems) = check_description(example);
-        assert!(fixed == example.to_string() + ".");
-        assert!(problems == vec![format!("PR description should end with dot: '{}'", example)]);
     }
 
     #[test]
     fn test_pass_start_with_codeblock_instead_of_capital_letter() {
         let example = "`add` method implemented.";
         let (fixed, problems) = check_description(example);
-        assert!(fixed == example);
-        assert!(problems.is_empty());
+        assert_eq!(fixed, example);
+        assert!(problems.is_empty(), "expected no problems: {:?}", problems);
+    }
+
+    #[test]
+    fn test_fail_start_with_lowercase() {
+        let example = "add Python implementation.";
+        let (fixed, problems) = check_description(example);
+        assert_eq!(fixed, "Add Python implementation.");
+        assert_eq!(problems, vec![format!(
+            "PR description should start with capital letter: '{}'",
+            example
+        )]);
+    }
+
+    #[test]
+    fn test_fail_does_not_end_with_dot() {
+        let example = "Add Python implementation";
+        let (fixed, problems) = check_description(example);
+        assert_eq!(fixed, example.to_string() + ".");
+        assert_eq!(problems, vec![format!("PR description should end with a dot: '{}'", example)]);
+    }
+}
+
+// #[cfg(test)]
+// mod spelling_tests {
+//     use super::*;
+//
+//     #[test]
+//     fn test_pass() {
+//         let example = "Fix API.";
+//         let (fixed, problems) = check_spelling(CONFIG, example)
+//             .expect("unexpected error during spell check");
+//         assert_eq!(fixed, example);
+//         assert!(problems.is_empty());
+//     }
+//
+//     #[test]
+//     fn test_wrong_spelling() {
+//         let example = "Fix aPi.";
+//         let (fixed, problems) = check_spelling(CONFIG, example)
+//             .expect("unexpected error during spell check");
+//         assert_eq!(fixed, "Fix API.");
+//         assert_eq!(problems, vec!["'API' should be used instead of 'aPi'"])
+//     }
+//
+//     #[test]
+//     fn test_multiple_problems() {
+//         let example = "Fix aPi and ClI.";
+//         let (fixed, problems) = check_spelling(CONFIG, example)
+//             .expect("unexpected error during spell check");
+//         assert_eq!(fixed, "Fix API and CLI.");
+//         assert_eq!(problems, vec![
+//             "'API' should be used instead of 'aPi'",
+//             "'CLI' should be used instead of 'ClI'",
+//         ])
+//     }
+//
+//     #[test]
+//     fn test_pass_codeblocks() {
+//         let example = "Fix `ApI in codeblocks`.";
+//         let (fixed, problems) = check_spelling(CONFIG, example)
+//             .expect("unexpected error during spell check");
+//         assert_eq!(fixed, example);
+//         assert!(problems.is_empty());
+//     }
+//
+//     #[test]
+//     fn test_pass_nested_word() {
+//         let example = "FixApI in another word.";
+//         let (fixed, problems) = check_spelling(CONFIG, example)
+//             .expect("unexpected error during spell check");
+//         assert_eq!(fixed, example);
+//         assert!(problems.is_empty());
+//     }
+// }
+//
+#[cfg(test)]
+mod match_tests {
+    use super::*;
+
+    #[test]
+    fn test_pass() {
+        let found_res = get_spelling_match("api", "Fix API.");
+        assert!(found_res.is_ok());
+        let found = found_res.unwrap();
+        assert_eq!(found, "API");
+    }
+
+    #[test]
+    fn test_ignore_inside_codeblocks() {
+        let found_err = get_spelling_match("api", "Fix `aPi in codeblocks`.")
+            .expect_err("expected match in code block");
+        assert_eq!(found_err, MatchError::MatchInCodeblock);
+    }
+
+    #[test]
+    fn test_ignore_in_word() {
+        let found_err = get_spelling_match("api", "FixApI in word.")
+            .expect_err("expected no match found error");
+        assert_eq!(found_err, MatchError::NoMatchFound);
+    }
+
+    #[test]
+    fn test_ignore_in_link() {
+        let found_err = get_spelling_match("api", "Fix [abcdef](https://example/aPi.com)")
+            .expect_err("expected no match found error");
+        assert_eq!(found_err, MatchError::NoMatchFound);
     }
 }

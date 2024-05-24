@@ -24,3 +24,13 @@ pub enum EntryError {
     #[error("invalid entry: {0}")]
     InvalidEntry(String),
 }
+
+#[derive(Error, Debug, PartialEq)]
+pub enum MatchError {
+    #[error("match is nested inside of code block")]
+    MatchInCodeblock,
+    #[error("invalid regex: {0}")]
+    InvalidRegex(#[from] regex::Error),
+    #[error("no match found")]
+    NoMatchFound,
+}
