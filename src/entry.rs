@@ -25,7 +25,7 @@ struct Entry<'a> {
 }
 
 fn parse(line: &str) -> Result<Entry, EntryError> {
-    let mut regex_string = r"^-(?P<ws1>\s*)\((?P<category>[a-zA-Z0-9\-]+)\)".to_string();
+    let mut regex_string = r"^(?P<ws0>\s*)-(?P<ws1>\s*)\((?P<category>[a-zA-Z0-9\-]+)\)".to_string();
     regex_string.push_str(r"(?P<ws2>\s*)\[(?P<bs>\\)?#(?P<pr>\d+)]");
     regex_string.push_str(r"(?P<ws3>\s*)\((?P<link>[^)]*)\)(?P<ws4>\s*)(?P<desc>.+)$");
 
@@ -36,15 +36,25 @@ fn parse(line: &str) -> Result<Entry, EntryError> {
     };
 
     // NOTE: calling unwrap here is okay because we checked that the pattern matched above
+    //
+    // TODO: This should definitely improved if possible, using some iterator stuff maybe?
     let category = matches.name("category").unwrap().as_str();
     let description = matches.name("desc").unwrap().as_str();
     let link = matches.name("link").unwrap().as_str();
     let pr_number = matches.name("pr").unwrap().as_str().parse::<u16>().unwrap();
-
-    // TODO: check whitespace in matches
+    let spaces = vec![
+        matches.name("ws0").unwrap().as_str(),
+        matches.name("ws1").unwrap().as_str(),
+        matches.name("ws2").unwrap().as_str(),
+        matches.name("ws3").unwrap().as_str(),
+        matches.name("ws4").unwrap().as_str(),
+    ];
 
     // TODO: check individual parts for problems like category, etc.
     let mut problems: Vec<String> = Vec::new();
+    for whitespace_problem in check_whitespace(spaces) {
+        problems.push(whitespace_problem)
+    }
 
     let fixed = format!(
         "- ({}) [#{}]({}) {}",
@@ -204,6 +214,38 @@ fn get_spelling_match(pattern: &str, text: &str) -> Result<String, MatchError> {
     }
 }
 
+/// Checks the used whitespace in the entry.
+fn check_whitespace(spaces: Vec<&str>) -> Vec<String> {
+    if spaces.len() != 5 {
+        panic!("unexpected amount of whitespace values passed; expected 5; got {}", spaces.len())
+    }
+
+    let mut problems: Vec<String> = Vec::new();
+    let separator = " ";
+
+    let errors = vec![
+        "There should be no leading whitespace before the dash",
+        "There should be exactly one space between the leading dash and the category",
+        "There should be exactly one space between the category and the PR link",
+        "There should be no whitespace inside of the markdown link",
+        "There should be exactly one space between the PR link and the description"
+    ];
+
+    for (i, val) in spaces.iter().enumerate() {
+        match i {
+            // The whitespace at these indices should be empty instead of the separator
+            0 | 3 => {if (*val).ne("") {
+                problems.push(errors[i].to_string())
+            }},
+            _ => {if (*val).ne(separator) {
+                problems.push(errors[i].to_string())
+            }}
+        }
+    }
+
+    problems
+}
+
 #[cfg(test)]
 fn load_test_config() -> Config {
     Config::load(include_str!("testdata/example_config.json"))
@@ -238,12 +280,12 @@ mod entry_tests {
             r"- (cli) [\#1](https://github.com/MalteHerrmann/changelog-utils/pull/1) Test.";
         let entry_res = parse(example);
         // TODO: should this actually return an error? Not really, because parsing has worked??
-        assert!(entry_res.is_err());
+        assert!(entry_res.is_ok());
         let entry = entry_res.unwrap();
         assert_eq!(entry.line, example);
         assert_eq!(entry.fixed, example.replace(r"\", ""));
         assert_eq!(entry.category, "cli");
-        assert_eq!(entry.pr_number, 1851);
+        assert_eq!(entry.pr_number, 1);
         assert_eq!(entry.link, "https://github.com/MalteHerrmann/changelog-utils/pull/1");
         assert_eq!(entry.description, "Test.");
         assert_eq!(entry.problems.len(), 1);
@@ -253,15 +295,17 @@ mod entry_tests {
     #[test]
     fn test_fail_wrong_pr_link_and_missing_dot() {
         let example = r"- (cli) [#2](https://github.com/MalteHerrmann/changelog-utils/pull/1) Test";
+        let mut expected_fixed = example.replace(r"\", "");
+        expected_fixed.push(".".parse().unwrap());
         let entry_res = parse(example);
-        assert!(entry_res.is_err());
+        assert!(entry_res.is_ok());
         let entry = entry_res.unwrap();
         assert_eq!(entry.line, example);
-        assert_eq!(entry.fixed, example.replace(r"\", ""));
+        assert_eq!(entry.fixed, expected_fixed);
         assert_eq!(entry.category, "cli");
-        assert_eq!(entry.pr_number, 1851);
+        assert_eq!(entry.pr_number, 2);
         assert_eq!(entry.link, "https://github.com/MalteHerrmann/changelog-utils/pull/1");
-        assert_eq!(entry.description, "Test.");
+        assert_eq!(entry.description, "Test");
         assert_eq!(entry.problems.len(), 2);
         assert_eq!(entry.problems, vec![
             concat!(
@@ -277,6 +321,25 @@ mod entry_tests {
         let example = r"- (cli) [#13tps://github.com/Ma/2";
         // TODO: figure how to still return an entry but with the corresponding array of problems filled
         assert!(parse(example).is_err());
+    }
+
+    #[test]
+    fn test_fail_wrong_whitespace() {
+        let example = r"- (cli)   [#1] (https://github.com/MalteHerrmann/changelog-utils/pull/1) Run test.";
+        let entry_res = parse(example);
+        assert!(entry_res.is_ok());
+        let entry = entry_res.unwrap();
+        assert_eq!(entry.line, example);
+        assert_eq!(entry.fixed, Regex::new(r"\s*").unwrap().replace(example, " "));
+        assert_eq!(entry.category, "cli");
+        assert_eq!(entry.pr_number, 1);
+        assert_eq!(entry.link, "https://github.com/MalteHerrmann/changelog-utils/pull/1");
+        assert_eq!(entry.description, "Run test.");
+        assert_eq!(entry.problems.len(), 2);
+        assert_eq!(entry.problems, vec![
+            "There should be exactly one space between the PR link and the description",
+            "There should be no whitespace inside of the markdown link"
+        ]);
     }
 }
 
@@ -466,5 +529,47 @@ mod match_tests {
         let found_err = get_spelling_match("api", "Fix [abcdef](https://example/aPi.com)")
             .expect_err("expected no match found error");
         assert_eq!(found_err, MatchError::NoMatchFound);
+    }
+}
+
+#[cfg(test)]
+mod whitespace_tests {
+    use super::*;
+
+    #[test]
+    fn test_pass() {
+        // TODO: rather pass as &str?
+        let example_spaces = vec!["", " ", " ", "", " "];
+        assert!(check_whitespace(example_spaces).is_empty());
+    }
+
+    #[test]
+    fn test_fail_leading_space() {
+        let example_spaces = vec![" ", " ", " ", "", " "];
+        assert_eq!(check_whitespace(example_spaces), vec!["There should be no leading whitespace before the dash"]);
+    }
+
+    #[test]
+    fn test_fail_space_between_category_and_link() {
+        let example_spaces = vec!["", " ", "", "", " "];
+        assert_eq!(check_whitespace(example_spaces), vec!["There should be exactly one space between the category and the PR link"]);
+    }
+
+    #[test]
+    fn test_fail_multiple_spaces() {
+        let example_spaces = vec!["", "", " ", "", " "];
+        assert_eq!(check_whitespace(example_spaces), vec!["There should be exactly one space between the leading dash and the category"]);
+    }
+
+    #[test]
+    fn test_fail_multiple_spaces_before_description() {
+        let example_spaces = vec!["", " ", " ", "", "  "];
+        assert_eq!(check_whitespace(example_spaces), vec!["There should be exactly one space between the PR link and the description"]);
+    }
+
+    #[test]
+    fn test_fail_space_in_link() {
+        let example_spaces = vec!["", " ", " ", " ", " "];
+        assert_eq!(check_whitespace(example_spaces), vec!["There should be no whitespace inside of the markdown link"]);
     }
 }
