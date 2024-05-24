@@ -110,7 +110,7 @@ fn check_link(link: &str, pr_number: u16) -> (String, Vec<String>) {
     (fixed, problems)
 }
 
-fn check_description(desc: &str) -> (String, Vec<String>) {
+fn check_description(config: Config, desc: &str) -> (String, Vec<String>) {
     let mut fixed = desc.to_string();
     let mut problems: Vec<String> = Vec::new();
 
@@ -130,6 +130,11 @@ fn check_description(desc: &str) -> (String, Vec<String>) {
     if last_letter.to_string() != ".".to_string() {
         fixed = desc.to_string() + ".";
         problems.push(format!("PR description should end with a dot: '{}'", desc))
+    }
+
+    let (fixed, spelling_problems) = check_spelling(config, fixed.as_str());
+    for prob in spelling_problems {
+        problems.push(prob)
     }
 
     (fixed, problems)
@@ -197,6 +202,12 @@ fn get_spelling_match(pattern: &str, text: &str) -> Result<String, MatchError> {
         Some(m) => Ok(m.as_str().to_string()),
         None => return Err(MatchError::NoMatchFound),
     }
+}
+
+#[cfg(test)]
+fn load_test_config() -> Config {
+    Config::load(include_str!("testdata/example_config.json"))
+        .expect("failed to load example config")
 }
 
 #[cfg(test)]
@@ -339,7 +350,7 @@ mod description_tests {
     #[test]
     fn test_pass() {
         let example = "Add Python implementation.";
-        let (fixed, problems) = check_description(example);
+        let (fixed, problems) = check_description(load_test_config(), example);
         assert_eq!(fixed, example);
         assert!(problems.is_empty());
     }
@@ -347,7 +358,7 @@ mod description_tests {
     #[test]
     fn test_pass_start_with_codeblock_instead_of_capital_letter() {
         let example = "`add` method implemented.";
-        let (fixed, problems) = check_description(example);
+        let (fixed, problems) = check_description(load_test_config(), example);
         assert_eq!(fixed, example);
         assert!(problems.is_empty(), "expected no problems: {:?}", problems);
     }
@@ -355,7 +366,7 @@ mod description_tests {
     #[test]
     fn test_fail_start_with_lowercase() {
         let example = "add Python implementation.";
-        let (fixed, problems) = check_description(example);
+        let (fixed, problems) = check_description(load_test_config(), example);
         assert_eq!(fixed, "Add Python implementation.");
         assert_eq!(
             problems,
@@ -369,7 +380,7 @@ mod description_tests {
     #[test]
     fn test_fail_does_not_end_with_dot() {
         let example = "Add Python implementation";
-        let (fixed, problems) = check_description(example);
+        let (fixed, problems) = check_description(load_test_config(), example);
         assert_eq!(fixed, example.to_string() + ".");
         assert_eq!(
             problems,
@@ -384,11 +395,6 @@ mod description_tests {
 #[cfg(test)]
 mod spelling_tests {
     use super::*;
-
-    fn load_test_config() -> Config {
-        Config::load(include_str!("testdata/example_config.json"))
-            .expect("failed to load example config")
-    }
 
     #[test]
     fn test_pass() {
