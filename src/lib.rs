@@ -1,6 +1,6 @@
 mod changelog;
 pub mod cli;
-mod config;
+pub mod config;
 mod entry;
 mod errors;
 pub mod lint;

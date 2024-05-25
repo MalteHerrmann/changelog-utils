@@ -6,6 +6,8 @@ use thiserror::Error;
 pub enum LintError {
     #[error("failed to parse changelog: {0}")]
     InvalidChangelog(#[from] ChangelogError),
+    #[error("invalid configuration: {0}")]
+    InvalidConfig(#[from] ConfigError),
     #[error("failed to find changelog in directory")]
     NoChangelogFound,
     #[error("failed to read file system: {0}")]

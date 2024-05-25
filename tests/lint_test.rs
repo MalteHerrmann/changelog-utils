@@ -1,9 +1,18 @@
-use changelog_utils::lint;
+use changelog_utils::{
+    config::Config,
+    lint
+};
 use std::path::Path;
+
+#[cfg(test)]
+fn load_test_config() -> Config {
+    Config::load(include_str!("tests/testdata/evmos_config.json"))
+        .expect("failed to load example config")
+}
+
 
 #[test]
 fn it_should_pass_for_correct_changelogs() {
-    println!("Current dir: {:?}", std::env::current_dir().unwrap());
     let correct_changelog = Path::new("tests/testdata/changelog_ok.md");
     let parse_res = lint::lint(correct_changelog);
     assert!(parse_res.is_ok());

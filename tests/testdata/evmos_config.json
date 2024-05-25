@@ -1,0 +1,20 @@
+{
+  "legacy_version": "v2.0.0",
+  "categories": [
+    "p256-precompile",
+    "distribution-precompile",
+    "inflation",
+    "ante",
+    "testnet",
+    "stride-outpost",
+    "evm",
+    "vesting",
+    "swagger",
+    "go",
+    "app"
+  ],
+  "expected_spellings": {
+    "ABI": "abi",
+    "EIP-712": "eip[-\\s]*712"
+  }
+}

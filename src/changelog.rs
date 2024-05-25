@@ -1,4 +1,4 @@
-use crate::errors::ChangelogError;
+use crate::{config::Config, errors::ChangelogError};
 
 /// Represents the changelog contents.
 pub struct Changelog {
@@ -7,13 +7,12 @@ pub struct Changelog {
 }
 
 /// Parses the given changelog contents.
-pub fn parse_changelog(contents: &str) -> Result<Changelog, ChangelogError> {
-    println!("parsing contents: {}", contents);
+///
+/// TODO: implement this fully!
+pub fn parse_changelog(config: Config, contents: &str) -> Result<Changelog, ChangelogError> {
     let releases: Vec<String> = vec![];
     for line in contents.lines() {
-        if line.trim().starts_with("## ") {
-
-        }
+        if line.trim().starts_with("## ") {}
     }
     Ok(Changelog { releases: vec![] })
 }
