@@ -13,6 +13,11 @@
     "go",
     "app"
   ],
+  "change_types": {
+    "Bug Fixes": "bug\\s*fixes",
+    "Improvements": "improvements",
+    "Features": "features"
+  },
   "expected_spellings": {
     "ABI": "abi",
     "EIP-712": "eip[-\\s]*712"

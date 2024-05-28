@@ -6,6 +6,15 @@ use std::collections::HashMap;
 /// Holds the configuration of the application
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
+    /// The list of categories for a given entry,
+    /// that can be used.
+    pub categories: Vec<String>,
+    /// The map of allowed change types.
+    ///
+    /// Note: The key is the correct spelling and the value is
+    /// a regular expression matching all possible (mis-)spellings
+    /// of the given category.
+    pub change_types: HashMap<String, String>,
     /// The map of expected spellings.
     ///
     /// Note: The key is the correct spelling and the value
@@ -38,5 +47,23 @@ mod config_tests {
             "expected non-zero length of example configuration spellings"
         );
         assert_eq!(config.expected_spellings.get("API").unwrap(), "api");
+
+        assert!(
+            config.change_types.len() > 0,
+            "expected non-zero length of change types in example config"
+        );
+        assert_eq!(
+            config.change_types.get("Bug Fixes").unwrap(),
+            "bug\\s*fixes"
+        );
+
+        assert!(
+            config.categories.len() > 0,
+            "expected non-zero length of categories in example config",
+        );
+        assert!(
+            config.categories.contains(&"cli".to_string()),
+            "expected cli to be in list of allowed categories"
+        );
     }
 }

@@ -27,5 +27,5 @@ pub fn run() -> Result<Changelog, LintError> {
 /// TODO: Check if this is actually necessary or parse_changelog can be used directly?
 pub fn lint(config: Config, changelog_path: &Path) -> Result<Changelog, LintError> {
     let contents = fs::read_to_string(changelog_path)?;
-    Ok(parse_changelog(contents.as_str())?)
+    Ok(parse_changelog(config, contents.as_str())?)
 }

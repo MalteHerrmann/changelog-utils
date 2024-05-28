@@ -5,7 +5,8 @@ use crate::{
 use regex::{Error, Regex, RegexBuilder};
 
 /// Represents an individual entry in the changelog.
-struct Entry<'a> {
+#[derive(Debug)]
+pub struct Entry<'a> {
     /// The original line from the parsed changelog.
     line: &'a str,
     /// The fixed line adhering to all standards.
@@ -25,7 +26,8 @@ struct Entry<'a> {
 }
 
 fn parse(config: Config, line: &str) -> Result<Entry, EntryError> {
-    let mut regex_string = r"^(?P<ws0>\s*)-(?P<ws1>\s*)\((?P<category>[a-zA-Z0-9\-]+)\)".to_string();
+    let mut regex_string =
+        r"^(?P<ws0>\s*)-(?P<ws1>\s*)\((?P<category>[a-zA-Z0-9\-]+)\)".to_string();
     regex_string.push_str(r"(?P<ws2>\s*)\[(?P<bs>\\)?#(?P<pr>\d+)]");
     regex_string.push_str(r"(?P<ws3>\s*)\((?P<link>[^)]*)\)(?P<ws4>\s*)(?P<desc>.+)$");
 
@@ -55,14 +57,15 @@ fn parse(config: Config, line: &str) -> Result<Entry, EntryError> {
         problems.push(whitespace_problem)
     }
 
-    let (fixed_category, category_problems) = check_category(category);
+    let (fixed_category, category_problems) = check_category(&config, category);
     for category_problem in category_problems {
         problems.push(category_problem)
     }
 
     match matches.name("bs") {
-        Some(_) => problems.push("There should be no backslash in front of the # in the PR link".to_string()),
-        _ => ()
+        Some(_) => problems
+            .push("There should be no backslash in front of the # in the PR link".to_string()),
+        _ => (),
     }
 
     let (fixed_link, link_problems) = check_link(link, pr_number);
@@ -70,7 +73,7 @@ fn parse(config: Config, line: &str) -> Result<Entry, EntryError> {
         problems.push(link_problem)
     }
 
-    let (fixed_desc, desc_problems) = check_description(config, description);
+    let (fixed_desc, desc_problems) = check_description(&config, description);
     for desc_problem in desc_problems {
         problems.push(desc_problem)
     }
@@ -94,16 +97,14 @@ fn parse(config: Config, line: &str) -> Result<Entry, EntryError> {
 
 /// Check if the category is valid and return a fixed version that addresses
 /// well-known problems.
-fn check_category(category: &str) -> (String, Vec<String>) {
+fn check_category(config: &Config, category: &str) -> (String, Vec<String>) {
     let mut problems: Vec<String> = Vec::new();
     let fixed = category.to_lowercase();
     if category.to_lowercase() != category {
         problems.push(format!("category should be lowercase: ({})", category));
     }
 
-    // TODO: use config
-    let allowed_categories: Vec<String> = vec!["cli".to_string(), "test".to_string()];
-    if !allowed_categories.contains(&fixed) {
+    if !config.categories.contains(&fixed) {
         problems.push(format!("invalid change category: ({})", category));
     }
 
@@ -139,7 +140,7 @@ fn check_link(link: &str, pr_number: u16) -> (String, Vec<String>) {
     (fixed, problems)
 }
 
-fn check_description(config: Config, desc: &str) -> (String, Vec<String>) {
+fn check_description(config: &Config, desc: &str) -> (String, Vec<String>) {
     let mut fixed = desc.to_string();
     let mut problems: Vec<String> = Vec::new();
 
@@ -170,7 +171,7 @@ fn check_description(config: Config, desc: &str) -> (String, Vec<String>) {
 }
 
 /// Checks the spelling of entries according to the given configuration.
-fn check_spelling(config: Config, text: &str) -> (String, Vec<String>) {
+fn check_spelling(config: &Config, text: &str) -> (String, Vec<String>) {
     let mut fixed = text.to_string();
     let mut problems: Vec<String> = Vec::new();
 
@@ -236,7 +237,10 @@ fn get_spelling_match(pattern: &str, text: &str) -> Result<String, MatchError> {
 /// Checks the used whitespace in the entry.
 fn check_whitespace(spaces: Vec<&str>) -> Vec<String> {
     if spaces.len() != 5 {
-        panic!("unexpected amount of whitespace values passed; expected 5; got {}", spaces.len())
+        panic!(
+            "unexpected amount of whitespace values passed; expected 5; got {}",
+            spaces.len()
+        )
     }
 
     let mut problems: Vec<String> = Vec::new();
@@ -247,18 +251,22 @@ fn check_whitespace(spaces: Vec<&str>) -> Vec<String> {
         "There should be exactly one space between the leading dash and the category",
         "There should be exactly one space between the category and the PR link",
         "There should be no whitespace inside of the markdown link",
-        "There should be exactly one space between the PR link and the description"
+        "There should be exactly one space between the PR link and the description",
     ];
 
     for (i, val) in spaces.iter().enumerate() {
         match i {
             // The whitespace at these indices should be empty instead of the separator
-            0 | 3 => {if (*val).ne("") {
-                problems.push(errors[i].to_string())
-            }},
-            _ => {if (*val).ne(separator) {
-                problems.push(errors[i].to_string())
-            }}
+            0 | 3 => {
+                if (*val).ne("") {
+                    problems.push(errors[i].to_string())
+                }
+            }
+            _ => {
+                if (*val).ne(separator) {
+                    problems.push(errors[i].to_string())
+                }
+            }
         }
     }
 
@@ -288,7 +296,10 @@ mod entry_tests {
         assert_eq!(entry.fixed, example); // NOTE: since line is okay there are no changes to it in the fixed version
         assert_eq!(entry.category, "cli");
         assert_eq!(entry.pr_number, 1);
-        assert_eq!(entry.link, "https://github.com/MalteHerrmann/changelog-utils/pull/1");
+        assert_eq!(
+            entry.link,
+            "https://github.com/MalteHerrmann/changelog-utils/pull/1"
+        );
         assert_eq!(entry.description, "Add initial Python implementation.");
         assert!(entry.problems.is_empty());
     }
@@ -305,10 +316,16 @@ mod entry_tests {
         assert_eq!(entry.fixed, example.replace(r"\", ""));
         assert_eq!(entry.category, "cli");
         assert_eq!(entry.pr_number, 1);
-        assert_eq!(entry.link, "https://github.com/MalteHerrmann/changelog-utils/pull/1");
+        assert_eq!(
+            entry.link,
+            "https://github.com/MalteHerrmann/changelog-utils/pull/1"
+        );
         assert_eq!(entry.description, "Test.");
         assert_eq!(entry.problems.len(), 1);
-        assert_eq!(entry.problems[0], "There should be no backslash in front of the # in the PR link");
+        assert_eq!(
+            entry.problems[0],
+            "There should be no backslash in front of the # in the PR link"
+        );
     }
 
     #[test]
@@ -322,16 +339,22 @@ mod entry_tests {
         assert_eq!(entry.fixed, fixed);
         assert_eq!(entry.category, "cli");
         assert_eq!(entry.pr_number, 2);
-        assert_eq!(entry.link, "https://github.com/MalteHerrmann/changelog-utils/pull/1");
+        assert_eq!(
+            entry.link,
+            "https://github.com/MalteHerrmann/changelog-utils/pull/1"
+        );
         assert_eq!(entry.description, "Test");
         assert_eq!(entry.problems.len(), 2);
-        assert_eq!(entry.problems, vec![
-            concat!(
-            r"PR link is not matching PR number 2: ",
-            "'https://github.com/MalteHerrmann/changelog-utils/pull/1'"
-            ),
-            "PR description should end with a dot: 'Test'"
-        ]);
+        assert_eq!(
+            entry.problems,
+            vec![
+                concat!(
+                    r"PR link is not matching PR number 2: ",
+                    "'https://github.com/MalteHerrmann/changelog-utils/pull/1'"
+                ),
+                "PR description should end with a dot: 'Test'"
+            ]
+        );
     }
 
     #[test]
@@ -343,8 +366,10 @@ mod entry_tests {
 
     #[test]
     fn test_fail_wrong_whitespace() {
-        let example = r"- (cli)   [#1] (https://github.com/MalteHerrmann/changelog-utils/pull/1) Run test.";
-        let expected = r"- (cli) [#1](https://github.com/MalteHerrmann/changelog-utils/pull/1) Run test.";
+        let example =
+            r"- (cli)   [#1] (https://github.com/MalteHerrmann/changelog-utils/pull/1) Run test.";
+        let expected =
+            r"- (cli) [#1](https://github.com/MalteHerrmann/changelog-utils/pull/1) Run test.";
         let entry_res = parse(load_test_config(), example);
         assert!(entry_res.is_ok());
         let entry = entry_res.unwrap();
@@ -352,13 +377,19 @@ mod entry_tests {
         assert_eq!(entry.fixed, expected);
         assert_eq!(entry.category, "cli");
         assert_eq!(entry.pr_number, 1);
-        assert_eq!(entry.link, "https://github.com/MalteHerrmann/changelog-utils/pull/1");
+        assert_eq!(
+            entry.link,
+            "https://github.com/MalteHerrmann/changelog-utils/pull/1"
+        );
         assert_eq!(entry.description, "Run test.");
         assert_eq!(entry.problems.len(), 2);
-        assert_eq!(entry.problems, vec![
-            "There should be exactly one space between the category and the PR link",
-            "There should be no whitespace inside of the markdown link",
-        ]);
+        assert_eq!(
+            entry.problems,
+            vec![
+                "There should be exactly one space between the category and the PR link",
+                "There should be no whitespace inside of the markdown link",
+            ]
+        );
     }
 }
 
@@ -368,21 +399,21 @@ mod category_tests {
 
     #[test]
     fn test_pass() {
-        let (fixed, problems) = check_category("cli");
+        let (fixed, problems) = check_category(&load_test_config(), "cli");
         assert_eq!(fixed, "cli");
         assert!(problems.is_empty());
     }
 
     #[test]
     fn test_fail_invalid_category() {
-        let (fixed, problems) = check_category("invalid");
+        let (fixed, problems) = check_category(&load_test_config(), "invalid");
         assert_eq!(fixed, "invalid");
         assert_eq!(problems, vec!["invalid change category: (invalid)"]);
     }
 
     #[test]
     fn test_fail_non_lower_category() {
-        let (fixed, problems) = check_category("cLi");
+        let (fixed, problems) = check_category(&load_test_config(), "cLi");
         assert_eq!(fixed, "cli");
         assert_eq!(problems, vec!["category should be lowercase: (cLi)"]);
     }
@@ -405,7 +436,10 @@ mod link_tests {
         let example = r"https://github.com/MalteHerrmann/changelg-utils/pull/1";
         let (fixed, problems) = check_link(example, 1);
         assert_eq!(fixed, example.replace("changelg", "changelog"));
-        assert_eq!(problems, vec![format!("PR link points to wrong repository: {}", example)]);
+        assert_eq!(
+            problems,
+            vec![format!("PR link points to wrong repository: {}", example)]
+        );
     }
 
     #[test]
@@ -413,10 +447,13 @@ mod link_tests {
         let example = r"https://github.com/MalteHerrmann/changelog-utils/pull/2";
         let (fixed, problems) = check_link(example, 1);
         assert_eq!(fixed, example.replace("2", "1"));
-        assert_eq!(problems, vec![format!(
-            "PR link is not matching PR number {}: '{}'",
-            1, example
-        )]);
+        assert_eq!(
+            problems,
+            vec![format!(
+                "PR link is not matching PR number {}: '{}'",
+                1, example
+            )]
+        );
     }
 }
 
@@ -427,7 +464,7 @@ mod description_tests {
     #[test]
     fn test_pass() {
         let example = "Add Python implementation.";
-        let (fixed, problems) = check_description(load_test_config(), example);
+        let (fixed, problems) = check_description(&load_test_config(), example);
         assert_eq!(fixed, example);
         assert!(problems.is_empty());
     }
@@ -435,7 +472,7 @@ mod description_tests {
     #[test]
     fn test_pass_start_with_codeblock_instead_of_capital_letter() {
         let example = "`add` method implemented.";
-        let (fixed, problems) = check_description(load_test_config(), example);
+        let (fixed, problems) = check_description(&load_test_config(), example);
         assert_eq!(fixed, example);
         assert!(problems.is_empty(), "expected no problems: {:?}", problems);
     }
@@ -443,7 +480,7 @@ mod description_tests {
     #[test]
     fn test_fail_start_with_lowercase() {
         let example = "add Python implementation.";
-        let (fixed, problems) = check_description(load_test_config(), example);
+        let (fixed, problems) = check_description(&load_test_config(), example);
         assert_eq!(fixed, "Add Python implementation.");
         assert_eq!(
             problems,
@@ -457,7 +494,7 @@ mod description_tests {
     #[test]
     fn test_fail_does_not_end_with_dot() {
         let example = "Add Python implementation";
-        let (fixed, problems) = check_description(load_test_config(), example);
+        let (fixed, problems) = check_description(&load_test_config(), example);
         assert_eq!(fixed, example.to_string() + ".");
         assert_eq!(
             problems,
@@ -476,7 +513,7 @@ mod spelling_tests {
     #[test]
     fn test_pass() {
         let example = "Fix API.";
-        let (fixed, problems) = check_spelling(load_test_config(), example);
+        let (fixed, problems) = check_spelling(&load_test_config(), example);
         assert_eq!(fixed, example);
         assert!(problems.is_empty());
     }
@@ -484,15 +521,18 @@ mod spelling_tests {
     #[test]
     fn test_wrong_spelling() {
         let example = "Fix web--SdK.";
-        let (fixed, problems) = check_spelling(load_test_config(), example);
+        let (fixed, problems) = check_spelling(&load_test_config(), example);
         assert_eq!(fixed, "Fix Web-SDK.");
-        assert_eq!(problems, vec!["'Web-SDK' should be used instead of 'web--SdK'"])
+        assert_eq!(
+            problems,
+            vec!["'Web-SDK' should be used instead of 'web--SdK'"]
+        )
     }
 
     #[test]
     fn test_multiple_problems() {
         let example = "Fix aPi and ClI.";
-        let (fixed, problems) = check_spelling(load_test_config(), example);
+        let (fixed, problems) = check_spelling(&load_test_config(), example);
         assert_eq!(fixed, "Fix API and CLI.");
         assert_eq!(problems.len(), 2);
         // TODO: this is currently not deterministically in the same order
@@ -503,7 +543,7 @@ mod spelling_tests {
     #[test]
     fn test_pass_codeblocks() {
         let example = "Fix `ApI in codeblocks`.";
-        let (fixed, problems) = check_spelling(load_test_config(), example);
+        let (fixed, problems) = check_spelling(&load_test_config(), example);
         assert_eq!(fixed, example);
         assert!(problems.is_empty());
     }
@@ -511,7 +551,7 @@ mod spelling_tests {
     #[test]
     fn test_pass_nested_word() {
         let example = "FixApI in another word.";
-        let (fixed, problems) = check_spelling(load_test_config(), example);
+        let (fixed, problems) = check_spelling(&load_test_config(), example);
         assert_eq!(fixed, example);
         assert!(problems.is_empty());
     }
@@ -565,30 +605,45 @@ mod whitespace_tests {
     #[test]
     fn test_fail_leading_space() {
         let example_spaces = vec![" ", " ", " ", "", " "];
-        assert_eq!(check_whitespace(example_spaces), vec!["There should be no leading whitespace before the dash"]);
+        assert_eq!(
+            check_whitespace(example_spaces),
+            vec!["There should be no leading whitespace before the dash"]
+        );
     }
 
     #[test]
     fn test_fail_space_between_category_and_link() {
         let example_spaces = vec!["", " ", "", "", " "];
-        assert_eq!(check_whitespace(example_spaces), vec!["There should be exactly one space between the category and the PR link"]);
+        assert_eq!(
+            check_whitespace(example_spaces),
+            vec!["There should be exactly one space between the category and the PR link"]
+        );
     }
 
     #[test]
     fn test_fail_multiple_spaces() {
         let example_spaces = vec!["", "", " ", "", " "];
-        assert_eq!(check_whitespace(example_spaces), vec!["There should be exactly one space between the leading dash and the category"]);
+        assert_eq!(
+            check_whitespace(example_spaces),
+            vec!["There should be exactly one space between the leading dash and the category"]
+        );
     }
 
     #[test]
     fn test_fail_multiple_spaces_before_description() {
         let example_spaces = vec!["", " ", " ", "", "  "];
-        assert_eq!(check_whitespace(example_spaces), vec!["There should be exactly one space between the PR link and the description"]);
+        assert_eq!(
+            check_whitespace(example_spaces),
+            vec!["There should be exactly one space between the PR link and the description"]
+        );
     }
 
     #[test]
     fn test_fail_space_in_link() {
         let example_spaces = vec!["", " ", " ", " ", " "];
-        assert_eq!(check_whitespace(example_spaces), vec!["There should be no whitespace inside of the markdown link"]);
+        assert_eq!(
+            check_whitespace(example_spaces),
+            vec!["There should be no whitespace inside of the markdown link"]
+        );
     }
 }

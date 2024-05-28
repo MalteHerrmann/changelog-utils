@@ -16,7 +16,12 @@ pub enum LintError {
 
 #[derive(Error, Debug)]
 pub enum ChangelogError {
-    // TODO: is this error necessary?
+    #[error("failed to parse change type: {0}")]
+    InvalidChangeType(#[from] ChangeTypeError),
+    #[error("failed to parse entry: {0}")]
+    InvalidEntry(#[from] EntryError),
+    #[error("failed to parse release: {0}")]
+    InvalidRelease(#[from] ReleaseError),
     #[error("failed to parse changelog: {0}")]
     Parse(#[from] io::Error),
 }
@@ -37,9 +42,24 @@ pub enum MatchError {
     NoMatchFound,
 }
 
-
 #[derive(Error, Debug)]
 pub enum ConfigError {
     #[error("failed to parse configuration")]
-    FailedToParse(#[from] serde_json::Error)
+    FailedToParse(#[from] serde_json::Error),
+}
+
+#[derive(Error, Debug, PartialEq)]
+pub enum ChangeTypeError {
+    #[error("invalid regex: {0}")]
+    InvalidRegex(#[from] regex::Error),
+    #[error("no matches found")]
+    NoMatchesFound,
+}
+
+#[derive(Error, Debug, PartialEq)]
+pub enum ReleaseError {
+    #[error("invalid regex: {0}")]
+    InvalidRegex(#[from] regex::Error),
+    #[error("no release pattern found in line")]
+    NoMatchFound,
 }
