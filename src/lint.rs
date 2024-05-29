@@ -1,6 +1,6 @@
 use crate::{
     changelog::{parse_changelog, Changelog},
-    config::Config,
+    config,
     errors::LintError,
 };
 use std::{fs, path::Path};
@@ -17,7 +17,7 @@ pub fn run() -> Result<Changelog, LintError> {
     };
 
     // TODO: check for configuration file in user directory
-    let config = Config::load(include_str!("testdata/example_config.json"))?;
+    let config = config::load(include_str!("testdata/example_config.json"))?;
 
     lint(config, changelog_file.path().as_path())
 }
@@ -25,7 +25,7 @@ pub fn run() -> Result<Changelog, LintError> {
 /// Executes the linter logic.
 ///
 /// TODO: Check if this is actually necessary or parse_changelog can be used directly?
-pub fn lint(config: Config, changelog_path: &Path) -> Result<Changelog, LintError> {
+pub fn lint(config: config::Config, changelog_path: &Path) -> Result<Changelog, LintError> {
     let contents = fs::read_to_string(changelog_path)?;
-    Ok(parse_changelog(config, contents.as_str())?)
+    Ok(parse_changelog(config, contents.to_owned().as_str())?)
 }

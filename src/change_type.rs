@@ -1,16 +1,26 @@
-use crate::{config::Config, entry::Entry, errors::ChangeTypeError};
+use crate::{config, entry::Entry, errors::ChangeTypeError};
 use regex::{Regex, RegexBuilder};
 
-#[derive(Debug)]
-pub struct ChangeType<'a> {
-    name: String,
-    line: &'a str,
+#[derive(Clone, Debug)]
+pub struct ChangeType {
+    pub name: String,
+    line: String,
     fixed: String,
-    problems: Vec<String>,
-    entries: Vec<Entry<'a>>,
+    pub problems: Vec<String>,
+    entries: Vec<Entry>,
 }
 
-fn parse(config: Config, line: &str) -> Result<ChangeType, ChangeTypeError> {
+pub fn new_empty_change_type() -> ChangeType {
+    ChangeType{
+        name: "".to_string(),
+        line: "".to_string(),
+        fixed: "".to_string(),
+        problems: Vec::new(),
+        entries: Vec::new(),
+    }
+}
+
+pub fn parse(config: config::Config, line: &str) -> Result<ChangeType, ChangeTypeError> {
     let captures = match Regex::new(r"^\s*###\s*(?P<name>[a-zA-Z0-9\- ]+)\s*$")
         .expect("regex pattern should be valid")
         .captures(line)
@@ -55,7 +65,7 @@ fn parse(config: Config, line: &str) -> Result<ChangeType, ChangeTypeError> {
 
     Ok(ChangeType {
         name: fixed_name,
-        line,
+        line: line.to_string(),
         fixed,
         problems,
         entries: Vec::new(),
@@ -66,8 +76,8 @@ fn parse(config: Config, line: &str) -> Result<ChangeType, ChangeTypeError> {
 mod change_type_tests {
     use super::*;
 
-    fn load_test_config() -> Config {
-        Config::load(include_str!("testdata/example_config.json")).expect("failed to load config")
+    fn load_test_config() -> config::Config {
+        config::load(include_str!("testdata/example_config.json")).expect("failed to load config")
     }
 
     #[test]

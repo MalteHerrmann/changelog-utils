@@ -1,37 +1,34 @@
-use crate::{
-    config::Config,
-    errors::{EntryError, MatchError},
-};
+use crate::{config, errors::{EntryError, MatchError}};
 use regex::{Error, Regex, RegexBuilder};
 
 /// Represents an individual entry in the changelog.
-#[derive(Debug)]
-pub struct Entry<'a> {
+#[derive(Clone, Debug)]
+pub struct Entry {
     /// The original line from the parsed changelog.
-    line: &'a str,
+    line: String,
     /// The fixed line adhering to all standards.
     fixed: String,
     /// The category of the given entry, e.g. (tests).
-    category: &'a str,
+    category: String,
     /// The description of the changes.
-    description: &'a str,
+    description: String,
     /// The PR number for the given change.
-    pr_number: u16,
+    pub pr_number: u16,
     /// The link to the PR
-    link: &'a str,
+    link: String,
     /// The list of problems with the given line.
     ///
     /// TODO: Should this rather be a Vec<a' str>?
-    problems: Vec<String>,
+    pub problems: Vec<String>,
 }
 
-fn parse(config: Config, line: &str) -> Result<Entry, EntryError> {
-    let mut regex_string =
-        r"^(?P<ws0>\s*)-(?P<ws1>\s*)\((?P<category>[a-zA-Z0-9\-]+)\)".to_string();
-    regex_string.push_str(r"(?P<ws2>\s*)\[(?P<bs>\\)?#(?P<pr>\d+)]");
-    regex_string.push_str(r"(?P<ws3>\s*)\((?P<link>[^)]*)\)(?P<ws4>\s*)(?P<desc>.+)$");
+pub fn parse(config: config::Config, line: &str) -> Result<Entry, EntryError> {
+    let entry_pattern = Regex::new(concat!(
+        r"^(?P<ws0>\s*)-(?P<ws1>\s*)\((?P<category>[a-zA-Z0-9\-]+)\)",
+        r"(?P<ws2>\s*)\[(?P<bs>\\)?#(?P<pr>\d+)]",
+        r"(?P<ws3>\s*)\((?P<link>[^)]*)\)(?P<ws4>\s*)(?P<desc>.+)$"
+    )).expect("invalid regex pattern");
 
-    let entry_pattern = Regex::new(regex_string.as_str()).expect("invalid regex pattern");
     let matches = match entry_pattern.captures(line) {
         Some(c) => c,
         None => return Err(EntryError::InvalidEntry(line.to_string())),
@@ -68,7 +65,7 @@ fn parse(config: Config, line: &str) -> Result<Entry, EntryError> {
         _ => (),
     }
 
-    let (fixed_link, link_problems) = check_link(link, pr_number);
+    let (fixed_link, link_problems) = check_link(&config, link, pr_number);
     for link_problem in link_problems {
         problems.push(link_problem)
     }
@@ -84,11 +81,11 @@ fn parse(config: Config, line: &str) -> Result<Entry, EntryError> {
     );
 
     Ok(Entry {
-        line,
+        line: line.to_string(),
         fixed, // TODO: why is it not possible to have this as &'a str too?
-        category,
-        description,
-        link,
+        category: category.to_string(),
+        description: description.to_string(),
+        link: link.to_string(),
         pr_number,
         // TODO: implement describing problems in line
         problems,
@@ -97,7 +94,7 @@ fn parse(config: Config, line: &str) -> Result<Entry, EntryError> {
 
 /// Check if the category is valid and return a fixed version that addresses
 /// well-known problems.
-fn check_category(config: &Config, category: &str) -> (String, Vec<String>) {
+fn check_category(config: &config::Config, category: &str) -> (String, Vec<String>) {
     let mut problems: Vec<String> = Vec::new();
     let fixed = category.to_lowercase();
     if category.to_lowercase() != category {
@@ -112,14 +109,13 @@ fn check_category(config: &Config, category: &str) -> (String, Vec<String>) {
 }
 
 /// Check if the link is valid
-fn check_link(link: &str, pr_number: u16) -> (String, Vec<String>) {
+fn check_link(config: &config::Config, link: &str, pr_number: u16) -> (String, Vec<String>) {
     let mut problems: Vec<String> = Vec::new();
 
     // TODO: check the base url of the used Git repository automatically
-    let expected_base_url = r"https://github.com/MalteHerrmann/changelog-utils";
-    let fixed = format!("{}/pull/{}", expected_base_url, pr_number);
+    let fixed = format!("{}/pull/{}", config.target_repo, pr_number);
 
-    if !link.starts_with(expected_base_url) {
+    if !link.starts_with(config.target_repo.as_str()) {
         problems.push(format!("PR link points to wrong repository: {}", link))
     }
 
@@ -140,7 +136,7 @@ fn check_link(link: &str, pr_number: u16) -> (String, Vec<String>) {
     (fixed, problems)
 }
 
-fn check_description(config: &Config, desc: &str) -> (String, Vec<String>) {
+fn check_description(config: &config::Config, desc: &str) -> (String, Vec<String>) {
     let mut fixed = desc.to_string();
     let mut problems: Vec<String> = Vec::new();
 
@@ -171,7 +167,7 @@ fn check_description(config: &Config, desc: &str) -> (String, Vec<String>) {
 }
 
 /// Checks the spelling of entries according to the given configuration.
-fn check_spelling(config: &Config, text: &str) -> (String, Vec<String>) {
+fn check_spelling(config: &config::Config, text: &str) -> (String, Vec<String>) {
     let mut fixed = text.to_string();
     let mut problems: Vec<String> = Vec::new();
 
@@ -274,8 +270,8 @@ fn check_whitespace(spaces: Vec<&str>) -> Vec<String> {
 }
 
 #[cfg(test)]
-fn load_test_config() -> Config {
-    Config::load(include_str!("testdata/example_config.json"))
+fn load_test_config() -> config::Config {
+    config::load(include_str!("testdata/example_config.json"))
         .expect("failed to load example config")
 }
 
@@ -423,10 +419,15 @@ mod category_tests {
 mod link_tests {
     use super::*;
 
+    fn load_test_config() -> config::Config {
+        config::load(include_str!("testdata/example_config.json"))
+            .expect("failed to load example config")
+    }
+
     #[test]
     fn test_pass() {
         let example = r"https://github.com/MalteHerrmann/changelog-utils/pull/1";
-        let (fixed, problems) = check_link(example, 1);
+        let (fixed, problems) = check_link(&load_test_config(), example, 1);
         assert_eq!(fixed, example);
         assert!(problems.is_empty());
     }
@@ -434,7 +435,7 @@ mod link_tests {
     #[test]
     fn test_wrong_base_url() {
         let example = r"https://github.com/MalteHerrmann/changelg-utils/pull/1";
-        let (fixed, problems) = check_link(example, 1);
+        let (fixed, problems) = check_link(&load_test_config(), example, 1);
         assert_eq!(fixed, example.replace("changelg", "changelog"));
         assert_eq!(
             problems,
@@ -445,7 +446,7 @@ mod link_tests {
     #[test]
     fn test_wrong_pr_number() {
         let example = r"https://github.com/MalteHerrmann/changelog-utils/pull/2";
-        let (fixed, problems) = check_link(example, 1);
+        let (fixed, problems) = check_link(&load_test_config(), example, 1);
         assert_eq!(fixed, example.replace("2", "1"));
         assert_eq!(
             problems,

@@ -1,5 +1,4 @@
 {
-  "legacy_version": "v2.0.0",
   "categories": [
     "p256-precompile",
     "distribution-precompile",
@@ -7,19 +6,25 @@
     "ante",
     "testnet",
     "stride-outpost",
+    "erc20",
     "evm",
     "vesting",
     "swagger",
     "go",
-    "app"
+    "app",
+    "all"
   ],
   "change_types": {
     "Bug Fixes": "bug\\s*fixes",
     "Improvements": "improvements",
-    "Features": "features"
+    "Features": "features",
+    "State Machine Breaking": "state\\s*machine\\s*breaking",
+    "API Breaking": "api\\s*breaking"
   },
   "expected_spellings": {
     "ABI": "abi",
     "EIP-712": "eip[-\\s]*712"
-  }
+  },
+  "legacy_version": "v2.0.0",
+  "target_repo": "https://github.com/evmos/evmos"
 }

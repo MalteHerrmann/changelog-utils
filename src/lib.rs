@@ -6,3 +6,4 @@ mod entry;
 mod errors;
 pub mod lint;
 mod release;
+mod version;

@@ -4,7 +4,9 @@ use serde_json;
 use std::collections::HashMap;
 
 /// Holds the configuration of the application
-#[derive(Debug, Serialize, Deserialize)]
+///
+/// TODO: check if clone is actually necessary?
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
     /// The list of categories for a given entry,
     /// that can be used.
@@ -22,14 +24,26 @@ pub struct Config {
     /// (mis-)spellings, that should be associated with the correct
     /// version.
     pub expected_spellings: HashMap<String, String>,
+    /// Optional Version to specify legacy entries, that
+    /// don't need to adhere to the given linter standards.
+    ///
+    /// TODO: use Version type directly instead
+    pub legacy_version: Option<String>,
+    /// The target repository, that represents the base url
+    /// enforced to occur in PR links.
+    pub target_repo: String,
 }
 
 impl Config {
-    // Loads a configuration from a given raw string.
-    pub fn load(contents: &str) -> Result<Config, ConfigError> {
-        let config: Config = serde_json::from_str(contents)?;
-        Ok(config)
+    pub fn has_legacy_version(&self) -> bool {
+        self.legacy_version.is_some()
     }
+}
+
+// Loads a configuration from a given raw string.
+pub fn load(contents: &str) -> Result<Config, ConfigError> {
+    let config: Config = serde_json::from_str(contents)?;
+    Ok(config)
 }
 
 #[cfg(test)]
@@ -38,7 +52,7 @@ mod config_tests {
 
     #[test]
     fn test_load_config() {
-        let config: Config = serde_json::from_str(include_str!("testdata/example_config.json"))
+        let config = load(include_str!("testdata/example_config.json"))
             .expect("failed to parse config");
         println!("{:?}", config);
 
@@ -65,5 +79,17 @@ mod config_tests {
             config.categories.contains(&"cli".to_string()),
             "expected cli to be in list of allowed categories"
         );
+
+        assert!(
+            config.legacy_version.is_some(),
+            "expected legacy version to be found"
+        )
+    }
+
+    #[test]
+    fn test_load_config_no_optionals() {
+        let config = load(include_str!("testdata/example_config_without_optionals.json"))
+            .expect("failed to load config without optionals");
+        assert!(config.legacy_version.is_none(), "expected legacy version not to be set")
     }
 }

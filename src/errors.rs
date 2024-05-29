@@ -1,5 +1,7 @@
 use serde_json;
 use std::io;
+use std::num::ParseIntError;
+use regex::Error;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -20,8 +22,12 @@ pub enum ChangelogError {
     InvalidChangeType(#[from] ChangeTypeError),
     #[error("failed to parse entry: {0}")]
     InvalidEntry(#[from] EntryError),
+    #[error("failed to build regex: {0}")]
+    InvalidRegex(#[from] Error),
     #[error("failed to parse release: {0}")]
     InvalidRelease(#[from] ReleaseError),
+    #[error("invalid version: {0}")]
+    InvalidVersion(#[from] VersionError),
     #[error("failed to parse changelog: {0}")]
     Parse(#[from] io::Error),
 }
@@ -60,6 +66,18 @@ pub enum ChangeTypeError {
 pub enum ReleaseError {
     #[error("invalid regex: {0}")]
     InvalidRegex(#[from] regex::Error),
+    #[error("invalid version: {0}")]
+    InvalidVersion(#[from] VersionError),
     #[error("no release pattern found in line")]
+    NoMatchFound,
+}
+
+#[derive(Error, Debug, PartialEq)]
+pub enum VersionError {
+    #[error("failed to parse version integer: {0}")]
+    NoInteger(#[from] ParseIntError),
+    #[error("invalid regex: {0}")]
+    InvalidRegex(#[from] regex::Error),
+    #[error("version does not follow semantic versioning")]
     NoMatchFound,
 }
