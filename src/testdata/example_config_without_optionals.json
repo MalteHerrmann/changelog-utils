@@ -1,0 +1,14 @@
+{
+  "categories": ["cli", "test"],
+  "change_types": {
+    "Bug Fixes": "bug\\s*fixes",
+    "Improvements": "improvements",
+    "Features": "features"
+  },
+  "expected_spellings": {
+    "API": "api",
+    "CLI": "cli",
+    "Web-SDK": "web[-\\s]*sdk"
+  },
+  "target_repo": "https://github.com/MalteHerrmann/changelog-utils"
+}
