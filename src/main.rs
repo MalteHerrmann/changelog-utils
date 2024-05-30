@@ -1,17 +1,13 @@
 /*
 Main file to run the changelog utils application.
 */
-use changelog_utils::{cli::ChangelogCLI, lint};
+use clu::{cli::ChangelogCLI, errors::CLIError, lint};
 use clap::Parser;
-use std::process;
 
-fn main() {
+fn main() -> Result<(), CLIError>{
     match ChangelogCLI::parse() {
         ChangelogCLI::Lint => {
-            if let Err(e) = lint::run() {
-                println!("errors while linting changelog: {}", e);
-                process::exit(1);
-            };
+            Ok(lint::run()?)
         }
-    };
+    }
 }

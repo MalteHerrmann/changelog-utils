@@ -5,6 +5,12 @@ use regex::Error;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+pub enum CLIError {
+    #[error("failed to run linter")]
+    LintError(#[from] LintError)
+}
+
+#[derive(Error, Debug)]
 pub enum LintError {
     #[error("failed to parse changelog: {0}")]
     InvalidChangelog(#[from] ChangelogError),
@@ -12,6 +18,8 @@ pub enum LintError {
     InvalidConfig(#[from] ConfigError),
     #[error("failed to find changelog in directory")]
     NoChangelogFound,
+    #[error("found problems in changelog")]
+    ProblemsInChangelog,
     #[error("failed to read file system: {0}")]
     Read(#[from] io::Error),
 }

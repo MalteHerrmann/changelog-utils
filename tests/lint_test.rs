@@ -1,4 +1,4 @@
-use changelog_utils::{config, lint};
+use clu::{config, lint};
 use std::path::Path;
 
 #[cfg(test)]

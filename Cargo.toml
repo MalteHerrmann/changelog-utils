@@ -1,5 +1,5 @@
 [package]
-name = "changelog_utils"
+name = "clu"
 version = "0.1.0"
 edition = "2021"
 

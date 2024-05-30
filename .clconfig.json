@@ -1,0 +1,12 @@
+{
+  "categories": ["lint", "test"],
+  "change_types": {
+    "Bug Fixes": "bug\\s*fixes",
+    "Improvements": "improvements",
+    "Features": "features"
+  },
+  "expected_spellings": {
+    "CLI": "cli"
+  },
+  "target_repo": "https://github.com/MalteHerrmann/changelog-utils"
+}
