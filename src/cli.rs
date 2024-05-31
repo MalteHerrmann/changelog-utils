@@ -1,7 +1,12 @@
-use clap::Parser;
+use clap::{Args, Parser};
 
 #[derive(Parser, Debug)]
 pub enum ChangelogCLI {
-    #[command(about = "Lint the changelog contents")]
-    Lint,
+    Lint(LintArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct LintArgs {
+    #[arg(short, long)]
+    pub fix: bool
 }

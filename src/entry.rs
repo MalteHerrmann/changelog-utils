@@ -4,18 +4,10 @@ use regex::{Error, Regex, RegexBuilder};
 /// Represents an individual entry in the changelog.
 #[derive(Clone, Debug)]
 pub struct Entry {
-    /// The original line from the parsed changelog.
-    line: String,
     /// The fixed line adhering to all standards.
-    fixed: String,
-    /// The category of the given entry, e.g. (tests).
-    category: String,
-    /// The description of the changes.
-    description: String,
+    pub fixed: String,
     /// The PR number for the given change.
     pub pr_number: u16,
-    /// The link to the PR
-    link: String,
     /// The list of problems with the given line.
     ///
     /// TODO: Should this rather be a Vec<a' str>?
@@ -81,11 +73,7 @@ pub fn parse(config: config::Config, line: &str) -> Result<Entry, EntryError> {
     );
 
     Ok(Entry {
-        line: line.to_string(),
         fixed, // TODO: why is it not possible to have this as &'a str too?
-        category: category.to_string(),
-        description: description.to_string(),
-        link: link.to_string(),
         pr_number,
         // TODO: implement describing problems in line
         problems,
@@ -288,15 +276,8 @@ mod entry_tests {
         let entry_res = parse(load_test_config(), example);
         assert!(entry_res.is_ok());
         let entry = entry_res.unwrap();
-        assert_eq!(entry.line, example);
         assert_eq!(entry.fixed, example); // NOTE: since line is okay there are no changes to it in the fixed version
-        assert_eq!(entry.category, "cli");
         assert_eq!(entry.pr_number, 1);
-        assert_eq!(
-            entry.link,
-            "https://github.com/MalteHerrmann/changelog-utils/pull/1"
-        );
-        assert_eq!(entry.description, "Add initial Python implementation.");
         assert!(entry.problems.is_empty());
     }
 
@@ -308,15 +289,8 @@ mod entry_tests {
         // TODO: should this actually return an error? Not really, because parsing has worked??
         assert!(entry_res.is_ok());
         let entry = entry_res.unwrap();
-        assert_eq!(entry.line, example);
         assert_eq!(entry.fixed, example.replace(r"\", ""));
-        assert_eq!(entry.category, "cli");
         assert_eq!(entry.pr_number, 1);
-        assert_eq!(
-            entry.link,
-            "https://github.com/MalteHerrmann/changelog-utils/pull/1"
-        );
-        assert_eq!(entry.description, "Test.");
         assert_eq!(entry.problems.len(), 1);
         assert_eq!(
             entry.problems[0],
@@ -331,15 +305,8 @@ mod entry_tests {
         let entry_res = parse(load_test_config(), example);
         assert!(entry_res.is_ok());
         let entry = entry_res.unwrap();
-        assert_eq!(entry.line, example);
         assert_eq!(entry.fixed, fixed);
-        assert_eq!(entry.category, "cli");
         assert_eq!(entry.pr_number, 2);
-        assert_eq!(
-            entry.link,
-            "https://github.com/MalteHerrmann/changelog-utils/pull/1"
-        );
-        assert_eq!(entry.description, "Test");
         assert_eq!(entry.problems.len(), 2);
         assert_eq!(
             entry.problems,
@@ -369,15 +336,8 @@ mod entry_tests {
         let entry_res = parse(load_test_config(), example);
         assert!(entry_res.is_ok());
         let entry = entry_res.unwrap();
-        assert_eq!(entry.line, example);
         assert_eq!(entry.fixed, expected);
-        assert_eq!(entry.category, "cli");
         assert_eq!(entry.pr_number, 1);
-        assert_eq!(
-            entry.link,
-            "https://github.com/MalteHerrmann/changelog-utils/pull/1"
-        );
-        assert_eq!(entry.description, "Run test.");
         assert_eq!(entry.problems.len(), 2);
         assert_eq!(
             entry.problems,

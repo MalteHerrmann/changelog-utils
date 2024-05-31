@@ -5,6 +5,7 @@ use crate::{change_type, config::Config, entry, errors::ChangelogError, release}
 /// Represents the changelog contents.
 #[derive(Debug)]
 pub struct Changelog {
+    pub fixed: Vec<String>,
     pub releases: HashMap<String, release::Release>,
     pub problems: Vec<String>
 }
@@ -13,6 +14,7 @@ pub struct Changelog {
 ///
 /// TODO: implement fix functionality
 pub fn parse_changelog(config: Config, contents: &str) -> Result<Changelog, ChangelogError> {
+    let mut fixed: Vec<String> = Vec::new();
     let mut releases: HashMap<String, release::Release> = HashMap::new();
     let mut problems: Vec<String> = Vec::new();
 
@@ -33,15 +35,18 @@ pub fn parse_changelog(config: Config, contents: &str) -> Result<Changelog, Chan
         // TODO: improve this?
         if enter_comment_regex.is_match(trimmed_line) {
             is_comment = true;
+            fixed.push(line.to_string());
             continue
         }
 
         if is_comment && exit_comment_regex.is_match(trimmed_line) {
             is_comment = false;
+            fixed.push(line.to_string());
             continue
         }
 
         if is_comment {
+            fixed.push(line.to_string());
             continue
         }
 
@@ -70,6 +75,8 @@ pub fn parse_changelog(config: Config, contents: &str) -> Result<Changelog, Chan
                 problems.push(rel_prob.to_string())
             }
 
+            fixed.push(current_release.fixed);
+
             continue
         }
 
@@ -91,18 +98,22 @@ pub fn parse_changelog(config: Config, contents: &str) -> Result<Changelog, Chan
                 problems.push(ct_prob.to_string())
             }
 
+            fixed.push(current_change_type.fixed);
+
             continue
         }
 
         if !trimmed_line.starts_with("-") || is_legacy {
+            fixed.push(line.to_string());
             continue
         }
 
         // TODO: remove clone?
         let current_entry = match entry::parse(config.clone(), line) {
             Ok(e) => e,
-            Err(e) => {
-                problems.push(e.to_string());
+            Err(ee) => {
+                problems.push(ee.to_string());
+                fixed.push(line.to_string());
                 continue
             }
         };
@@ -122,7 +133,9 @@ pub fn parse_changelog(config: Config, contents: &str) -> Result<Changelog, Chan
         for entry_prob in &current_entry.problems {
             problems.push(entry_prob.to_string());
         }
+
+        fixed.push(current_entry.fixed)
     }
 
-    Ok(Changelog { releases, problems })
+    Ok(Changelog { fixed, releases, problems })
 }
