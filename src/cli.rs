@@ -1,4 +1,4 @@
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser};
 
 #[derive(Parser, Debug)]
 pub enum ChangelogCLI {
