@@ -5,9 +5,10 @@ use clu::{cli::ChangelogCLI, errors::CLIError, lint};
 use clap::Parser;
 
 fn main() -> Result<(), CLIError>{
-    match ChangelogCLI::parse() {
-        ChangelogCLI::Lint => {
-            Ok(lint::run()?)
+    let cli = ChangelogCLI::parse();
+    match cli {
+        ChangelogCLI::Lint(args) => {
+            Ok(lint::run(args.fix)?)
         }
     }
 }

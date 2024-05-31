@@ -1,22 +1,18 @@
-use crate::{config, entry::Entry, errors::ChangeTypeError};
+use crate::{config, errors::ChangeTypeError};
 use regex::{Regex, RegexBuilder};
 
 #[derive(Clone, Debug)]
 pub struct ChangeType {
     pub name: String,
-    line: String,
-    fixed: String,
+    pub fixed: String,
     pub problems: Vec<String>,
-    entries: Vec<Entry>,
 }
 
 pub fn new_empty_change_type() -> ChangeType {
     ChangeType{
         name: "".to_string(),
-        line: "".to_string(),
         fixed: "".to_string(),
         problems: Vec::new(),
-        entries: Vec::new(),
     }
 }
 
@@ -65,10 +61,8 @@ pub fn parse(config: config::Config, line: &str) -> Result<ChangeType, ChangeTyp
 
     Ok(ChangeType {
         name: fixed_name,
-        line: line.to_string(),
         fixed,
         problems,
-        entries: Vec::new(),
     })
 }
 

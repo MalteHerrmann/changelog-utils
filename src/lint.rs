@@ -7,7 +7,7 @@ use std::{fs, path::Path};
 
 /// Runs the main logic for the linter, by searching for the changelog file in the
 /// current directory and then executing the linting on the found file.
-pub fn run() -> Result<(), LintError> {
+pub fn run(fix: bool) -> Result<(), LintError> {
     let changelog_file = match fs::read_dir(Path::new("./"))?.find(|e| {
         e.as_ref()
             .is_ok_and(|e| e.file_name().to_ascii_lowercase() == "changelog.md")
@@ -27,15 +27,24 @@ pub fn run() -> Result<(), LintError> {
     let changelog = lint(config, &changelog_file.path())?;
     match changelog.problems.is_empty() {
         true => {
-            println!("changelog has no problems");
+            println ! ("changelog has no problems");
             Ok(())
         },
         false => {
-            println!("found problems in changelog:");
-            for problem in changelog.problems {
-                println!("{}", problem);
+            match fix {
+                false => {
+                    println!("found problems in changelog:");
+                    for problem in changelog.problems {
+                        println!("{}", problem);
+                    }
+                    Err(LintError::ProblemsInChangelog)
+                },
+                true => {
+                    fs::write(changelog_file.path(), changelog.fixed.join("\n"))?;
+                    println!("automated fixes were applied to {}", changelog_file.path().to_string_lossy());
+                    Ok(())
+                }
             }
-            Err(LintError::ProblemsInChangelog)
         }
     }
 }

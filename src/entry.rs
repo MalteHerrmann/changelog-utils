@@ -7,7 +7,7 @@ pub struct Entry {
     /// The original line from the parsed changelog.
     line: String,
     /// The fixed line adhering to all standards.
-    fixed: String,
+    pub fixed: String,
     /// The category of the given entry, e.g. (tests).
     category: String,
     /// The description of the changes.
