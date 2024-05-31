@@ -1,13 +1,23 @@
+use regex::Error;
 use serde_json;
 use std::io;
 use std::num::ParseIntError;
-use regex::Error;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum CLIError {
-    #[error("failed to run linter")]
-    LintError(#[from] LintError)
+    #[error("failed to initialize the changelog settings: {0}")]
+    InitError(#[from] InitError),
+    #[error("failed to run linter: {0}")]
+    LintError(#[from] LintError),
+}
+
+#[derive(Error, Debug)]
+pub enum InitError {
+    #[error("failed to write: {0}")]
+    FailedToWrite(#[from] io::Error),
+    #[error("config already created")]
+    ConfigAlreadyFound,
 }
 
 #[derive(Error, Debug)]

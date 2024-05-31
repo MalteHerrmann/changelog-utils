@@ -4,6 +4,7 @@ pub mod cli;
 pub mod config;
 mod entry;
 pub mod errors;
+pub mod init;
 pub mod lint;
 mod release;
 mod version;
