@@ -1,7 +1,8 @@
-use crate::errors::ConfigError;
+use crate::errors::{ConfigAdjustError, ConfigError};
 use serde::{Deserialize, Serialize};
 use serde_json;
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt, fs};
+use url::Url;
 
 /// Holds the configuration of the application
 ///
@@ -40,10 +41,82 @@ impl Config {
     }
 }
 
-// Loads a configuration from a given raw string.
-pub fn load(contents: &str) -> Result<Config, ConfigError> {
+impl fmt::Display for Config {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", serde_json::to_string_pretty(&self).unwrap())
+    }
+}
+
+// Unpacks the configuration from a given raw string.
+pub fn unpack_config(contents: &str) -> Result<Config, ConfigError> {
     let config: Config = serde_json::from_str(contents)?;
     Ok(config)
+}
+
+// Tries to open the configuration file in the expected location
+// and load the configuration.
+pub fn load() -> Result<Config, ConfigError> {
+    unpack_config(fs::read_to_string(".clconfig.json")?.as_str())
+}
+
+// Adds a category to the list of allowed categories.
+pub fn add_category(config: &mut Config, value: String) -> Result<(), ConfigAdjustError> {
+    if config.categories.contains(&value) {
+        return Err(ConfigAdjustError::CategoryAlreadyFound);
+    }
+
+    config.categories.push(value);
+    Ok(())
+}
+
+// Removes a category from the list of allowed categories.
+pub fn remove_category(config: &mut Config, value: String) -> Result<(), ConfigAdjustError> {
+    let index = match config.categories.iter().position(|x| x == &value) {
+        Some(i) => i,
+        None => return Err(ConfigAdjustError::NotFound),
+    };
+    config.categories.remove(index);
+    Ok(())
+}
+
+// Adds a new key-value pair into the given hashmap in case the key is not
+// already present.
+pub fn add_into_hashmap(
+    hm: &mut HashMap<String, String>,
+    key: String,
+    value: String,
+) -> Result<(), ConfigAdjustError> {
+    match hm.insert(key, value) {
+        Some(_) => Err(ConfigAdjustError::KeyAlreadyFound),
+        None => Ok(()),
+    }
+}
+
+// Removes a key from the given hashmap in case it is found.
+pub fn remove_from_hashmap(
+    hm: &mut HashMap<String, String>,
+    key: String,
+) -> Result<(), ConfigAdjustError> {
+    match hm.remove(&key) {
+        Some(_) => Ok(()),
+        None => Err(ConfigAdjustError::NotFound),
+    }
+}
+
+// Checks if the given value is a valid GitHub URL and sets the target
+// repository field if it is the case.
+pub fn set_target_repo(config: &mut Config, value: String) -> Result<(), ConfigAdjustError> {
+    match Url::parse(value.as_str())?.domain() {
+        Some(d) => {
+            if d != "github.com" {
+                return Err(ConfigAdjustError::NoGitHubRepository);
+            }
+        }
+        None => return Err(ConfigAdjustError::NoGitHubRepository),
+    }
+
+    config.target_repo = value;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -52,7 +125,7 @@ mod config_tests {
 
     #[test]
     fn test_load_config() {
-        let config = load(include_str!("testdata/example_config.json"))
+        let config = unpack_config(include_str!("testdata/example_config.json"))
             .expect("failed to parse config");
         println!("{:?}", config);
 
@@ -88,8 +161,139 @@ mod config_tests {
 
     #[test]
     fn test_load_config_no_optionals() {
-        let config = load(include_str!("testdata/example_config_without_optionals.json"))
-            .expect("failed to load config without optionals");
-        assert!(config.legacy_version.is_none(), "expected legacy version not to be set")
+        let config = unpack_config(include_str!(
+            "testdata/example_config_without_optionals.json"
+        ))
+        .expect("failed to load config without optionals");
+        assert!(
+            config.legacy_version.is_none(),
+            "expected legacy version not to be set"
+        )
+    }
+}
+
+#[cfg(test)]
+mod config_adjustment_tests {
+    use super::*;
+
+    fn load_example_config() -> Config {
+        unpack_config(include_str!("testdata/example_config.json"))
+            .expect("failed to load example config")
+    }
+
+    #[test]
+    fn test_add_category_pass() {
+        let mut config = load_example_config();
+        assert_eq!(config.categories.len(), 2);
+        assert!(!config.categories.contains(&"new".to_string()));
+        assert!(add_category(&mut config, "new".into()).is_ok());
+        assert_eq!(config.categories.len(), 3);
+        assert!(config.categories.contains(&"new".to_string()));
+    }
+
+    #[test]
+    fn test_add_category_duplicate() {
+        let mut config = load_example_config();
+        assert_eq!(config.categories.len(), 2);
+        // TODO: get value from existing categories instead of hardcoding here
+        assert_eq!(
+            add_category(&mut config, "test".to_string()).unwrap_err(),
+            ConfigAdjustError::CategoryAlreadyFound
+        );
+        assert_eq!(config.categories.len(), 2);
+    }
+
+    #[test]
+    fn test_remove_category() {
+        let mut config = load_example_config();
+        assert_eq!(config.categories.len(), 2);
+        // TODO: get value from existing categories instead of hardcoding here
+        assert!(remove_category(&mut config, "test".to_string()).is_ok());
+        assert_eq!(config.categories.len(), 1);
+    }
+
+    #[test]
+    fn test_remove_category_not_found() {
+        let mut config = load_example_config();
+        assert_eq!(config.categories.len(), 2);
+        // TODO: get value from existing categories instead of hardcoding here
+        assert_eq!(
+            remove_category(&mut config, "not-found".to_string()).unwrap_err(),
+            ConfigAdjustError::NotFound
+        );
+        assert_eq!(config.categories.len(), 2);
+    }
+
+    #[test]
+    fn test_add_into_hashmap() {
+        let mut config = load_example_config();
+        assert_eq!(config.change_types.keys().len(), 3);
+        assert!(!config.change_types.contains_key("newkey"));
+        assert!(add_into_hashmap(
+            &mut config.change_types,
+            "newkey".to_string(),
+            "newvalue".to_string()
+        )
+        .is_ok());
+        assert_eq!(config.change_types.keys().len(), 4);
+        assert!(config.change_types.contains_key("newkey"));
+    }
+
+    #[test]
+    fn test_add_into_hashmap_already_present() {
+        let mut config = load_example_config();
+        assert_eq!(config.change_types.keys().len(), 3);
+        assert!(config.change_types.contains_key("Bug Fixes"));
+        assert_eq!(
+            add_into_hashmap(
+                &mut config.change_types,
+                "Bug Fixes".to_string(),
+                "newvalue".to_string()
+            )
+            .unwrap_err(),
+            ConfigAdjustError::KeyAlreadyFound
+        );
+        assert_eq!(config.change_types.keys().len(), 3);
+    }
+
+    #[test]
+    fn test_remove_from_hashmap() {
+        let mut config = load_example_config();
+        assert_eq!(config.change_types.keys().len(), 3);
+        assert!(config.change_types.contains_key("Bug Fixes"));
+        assert!(remove_from_hashmap(&mut config.change_types, "Bug Fixes".to_string()).is_ok());
+        assert_eq!(config.change_types.keys().len(), 2);
+        assert!(!config.change_types.contains_key("Bug Fixes"));
+    }
+
+    #[test]
+    fn test_remove_from_hashmap_not_found() {
+        let mut config = load_example_config();
+        assert_eq!(config.change_types.keys().len(), 3);
+        assert_eq!(
+            remove_from_hashmap(&mut config.change_types, "not found".to_string()).unwrap_err(),
+            ConfigAdjustError::NotFound
+        );
+        assert_eq!(config.change_types.keys().len(), 3);
+    }
+
+    #[test]
+    fn test_set_target_repo_fail() {
+        let mut config = load_example_config();
+        let new_target = "https://other-link.com/MalteHerrmann/other-repo";
+        assert_eq!(
+            set_target_repo(&mut config, new_target.to_string()).unwrap_err(),
+            ConfigAdjustError::NoGitHubRepository
+        );
+        assert_ne!(config.target_repo, new_target);
+    }
+
+    #[test]
+    fn test_set_target_repo_pass() {
+        let mut config = load_example_config();
+        let new_target = "https://github.com/MalteHerrmann/other-repo";
+        assert_ne!(config.target_repo, new_target);
+        assert!(set_target_repo(&mut config, new_target.to_string()).is_ok());
+        assert_eq!(config.target_repo, new_target);
     }
 }

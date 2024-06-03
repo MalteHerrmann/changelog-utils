@@ -259,7 +259,7 @@ fn check_whitespace(spaces: Vec<&str>) -> Vec<String> {
 
 #[cfg(test)]
 fn load_test_config() -> config::Config {
-    config::load(include_str!("testdata/example_config.json"))
+    config::unpack_config(include_str!("testdata/example_config.json"))
         .expect("failed to load example config")
 }
 
@@ -380,7 +380,7 @@ mod link_tests {
     use super::*;
 
     fn load_test_config() -> config::Config {
-        config::load(include_str!("testdata/example_config.json"))
+        config::unpack_config(include_str!("testdata/example_config.json"))
             .expect("failed to load example config")
     }
 

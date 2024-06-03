@@ -1,12 +1,16 @@
 {
-  "categories": ["lint", "test"],
+  "categories": [
+    "lint",
+    "test"
+  ],
   "change_types": {
+    "Features": "features",
     "Bug Fixes": "bug\\s*fixes",
-    "Improvements": "improvements",
-    "Features": "features"
+    "Improvements": "improvements"
   },
   "expected_spellings": {
     "CLI": "cli"
   },
+  "legacy_version": null,
   "target_repo": "https://github.com/MalteHerrmann/changelog-utils"
 }
