@@ -19,7 +19,6 @@ pub fn run(fix: bool) -> Result<(), LintError> {
         }
     };
 
-    // TODO: check for configuration file in user directory
     let config = config::unpack_config(
         fs::read_to_string(Path::new(".clconfig.json"))?.as_str()
     )?;
