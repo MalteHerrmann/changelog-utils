@@ -1,25 +1,72 @@
-use std::collections::HashMap;
-use regex::Regex;
 use crate::{change_type, config::Config, entry, errors::ChangelogError, release};
+use regex::Regex;
+use std::{fs, path::{Path, PathBuf}};
 
 /// Represents the changelog contents.
 #[derive(Debug)]
 pub struct Changelog {
+    pub path: PathBuf,
     pub fixed: Vec<String>,
-    pub releases: HashMap<String, release::Release>,
-    pub problems: Vec<String>
+    pub releases: Vec<release::Release>,
+    pub problems: Vec<String>,
+}
+
+impl Changelog {
+    pub fn write(&self, export_path: &Path) -> Result<(), ChangelogError> {
+        let mut exported_string = concat!(
+            "# Changelog\n",
+            "\n",
+        ).to_string();
+
+        for release in &self.releases {
+            exported_string.push_str(release.fixed.as_str());
+            exported_string.push_str("\n");
+
+            for change_type in &release.change_types {
+                exported_string.push_str(change_type.fixed.as_str());
+                exported_string.push_str("\n");
+
+                for entry in &change_type.entries {
+                    exported_string.push_str(entry.fixed.as_str());
+                }
+
+                exported_string.push_str("\n");
+            }
+
+            exported_string.push_str("\n");
+        }
+
+        Ok(fs::write(export_path, exported_string)?)
+    }
+}
+
+/// Loads the changelog from the default changelog path.
+pub fn load(config: Config) -> Result<Changelog, ChangelogError> {
+    let changelog_file = match fs::read_dir(Path::new("./"))?.find(|e| {
+        e.as_ref()
+            .is_ok_and(|e| e.file_name().to_ascii_lowercase() == "changelog.md")
+    }) {
+        Some(f) => f.unwrap(),
+        None => {
+            println!("could not find the changelog in the current directory");
+            return Err(ChangelogError::NoChangelogFound);
+        }
+    };
+
+    parse_changelog(config, changelog_file.path().as_path())
 }
 
 /// Parses the given changelog contents.
-///
-/// TODO: implement fix functionality
-pub fn parse_changelog(config: Config, contents: &str) -> Result<Changelog, ChangelogError> {
+pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, ChangelogError> {
+    let contents = fs::read_to_string(file_path)?;
+
     let mut fixed: Vec<String> = Vec::new();
-    let mut releases: HashMap<String, release::Release> = HashMap::new();
+    let mut releases: Vec<release::Release> = Vec::new();
     let mut problems: Vec<String> = Vec::new();
 
     let mut current_release = release::new_empty_release();
-    let mut current_change_type= change_type::new_empty_change_type();
+    let mut seen_releases: Vec<String> = Vec::new();
+    let mut current_change_type = change_type::new_empty_change_type();
     let mut seen_change_types: Vec<String> = Vec::new();
     let mut seen_prs: Vec<u16> = Vec::new();
 
@@ -33,21 +80,21 @@ pub fn parse_changelog(config: Config, contents: &str) -> Result<Changelog, Chan
         let trimmed_line = line.trim();
 
         // TODO: improve this?
-        if enter_comment_regex.is_match(trimmed_line) {
+        if enter_comment_regex.is_match(trimmed_line) && !exit_comment_regex.is_match(trimmed_line) {
             is_comment = true;
             fixed.push(line.to_string());
-            continue
+            continue;
         }
 
         if is_comment && exit_comment_regex.is_match(trimmed_line) {
             is_comment = false;
             fixed.push(line.to_string());
-            continue
+            continue;
         }
 
         if is_comment {
             fixed.push(line.to_string());
-            continue
+            continue;
         }
 
         if trimmed_line.starts_with("## ") {
@@ -58,16 +105,20 @@ pub fn parse_changelog(config: Config, contents: &str) -> Result<Changelog, Chan
             // Alternatively, the logic should be adjusted to only insert into the hashmap, once
             // the next release is found but that makes the logic more complicated,
             // so we'll keep this for now.
-            match releases.insert(current_release.version.clone(), current_release.clone()) {
-                Some(_) => problems.push(
-                    format!("duplicate release: {}", &current_release.version)
-                ),
-                _ => ()
+            releases.push(current_release.clone());
+            match seen_releases.contains(&current_release.version) {
+                true => problems.push(format!("duplicate release: {}", &current_release.version)),
+                false => seen_releases.push((&current_release.version).to_string())
             };
 
+            // reset the seen change types for the current release
             seen_change_types = Vec::new();
 
-            if current_release.is_legacy(&config).expect("failed to check legacy") && !is_legacy {
+            if current_release
+                .is_legacy(&config)
+                .expect("failed to check legacy")
+                && !is_legacy
+            {
                 is_legacy = true;
             }
 
@@ -77,7 +128,7 @@ pub fn parse_changelog(config: Config, contents: &str) -> Result<Changelog, Chan
 
             fixed.push(current_release.fixed);
 
-            continue
+            continue;
         }
 
         if trimmed_line.starts_with("### ") {
@@ -86,7 +137,8 @@ pub fn parse_changelog(config: Config, contents: &str) -> Result<Changelog, Chan
             // TODO: this handling should definitely be improved.
             // It's only a quick and dirty implementation for now.
             if seen_change_types.contains(&current_change_type.name) {
-                problems.push(format!("duplicate change type in release {}: {}",
+                problems.push(format!(
+                    "duplicate change type in release {}: {}",
                     current_release.version.clone(),
                     current_change_type.name.clone(),
                 ))
@@ -98,23 +150,24 @@ pub fn parse_changelog(config: Config, contents: &str) -> Result<Changelog, Chan
                 problems.push(ct_prob.to_string())
             }
 
-            fixed.push(current_change_type.fixed);
+            fixed.push(current_change_type.fixed.clone());
+            current_release.change_types.push(current_change_type.clone());
 
-            continue
+            continue;
         }
 
         if !trimmed_line.starts_with("-") || is_legacy {
             fixed.push(line.to_string());
-            continue
+            continue;
         }
 
         // TODO: remove clone?
         let current_entry = match entry::parse(config.clone(), line) {
             Ok(e) => e,
-            Err(ee) => {
-                problems.push(ee.to_string());
+            Err(err) => {
+                problems.push(err.to_string());
                 fixed.push(line.to_string());
-                continue
+                continue;
             }
         };
 
@@ -137,5 +190,10 @@ pub fn parse_changelog(config: Config, contents: &str) -> Result<Changelog, Chan
         fixed.push(current_entry.fixed)
     }
 
-    Ok(Changelog { fixed, releases, problems })
+    Ok(Changelog {
+        path: file_path.to_path_buf(),
+        fixed,
+        releases,
+        problems,
+    })
 }

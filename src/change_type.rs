@@ -1,11 +1,13 @@
 use crate::{config, errors::ChangeTypeError};
 use regex::{Regex, RegexBuilder};
+use crate::entry::Entry;
 
 #[derive(Clone, Debug)]
 pub struct ChangeType {
     pub name: String,
     pub fixed: String,
     pub problems: Vec<String>,
+    pub entries: Vec<Entry>,
 }
 
 pub fn new_empty_change_type() -> ChangeType {
@@ -13,6 +15,7 @@ pub fn new_empty_change_type() -> ChangeType {
         name: "".to_string(),
         fixed: "".to_string(),
         problems: Vec::new(),
+        entries: Vec::new(),
     }
 }
 
@@ -31,6 +34,7 @@ pub fn parse(config: config::Config, line: &str) -> Result<ChangeType, ChangeTyp
     let mut problems: Vec<String> = Vec::new();
 
     let mut found = false;
+    // TODO: this should probably be done with map or smth. more rusty
     for (change_type, pattern) in config.change_types.iter() {
         if RegexBuilder::new(pattern)
             .case_insensitive(true)
@@ -63,6 +67,7 @@ pub fn parse(config: config::Config, line: &str) -> Result<ChangeType, ChangeTyp
         name: fixed_name,
         fixed,
         problems,
+        entries: Vec::new(),
     })
 }
 

@@ -6,6 +6,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum CLIError {
+    #[error("failed to add changelog entry: {0}")]
+    AddError(#[from] AddError),
     #[error("failed to initialize the changelog settings: {0}")]
     InitError(#[from] InitError),
     #[error("failed to run linter: {0}")]
@@ -16,6 +18,16 @@ pub enum CLIError {
     ConfigAdjustment(#[from] ConfigAdjustError),
     #[error("failed to read/write: {0}")]
     IOError(#[from] io::Error),
+}
+
+#[derive(Error, Debug)]
+pub enum AddError {
+    #[error("failed to load config: {0}")]
+    Config(#[from] ConfigError),
+    #[error("failed to parse changelog: {0}")]
+    InvalidChangelog(#[from] ChangelogError),
+    #[error("failed to read/write: {0}")]
+    ReadWriteError(#[from] io::Error),
 }
 
 #[derive(Error, Debug)]
@@ -32,8 +44,6 @@ pub enum LintError {
     InvalidChangelog(#[from] ChangelogError),
     #[error("invalid configuration: {0}")]
     InvalidConfig(#[from] ConfigError),
-    #[error("failed to find changelog in directory")]
-    NoChangelogFound,
     #[error("found problems in changelog")]
     ProblemsInChangelog,
     #[error("failed to read file system: {0}")]
@@ -52,6 +62,8 @@ pub enum ChangelogError {
     InvalidRelease(#[from] ReleaseError),
     #[error("invalid version: {0}")]
     InvalidVersion(#[from] VersionError),
+    #[error("failed to find changelog in directory")]
+    NoChangelogFound,
     #[error("failed to parse changelog: {0}")]
     Parse(#[from] io::Error),
 }
