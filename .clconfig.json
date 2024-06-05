@@ -1,7 +1,8 @@
 {
   "categories": [
     "lint",
-    "test"
+    "test",
+    "config"
   ],
   "change_types": {
     "Features": "features",
