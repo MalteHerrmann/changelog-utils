@@ -226,7 +226,7 @@ fn check_link(config: &config::Config, link: &str, version: &str) -> (String, Ve
 
 #[cfg(test)]
 fn load_test_config() -> config::Config {
-    config::load(include_str!("testdata/example_config.json"))
+    config::unpack_config(include_str!("testdata/example_config.json"))
         .expect("failed to load example config")
 }
 

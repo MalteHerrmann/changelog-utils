@@ -3,7 +3,7 @@ use std::path::Path;
 
 #[cfg(test)]
 fn load_test_config() -> config::Config {
-    config::load(include_str!("testdata/evmos_config.json")).expect("failed to load example config")
+    config::unpack_config(include_str!("testdata/evmos_config.json")).expect("failed to load example config")
 }
 
 #[test]

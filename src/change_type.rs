@@ -71,7 +71,7 @@ mod change_type_tests {
     use super::*;
 
     fn load_test_config() -> config::Config {
-        config::load(include_str!("testdata/example_config.json")).expect("failed to load config")
+        config::unpack_config(include_str!("testdata/example_config.json")).expect("failed to load config")
     }
 
     #[test]
