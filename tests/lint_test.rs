@@ -13,6 +13,9 @@ fn it_should_pass_for_correct_changelogs() {
         .expect("failed to parse correct changelog");
     assert_eq!(changelog.releases.len(), 3);
     assert!(changelog.problems.is_empty());
+
+    let first_release = changelog.releases.get(0).unwrap();
+    assert_eq!(first_release.change_types.len(), 4);
 }
 
 #[test]
