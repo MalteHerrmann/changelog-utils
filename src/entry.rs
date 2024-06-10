@@ -1,4 +1,7 @@
-use crate::{config, errors::{EntryError, MatchError}};
+use crate::{
+    config,
+    errors::{EntryError, MatchError},
+};
 use regex::{Error, Regex, RegexBuilder};
 
 /// Represents an individual entry in the changelog.
@@ -14,12 +17,26 @@ pub struct Entry {
     pub problems: Vec<String>,
 }
 
+impl Entry {
+    pub fn new(config: config::Config, category: &str, description: &str, pr_number: u16) -> Entry {
+        let link = format!("{}/pull/{}", config.target_repo, pr_number);
+        let fixed = build_fixed(category, link.as_str(), description, pr_number);
+
+        Entry {
+            fixed,
+            pr_number,
+            problems: Vec::new(),
+        }
+    }
+}
+
 pub fn parse(config: config::Config, line: &str) -> Result<Entry, EntryError> {
     let entry_pattern = Regex::new(concat!(
         r"^(?P<ws0>\s*)-(?P<ws1>\s*)\((?P<category>[a-zA-Z0-9\-]+)\)",
         r"(?P<ws2>\s*)\[(?P<bs>\\)?#(?P<pr>\d+)]",
         r"(?P<ws3>\s*)\((?P<link>[^)]*)\)(?P<ws4>\s*)(?P<desc>.+)$"
-    )).expect("invalid regex pattern");
+    ))
+    .expect("invalid regex pattern");
 
     let matches = match entry_pattern.captures(line) {
         Some(c) => c,
@@ -67,9 +84,11 @@ pub fn parse(config: config::Config, line: &str) -> Result<Entry, EntryError> {
         problems.push(desc_problem)
     }
 
-    let fixed = format!(
-        "- ({}) [#{}]({}) {}",
-        fixed_category, pr_number, fixed_link, fixed_desc,
+    let fixed = build_fixed(
+        fixed_category.as_str(),
+        fixed_link.as_str(),
+        fixed_desc.as_str(),
+        pr_number,
     );
 
     Ok(Entry {
@@ -78,6 +97,11 @@ pub fn parse(config: config::Config, line: &str) -> Result<Entry, EntryError> {
         // TODO: implement describing problems in line
         problems,
     })
+}
+
+/// Returns the fixed entry string based on the given building parts.
+fn build_fixed(cat: &str, link: &str, desc: &str, pr: u16) -> String {
+    format!("- ({}) [#{}]({}) {}", cat, pr, link, desc,)
 }
 
 /// Check if the category is valid and return a fixed version that addresses

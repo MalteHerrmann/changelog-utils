@@ -1,3 +1,4 @@
+use inquire::InquireError;
 use regex::Error;
 use serde_json;
 use std::io;
@@ -24,8 +25,14 @@ pub enum CLIError {
 pub enum AddError {
     #[error("failed to load config: {0}")]
     Config(#[from] ConfigError),
+    #[error("Generic error")]
+    Generic,
+    #[error("first release is not unreleased section: {0}")]
+    FirstReleaseNotUnreleased(String),
     #[error("failed to parse changelog: {0}")]
     InvalidChangelog(#[from] ChangelogError),
+    #[error("failed to prompt user: {0}")]
+    InquireError(#[from] InquireError),
     #[error("failed to read/write: {0}")]
     ReadWriteError(#[from] io::Error),
 }
