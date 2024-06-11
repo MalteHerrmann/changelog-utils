@@ -18,7 +18,12 @@ pub struct Entry {
 }
 
 impl Entry {
-    pub fn new(config: config::Config, category: &str, description: &str, pr_number: u16) -> Entry {
+    pub fn new(
+        config: &config::Config,
+        category: &str,
+        description: &str,
+        pr_number: u16,
+    ) -> Entry {
         let link = format!("{}/pull/{}", config.target_repo, pr_number);
         let fixed = build_fixed(category, link.as_str(), description, pr_number);
 

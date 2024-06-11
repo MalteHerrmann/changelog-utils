@@ -3,7 +3,7 @@ use regex::RegexBuilder;
 
 /// Holds the information about a release section in the changelog.
 ///
-/// TODO: check if copy and clone are necessary?
+/// TODO: check if clone are necessary?
 #[derive(Clone, Debug)]
 pub struct Release {
     pub line: String,
@@ -38,6 +38,17 @@ impl Release {
         }
 
         Ok(false)
+    }
+}
+
+/// Returns a new Release instance for the unreleased section without any contained blocks.
+pub fn new_unreleased() -> Release {
+    Release {
+        line: "## Unreleased".to_string(),
+        fixed: "## Unreleased".to_string(),
+        version: "Unreleased".to_string(),
+        change_types: Vec::new(),
+        problems: Vec::new(),
     }
 }
 

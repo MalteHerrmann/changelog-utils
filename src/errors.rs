@@ -22,11 +22,17 @@ pub enum CLIError {
 }
 
 #[derive(Error, Debug)]
+pub enum InputError {
+    #[error("failed to parse integer: {0}")]
+    ParseError(#[from] ParseIntError),
+}
+
+#[derive(Error, Debug)]
 pub enum AddError {
     #[error("failed to load config: {0}")]
     Config(#[from] ConfigError),
-    #[error("Generic error")]
-    Generic,
+    #[error("failed to parse input: {0}")]
+    Input(#[from] InputError),
     #[error("first release is not unreleased section: {0}")]
     FirstReleaseNotUnreleased(String),
     #[error("failed to parse changelog: {0}")]

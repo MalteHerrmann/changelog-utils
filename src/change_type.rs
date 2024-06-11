@@ -1,6 +1,6 @@
+use crate::entry::Entry;
 use crate::{config, errors::ChangeTypeError};
 use regex::{Regex, RegexBuilder};
-use crate::entry::Entry;
 
 #[derive(Clone, Debug)]
 pub struct ChangeType {
@@ -10,8 +10,18 @@ pub struct ChangeType {
     pub entries: Vec<Entry>,
 }
 
+// Creates a new instance of a change type.
+pub fn new(name: String, entries: Option<Vec<Entry>>) -> ChangeType {
+    ChangeType {
+        name: name.clone(),
+        fixed: format!("### {name}"),
+        problems: Vec::new(),
+        entries: entries.unwrap_or(Vec::new()),
+    }
+}
+
 pub fn new_empty_change_type() -> ChangeType {
-    ChangeType{
+    ChangeType {
         name: "".to_string(),
         fixed: "".to_string(),
         problems: Vec::new(),
@@ -76,7 +86,8 @@ mod change_type_tests {
     use super::*;
 
     fn load_test_config() -> config::Config {
-        config::unpack_config(include_str!("testdata/example_config.json")).expect("failed to load config")
+        config::unpack_config(include_str!("testdata/example_config.json"))
+            .expect("failed to load config")
     }
 
     #[test]
