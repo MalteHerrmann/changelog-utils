@@ -8,6 +8,7 @@ This changelog was created using the `clu` binary
 
 ### Features
 
+- (crud) [#16](https://github.com/MalteHerrmann/changelog-utils/pull/16) Add `release` command.
 - (crud) [#12](https://github.com/MalteHerrmann/changelog-utils/pull/12) Implement adding new entries.
 - (config) [#7](https://github.com/MalteHerrmann/changelog-utils/pull/7) Add `init` and `config` subcommands.
 - (lint) [#5](https://github.com/MalteHerrmann/changelog-utils/pull/5) Implement fix flag for linter CLI.
