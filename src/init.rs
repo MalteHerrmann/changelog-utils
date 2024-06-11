@@ -43,7 +43,7 @@ fn create_default_config() -> String {
 }
 
 /// Creates an empty skeleton for a changelog.
-fn create_empty_changelog() -> String {
+pub fn create_empty_changelog() -> String {
     vec![
         "<!--",
         "This changelog was created using the `clu` binary",

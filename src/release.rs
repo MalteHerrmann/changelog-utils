@@ -3,7 +3,7 @@ use regex::RegexBuilder;
 
 /// Holds the information about a release section in the changelog.
 ///
-/// TODO: check if copy and clone are necessary?
+/// TODO: check if clone are necessary?
 #[derive(Clone, Debug)]
 pub struct Release {
     pub line: String,
@@ -26,14 +26,14 @@ impl Release {
     /// If no legacy version is defined, it returns false.
     pub fn is_legacy(&self, config: &config::Config) -> Result<bool, ReleaseError> {
         if self.is_unreleased() {
-           return Ok(false)
+            return Ok(false);
         }
 
         let parsed_version = version::parse(self.version.as_str())?;
         if config.has_legacy_version() {
             let legacy_version = version::parse(config.legacy_version.as_ref().unwrap())?;
             if !parsed_version.gt(&legacy_version) {
-                return Ok(true)
+                return Ok(true);
             }
         }
 
@@ -41,8 +41,19 @@ impl Release {
     }
 }
 
+/// Returns a new Release instance for the unreleased section without any contained blocks.
+pub fn new_unreleased() -> Release {
+    Release {
+        line: "## Unreleased".to_string(),
+        fixed: "## Unreleased".to_string(),
+        version: "Unreleased".to_string(),
+        change_types: Vec::new(),
+        problems: Vec::new(),
+    }
+}
+
 pub fn new_empty_release() -> Release {
-    Release{
+    Release {
         line: "".to_string(),
         fixed: "".to_string(),
         version: "".to_string(),
@@ -126,7 +137,7 @@ fn check_unreleased(line: &str) -> Option<Release> {
             version: "Unreleased".to_string(),
             change_types,
             problems,
-        })
+        });
     }
 
     None
@@ -245,7 +256,10 @@ mod link_tests {
     #[test]
     fn test_no_link() {
         let (fixed, problems) = check_link(&load_test_config(), "", "v0.1.0");
-        assert_eq!(fixed, "https://github.com/MalteHerrmann/changelog-utils/releases/tag/v0.1.0");
+        assert_eq!(
+            fixed,
+            "https://github.com/MalteHerrmann/changelog-utils/releases/tag/v0.1.0"
+        );
         assert_eq!(problems, vec!["Release link is missing for version v0.1.0"]);
     }
 

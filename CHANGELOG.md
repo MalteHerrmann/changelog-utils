@@ -4,6 +4,7 @@
 
 ### Features
 
+- (crud) [#12](https://github.com/MalteHerrmann/changelog-utils/pull/12) Implement adding new entries.
 - (config) [#7](https://github.com/MalteHerrmann/changelog-utils/pull/7) Add `init` and `config` subcommands.
 - (lint) [#5](https://github.com/MalteHerrmann/changelog-utils/pull/5) Implement fix flag for linter CLI.
 - (lint) [#4](https://github.com/MalteHerrmann/changelog-utils/pull/4) Rewrite linter implementation in Rust.

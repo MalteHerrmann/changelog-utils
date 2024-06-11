@@ -1,3 +1,4 @@
+use crate::entry::Entry;
 use crate::{config, errors::ChangeTypeError};
 use regex::{Regex, RegexBuilder};
 
@@ -6,13 +7,25 @@ pub struct ChangeType {
     pub name: String,
     pub fixed: String,
     pub problems: Vec<String>,
+    pub entries: Vec<Entry>,
+}
+
+// Creates a new instance of a change type.
+pub fn new(name: String, entries: Option<Vec<Entry>>) -> ChangeType {
+    ChangeType {
+        name: name.clone(),
+        fixed: format!("### {name}"),
+        problems: Vec::new(),
+        entries: entries.unwrap_or(Vec::new()),
+    }
 }
 
 pub fn new_empty_change_type() -> ChangeType {
-    ChangeType{
+    ChangeType {
         name: "".to_string(),
         fixed: "".to_string(),
         problems: Vec::new(),
+        entries: Vec::new(),
     }
 }
 
@@ -31,6 +44,7 @@ pub fn parse(config: config::Config, line: &str) -> Result<ChangeType, ChangeTyp
     let mut problems: Vec<String> = Vec::new();
 
     let mut found = false;
+    // TODO: this should probably be done with map or smth. more rusty
     for (change_type, pattern) in config.change_types.iter() {
         if RegexBuilder::new(pattern)
             .case_insensitive(true)
@@ -63,6 +77,7 @@ pub fn parse(config: config::Config, line: &str) -> Result<ChangeType, ChangeTyp
         name: fixed_name,
         fixed,
         problems,
+        entries: Vec::new(),
     })
 }
 
@@ -71,7 +86,8 @@ mod change_type_tests {
     use super::*;
 
     fn load_test_config() -> config::Config {
-        config::unpack_config(include_str!("testdata/example_config.json")).expect("failed to load config")
+        config::unpack_config(include_str!("testdata/example_config.json"))
+            .expect("failed to load config")
     }
 
     #[test]
