@@ -1,3 +1,7 @@
+<!--
+This changelog was created using the `clu` binary
+(https://github.com/MalteHerrmann/changelog-utils).
+-->
 # Changelog
 
 ## Unreleased
@@ -12,4 +16,5 @@
 
 ### Improvements
 
+- (crud) [#14](https://github.com/MalteHerrmann/changelog-utils/pull/14) Keep comments at head of file.
 - (lint) [#6](https://github.com/MalteHerrmann/changelog-utils/pull/6) Remove Python implementation.

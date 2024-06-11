@@ -10,6 +10,7 @@ use std::{
 pub struct Changelog {
     pub path: PathBuf,
     pub fixed: Vec<String>,
+    comments: Vec<String>,
     pub releases: Vec<release::Release>,
     pub problems: Vec<String>,
 }
@@ -17,7 +18,12 @@ pub struct Changelog {
 impl Changelog {
     /// Exports the changelog contents to the given filepath.
     pub fn write(&self, export_path: &Path) -> Result<(), ChangelogError> {
-        let mut exported_string = concat!("# Changelog\n").to_string();
+        let mut exported_string = "".to_string();
+
+        self.comments
+            .iter()
+            .for_each(|x| exported_string.push_str(format!("{x}\n").as_str()));
+        exported_string.push_str("# Changelog\n");
 
         for release in &self.releases {
             exported_string.push_str("\n");
@@ -63,6 +69,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
     let mut n_releases = 0;
     let mut n_change_types = 0;
 
+    let mut comments: Vec<String> = Vec::new();
     let mut fixed: Vec<String> = Vec::new();
     let mut releases: Vec<release::Release> = Vec::new();
     let mut problems: Vec<String> = Vec::new();
@@ -86,18 +93,21 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
         if enter_comment_regex.is_match(trimmed_line) && !exit_comment_regex.is_match(trimmed_line)
         {
             is_comment = true;
+            comments.push(line.to_string());
             fixed.push(line.to_string());
             continue;
         }
 
         if is_comment && exit_comment_regex.is_match(trimmed_line) {
             is_comment = false;
+            comments.push(line.to_string());
             fixed.push(line.to_string());
             continue;
         }
 
         if is_comment {
             fixed.push(line.to_string());
+            comments.push(line.to_string());
             continue;
         }
 
@@ -220,6 +230,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
         path: file_path.to_path_buf(),
         fixed,
         releases,
+        comments,
         problems,
     })
 }
@@ -249,6 +260,7 @@ mod changelog_tests {
             path: PathBuf::from_str("test").unwrap(),
             fixed: Vec::new(),
             releases: Vec::new(),
+            comments: Vec::new(),
             problems: Vec::new(),
         };
         let e = entry::parse(cfg.clone(), example).expect("failed to parse entry");
