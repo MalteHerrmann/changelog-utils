@@ -19,6 +19,8 @@ pub enum CLIError {
     ConfigAdjustment(#[from] ConfigAdjustError),
     #[error("failed to read/write: {0}")]
     IOError(#[from] io::Error),
+    #[error("failed to create new release in changelog: {0}")]
+    ReleaseCLIError(#[from] ReleaseCLIError),
 }
 
 #[derive(Error, Debug)]
@@ -135,6 +137,20 @@ pub enum ReleaseError {
     InvalidVersion(#[from] VersionError),
     #[error("no release pattern found in line")]
     NoMatchFound,
+}
+
+#[derive(Error, Debug)]
+pub enum ReleaseCLIError {
+    #[error("failed to load config: {0}")]
+    Config(#[from] ConfigError),
+    #[error("duplicate version: {0}")]
+    DuplicateVersion(String),
+    #[error("failed to parse changelog: {0}")]
+    InvalidChangelog(#[from] ChangelogError),
+    #[error("invalid version: {0}")]
+    InvalidVersion(#[from] VersionError),
+    #[error("no unreleased features")]
+    NoUnreleased,
 }
 
 #[derive(Error, Debug, PartialEq)]
