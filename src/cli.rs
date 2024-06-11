@@ -19,6 +19,8 @@ It creates an empty changelog skeleton if no existing changelog is found as well
         about = "Adjust the changelog configuration like allowed categories, change types or other"
     )]
     Config(ConfigSubcommands),
+    #[command(about = "Turns the Unreleased section into a new release with the given version")]
+    Release(ReleaseArgs),
 }
 
 #[derive(Args, Debug)]
@@ -54,6 +56,11 @@ pub struct StringValue {
 pub struct ConfigArgs {
     #[command(subcommand)]
     pub command: CategoryOperation,
+}
+
+#[derive(Args, Debug)]
+pub struct ReleaseArgs {
+    pub version: String,
 }
 
 #[derive(Debug, Subcommand)]

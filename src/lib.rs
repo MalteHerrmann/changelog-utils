@@ -9,4 +9,5 @@ pub mod errors;
 pub mod init;
 pub mod lint;
 mod release;
+pub mod release_cli;
 mod version;

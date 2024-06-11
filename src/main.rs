@@ -2,7 +2,7 @@
 Main file to run the changelog utils application.
 */
 use clap::Parser;
-use clu::{add, cli::ChangelogCLI, cli_config, errors::CLIError, init, lint};
+use clu::{add, cli::ChangelogCLI, cli_config, errors::CLIError, init, lint, release_cli};
 
 fn main() -> Result<(), CLIError> {
     match ChangelogCLI::parse() {
@@ -13,5 +13,6 @@ fn main() -> Result<(), CLIError> {
         ChangelogCLI::Config(config_subcommand) => {
             Ok(cli_config::adjust_config(config_subcommand)?)
         }
+        ChangelogCLI::Release(args) => Ok(release_cli::run(args.version)?),
     }
 }
