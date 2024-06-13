@@ -3,6 +3,14 @@
 This tool contains utilities to handle your changelogs for the better.
 Its linter can be used to enforce a standard for your changelogs and the CLI can be used to add, update or delete entries.
 
+## Installation
+
+To install the application from source, run
+
+```bash
+cargo install --git https://github.com/MalteHerrmann/changelog-utils
+```
+
 ## Usage
 
 The available subcommands can be listed when running
