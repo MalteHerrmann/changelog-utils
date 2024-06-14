@@ -8,6 +8,7 @@ This changelog was created using the `clu` binary
 
 ### Features
 
+- (docker) [#18](https://github.com/MalteHerrmann/changelog-utils/pull/18) Add Docker configuration.
 - (crud) [#16](https://github.com/MalteHerrmann/changelog-utils/pull/16) Add `release` command.
 - (crud) [#12](https://github.com/MalteHerrmann/changelog-utils/pull/12) Implement adding new entries.
 - (config) [#7](https://github.com/MalteHerrmann/changelog-utils/pull/7) Add `init` and `config` subcommands.

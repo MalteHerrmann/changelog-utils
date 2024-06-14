@@ -3,11 +3,12 @@
     "lint",
     "test",
     "config",
-    "crud"
+    "crud",
+    "docker"
   ],
   "change_types": {
-    "Features": "features",
     "Improvements": "improvements",
+    "Features": "features",
     "Bug Fixes": "bug\\s*fixes"
   },
   "expected_spellings": {

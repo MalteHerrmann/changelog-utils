@@ -11,6 +11,15 @@ To install the application from source, run
 cargo install --git https://github.com/MalteHerrmann/changelog-utils
 ```
 
+The application is also available to be used with a Docker image.
+It can be built locally by executing `make docker-build`
+or downloaded from the [GitHub container registry](https://github.com/MalteHerrmann/changelog-utils/pkgs/container/changelog-utils)
+by running
+
+```bash
+docker pull ghcr.io/malteherrmann/changelog-utils:[TAG]}
+```
+
 ## Usage
 
 The available subcommands can be listed when running
@@ -20,11 +29,13 @@ The available subcommands can be listed when running
 Usage: clu <COMMAND>
 
 Commands:
-  fix     Applies all possible auto-fixes to the changelog
-  lint    Checks if the changelog contents adhere to the defined rules
-  init    Initializes the changelog configuration in the current directory
-  config  Adjust the changelog configuration like allowed categories, change types or other
-  help    Print this message or the help of the given subcommand(s)
+  add      Adds a new entry to the unreleased section of the changelog
+  fix      Applies all possible auto-fixes to the changelog
+  lint     Checks if the changelog contents adhere to the defined rules
+  init     Initializes the changelog configuration in the current directory
+  config   Adjust the changelog configuration like allowed categories, change types or other
+  release  Turns the Unreleased section into a new release with the given version
+  help     Print this message or the help of the given subcommand(s)
 
 Options:
   -h, --help  Print help
