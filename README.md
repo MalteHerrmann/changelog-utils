@@ -17,7 +17,7 @@ or downloaded from the [GitHub container registry](https://github.com/MalteHerrm
 by running
 
 ```bash
-docker pull ghcr.io/malteherrmann/changelog-utils:[TAG]}
+docker pull ghcr.io/malteherrmann/changelog-utils:[TAG]
 ```
 
 ## Usage
