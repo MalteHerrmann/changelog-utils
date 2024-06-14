@@ -6,8 +6,8 @@
     "crud"
   ],
   "change_types": {
-    "Features": "features",
     "Improvements": "improvements",
+    "Features": "features",
     "Bug Fixes": "bug\\s*fixes"
   },
   "expected_spellings": {
