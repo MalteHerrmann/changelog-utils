@@ -18,3 +18,6 @@ docker-run:
 docker-build:
 	docker build -t MalteHerrmann/changelog-utils .
 
+# Lint codebase
+lint:
+	cargo clippy
