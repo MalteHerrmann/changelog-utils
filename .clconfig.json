@@ -3,7 +3,8 @@
     "lint",
     "test",
     "config",
-    "crud"
+    "crud",
+    "docker"
   ],
   "change_types": {
     "Improvements": "improvements",
