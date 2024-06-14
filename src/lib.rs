@@ -6,6 +6,7 @@ pub mod cli_config;
 pub mod config;
 mod entry;
 pub mod errors;
+pub mod github;
 pub mod init;
 pub mod lint;
 mod release;

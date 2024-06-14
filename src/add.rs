@@ -1,10 +1,10 @@
 use crate::errors::AddError;
-use crate::{change_type, changelog, config, entry, release};
+use crate::{change_type, changelog, config, entry, github::check_for_open_pr, release};
 use inquire::{Select, Text};
 use std::borrow::BorrowMut;
 
 // Runs the logic to add an entry to the unreleased section of the changelog.
-pub fn run() -> Result<(), AddError> {
+pub async fn run() -> Result<(), AddError> {
     let config = config::load()?;
 
     let mut selectable_change_types: Vec<String> =
@@ -14,9 +14,10 @@ pub fn run() -> Result<(), AddError> {
     let selected_change_type =
         Select::new("Select change type to add into", selectable_change_types).prompt()?;
 
-    // TODO: check for existing PR with GitHub crate (-> octocrab)
-    // TODO: also validate if this is a duplicate in the changelog
     let pr_number = match Text::new("Please provide the PR number")
+        .with_initial_value(
+            check_for_open_pr(&config).await.unwrap_or("".to_string()).as_str()
+        )
         .prompt()?
         .parse::<u16>()
     {

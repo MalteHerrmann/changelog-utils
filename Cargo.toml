@@ -16,3 +16,8 @@ predicates = "3.1.0"
 url = "2.5.0"
 inquire = "0.7.5"
 chrono = "0.4.38"
+tokio = { version = "1.38.0", features = ["full"] }
+octocrab = "0.38.0"
+
+[features]
+remote = []

@@ -3,6 +3,7 @@ use regex::Error;
 use serde_json;
 use std::io;
 use std::num::ParseIntError;
+use std::string::FromUtf8Error;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -87,6 +88,18 @@ pub enum ChangelogError {
 pub enum EntryError {
     #[error("invalid entry: {0}")]
     InvalidEntry(String),
+}
+
+#[derive(Error, Debug)]
+pub enum GitHubError {
+    #[error("failed to decode output: {0}")]
+    OutputDecoding(#[from] FromUtf8Error),
+    #[error("failed to execute command: {0}")]
+    StdCommand(#[from] io::Error),
+    #[error("failed to call GitHub API: {0}")]
+    GitHub(#[from] octocrab::Error),
+    #[error("failed to get current branch")]
+    CurrentBranch,
 }
 
 #[derive(Error, Debug, PartialEq)]
