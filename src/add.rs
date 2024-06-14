@@ -12,9 +12,9 @@ pub async fn run() -> Result<(), AddError> {
     selectable_change_types.sort();
 
     let selected_change_type =
-        Select::new("Select change type to add into", selectable_change_types).prompt()?;
+        Select::new("Select change type to add into:", selectable_change_types).prompt()?;
 
-    let pr_number = match Text::new("Please provide the PR number")
+    let pr_number = match Text::new("Please provide the PR number:")
         .with_initial_value(
             check_for_open_pr(&config).await.unwrap_or("".to_string()).as_str()
         )
@@ -26,11 +26,11 @@ pub async fn run() -> Result<(), AddError> {
     };
 
     let cat = Select::new(
-        "Select the category of the made changes",
+        "Select the category of the made changes:",
         config.categories.clone(),
     )
     .prompt()?;
-    let desc = Text::new("Please provide a short description of the made changes\n").prompt()?;
+    let desc = Text::new("Please provide a short description of the made changes:\n").prompt()?;
 
     let mut changelog = changelog::load(config.clone())?;
     add_entry(
