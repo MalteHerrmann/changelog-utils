@@ -7,7 +7,7 @@ use crate::config::Config;
 /// Returns an option for an open PR from the current local branch in the configured target
 /// repository if it exists.
 pub async fn check_for_open_pr(config: &Config) -> Result<String, GitHubError> {
-    let captures = match Regex::new(r"github.com/(?P<owner>\w+)/(?P<repo>\w+)\.*")
+    let captures = match Regex::new(r"github.com/(?P<owner>[\w-]+)/(?P<repo>[\w-]+)\.*")
         .expect("failed to build regular expression")
         .captures(config.target_repo.as_str()) {
         Some(r) => r,
@@ -18,15 +18,12 @@ pub async fn check_for_open_pr(config: &Config) -> Result<String, GitHubError> {
     let branch = get_current_local_branch()?;
 
     let octocrab = octocrab::instance();
-    match octocrab.pulls(owner, repo)
-        .list()
-        .send()
-        .await?
-        .items
+    let pulls = octocrab.pulls(owner, repo).list().send().await?.items;
+    match pulls
         .iter()
         .find(|pr| pr.head.label.as_ref().is_some_and(
             |l| {
-                let branch_parts: Vec<&str> = l.split("/").collect();
+                let branch_parts: Vec<&str> = l.split(":").collect();
                 let got_branch = branch_parts.get(1..)
                     .expect("unexpected branch identifier format")
                     .join("/");
