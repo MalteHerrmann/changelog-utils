@@ -49,6 +49,8 @@ fn get_current_local_branch() -> Result<String, GitHubError> {
     }
 }
 
+// Ignore these tests when running on CI because there won't be a local branch
+#[cfg(not(feature = "remote"))]
 #[cfg(test)]
 mod tests {
     use super::*;
