@@ -1,8 +1,13 @@
+# This YAML file was taken from the GitHub documentation:
+# https://docs.github.com/en/actions/publishing-packages/publishing-docker-images#prerequisites
+#
 name: Create and publish a Docker image
 
 # Configures this workflow to run every time a change is pushed to the branch called `release`.
 on:
-  pull_request:
+  push:
+       tags:
+        - '*' # Push events to every tag
     
 # Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
 env:
