@@ -17,5 +17,6 @@ This changelog was created using the `clu` binary
 
 ### Improvements
 
+- (crud) [#17](https://github.com/MalteHerrmann/changelog-utils/pull/17) Get PR number from GitHub to prefill input.
 - (crud) [#14](https://github.com/MalteHerrmann/changelog-utils/pull/14) Keep comments at head of file.
 - (lint) [#6](https://github.com/MalteHerrmann/changelog-utils/pull/6) Remove Python implementation.
