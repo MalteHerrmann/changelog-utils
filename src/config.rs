@@ -1,7 +1,7 @@
 use crate::errors::{ConfigAdjustError, ConfigError};
 use serde::{Deserialize, Serialize};
 use serde_json;
-use std::{collections::HashMap, fmt, fs};
+use std::{collections::HashMap, fmt, fs, path::Path};
 use url::Url;
 
 /// Holds the configuration of the application
@@ -36,6 +36,10 @@ pub struct Config {
 }
 
 impl Config {
+    pub fn export(&self, path: &Path) -> Result<(), ConfigError> {
+        Ok(fs::write(path, format!("{}", self))?)
+    }
+
     pub fn has_legacy_version(&self) -> bool {
         self.legacy_version.is_some()
     }
@@ -66,6 +70,8 @@ pub fn add_category(config: &mut Config, value: String) -> Result<(), ConfigAdju
     }
 
     config.categories.push(value);
+    config.categories.sort_unstable();
+
     Ok(())
 }
 
@@ -76,6 +82,7 @@ pub fn remove_category(config: &mut Config, value: String) -> Result<(), ConfigA
         None => return Err(ConfigAdjustError::NotFound),
     };
     config.categories.remove(index);
+
     Ok(())
 }
 

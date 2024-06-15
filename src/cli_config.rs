@@ -6,7 +6,7 @@ use crate::{
     },
     config, errors,
 };
-use std::fs;
+use std::path::Path;
 
 // Handles the CLI subcommands to adjust the configuration file.
 pub fn adjust_config(config_subcommand: ConfigSubcommands) -> Result<(), errors::CLIError> {
@@ -43,5 +43,5 @@ pub fn adjust_config(config_subcommand: ConfigSubcommands) -> Result<(), errors:
         TargetRepo(args) => config::set_target_repo(&mut configuration, args.value)?,
     }
 
-    Ok(fs::write(".clconfig.json", format!("{}", configuration))?)
+    Ok(configuration.export(Path::new(".clconfig.json"))?)
 }
