@@ -1,19 +1,80 @@
 use crate::config::Config;
 use crate::errors::GitHubError;
 use octocrab;
-use regex::Regex;
+use octocrab::models::pulls::PullRequest;
+use regex::{Regex, RegexBuilder};
 use std::process::Command;
+
+/// Holds the relevant information for a given PR.
+pub struct PRInfo {
+    pub change_type: String,
+    pub category: String,
+    pub description: String,
+    pub number: String,
+}
+
+impl PRInfo {
+    /// Returns an empty PRInfo struct with default values for all fields.
+    fn new_empty() -> PRInfo {
+        PRInfo {
+            change_type: String::new(),
+            category: String::new(),
+            description: String::new(),
+            number: String::new(),
+        }
+    }
+}
+
+/// Extracts the pull request information from the given
+/// instance.
+fn extract_pr_info(pr: &PullRequest) -> Result<PRInfo, GitHubError> {
+    let mut change_type = String::new();
+    let mut category = String::new();
+    let mut description = String::new();
+
+    let pr_title = pr.title.clone().unwrap_or("".to_string());
+
+    if let Some(i) = RegexBuilder::new(r"^(?P<ct>\w+)?(?P<cat>\(\w+\))?:?(?P<desc>.+)$")
+        .build()?
+        .captures(pr_title.as_str())
+    {
+        if let Some(ct) = i.name("ct") {
+            match ct.as_str() {
+                "fix" => change_type.push_str("Bug Fixes"),
+                "imp" => change_type.push_str("Improvements"),
+                "feat" => change_type.push_str("Features"),
+                _ => (),
+            }
+        };
+
+        if let Some(cat) = i.name("cat") {
+            category.push_str(cat.as_str())
+        };
+
+        if let Some(desc) = i.name("desc") {
+            description.push_str(desc.as_str())
+        };
+    };
+
+    Ok(PRInfo {
+        number: format!("{}", pr.number),
+        change_type,
+        category,
+        description,
+    })
+}
 
 /// Returns an option for an open PR from the current local branch in the configured target
 /// repository if it exists.
-pub async fn check_for_open_pr(config: &Config) -> Result<String, GitHubError> {
+pub async fn get_open_pr(config: &Config) -> Result<PRInfo, GitHubError> {
     let captures = match Regex::new(r"github.com/(?P<owner>[\w-]+)/(?P<repo>[\w-]+)\.*")
         .expect("failed to build regular expression")
         .captures(config.target_repo.as_str())
     {
         Some(r) => r,
-        None => return Ok("".to_string()),
+        None => return Err(GitHubError::NoGitHubRepo),
     };
+
     let owner = captures.name("owner").unwrap().as_str();
     let repo = captures.name("repo").unwrap().as_str();
     let branch = get_current_local_branch()?;
@@ -30,7 +91,7 @@ pub async fn check_for_open_pr(config: &Config) -> Result<String, GitHubError> {
             got_branch.eq(branch.as_str())
         })
     }) {
-        Some(pr) => Ok(format!("{}", pr.number)),
+        Some(pr) => Ok(extract_pr_info(pr)?),
         None => Err(GitHubError::NoOpenPR),
     }
 }
