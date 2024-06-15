@@ -3,6 +3,8 @@
 This tool contains utilities to handle your changelogs for the better.
 Its linter can be used to enforce a standard for your changelogs and the CLI can be used to add, update or delete entries.
 
+It was designed to be used as a constant companion for all of your projects. When creating a new project, `clu init` shall be the second thing to execute - right after `git init`.
+
 ## Installation
 
 To install the application from source, run
