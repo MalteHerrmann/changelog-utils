@@ -1,5 +1,5 @@
-use regex::Regex;
 use crate::errors::VersionError;
+use regex::Regex;
 
 #[derive(Clone, Debug)]
 pub struct Version {
@@ -9,36 +9,27 @@ pub struct Version {
     rc_version: Option<u8>,
 }
 
-impl Version{
+impl Version {
     /// Checks if the version is higher than the other version.
     pub fn gt(&self, other: &Version) -> bool {
         if self.major > other.major {
-            return true
+            return true;
         }
 
         if self.minor > other.major {
-            return true
+            return true;
         }
 
         if self.patch > other.major {
-            return true
+            return true;
         }
 
         match self.rc_version {
-            Some(v) => return match other.rc_version {
-                Some(v_other) => {
-                    if v > v_other {
-                        true
-                    } else {
-                        false
-                    }
-                },
-                None => false
+            Some(v) => match other.rc_version {
+                Some(v_other) => v > v_other,
+                None => false,
             },
-            None => match other.rc_version {
-                Some(_) => true,
-                None => false
-            }
+            None => other.rc_version.is_some(),
         }
     }
 }
@@ -51,26 +42,26 @@ pub fn parse(version: &str) -> Result<Version, VersionError> {
         r"(?P<minor>\d+)\.",
         r"(?P<patch>\d+)",
         r"(-rc(?P<rc>\d+))*$"
-    ))?.captures(version) {
+    ))?
+    .captures(version)
+    {
         Some(c) => c,
-        None => return Err(VersionError::NoMatchFound)
+        None => return Err(VersionError::NoMatchFound),
     };
 
     let major = captures.name("major").unwrap().as_str().parse::<u8>()?;
     let minor = captures.name("minor").unwrap().as_str().parse::<u8>()?;
     let patch = captures.name("patch").unwrap().as_str().parse::<u8>()?;
     let rc_version: Option<u8> = match captures.name("rc") {
-        Some(c) => {
-            Some(c.as_str().parse::<u8>()?)
-        },
-        None => None
+        Some(c) => Some(c.as_str().parse::<u8>()?),
+        None => None,
     };
 
     Ok(Version {
         major,
         minor,
         patch,
-        rc_version
+        rc_version,
     })
 }
 
@@ -80,8 +71,7 @@ mod version_tests {
 
     #[test]
     fn test_is_valid_version_pass() {
-        let version = parse("v10.0.2")
-            .expect("failed to parse version");
+        let version = parse("v10.0.2").expect("failed to parse version");
         assert_eq!(version.major, 10);
         assert_eq!(version.minor, 0);
         assert_eq!(version.patch, 2);
@@ -90,8 +80,8 @@ mod version_tests {
 
     #[test]
     fn test_pass_release_candidate() {
-        let version = parse("v11.0.2-rc1")
-            .expect("failed to parse valid release candidate version");
+        let version =
+            parse("v11.0.2-rc1").expect("failed to parse valid release candidate version");
         assert_eq!(version.major, 11);
         assert_eq!(version.minor, 0);
         assert_eq!(version.patch, 2);

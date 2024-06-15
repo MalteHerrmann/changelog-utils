@@ -68,9 +68,8 @@ pub fn parse(config: &config::Config, line: &str) -> Result<Release, ReleaseErro
     let mut problems: Vec<String> = Vec::new();
 
     // Check unreleased pattern
-    match check_unreleased(line) {
-        Some(r) => return Ok(r),
-        None => (),
+    if let Some(r) = check_unreleased(line) {
+        return Ok(r);
     }
 
     let captures = match RegexBuilder::new(concat!(
@@ -98,9 +97,7 @@ pub fn parse(config: &config::Config, line: &str) -> Result<Release, ReleaseErro
         None => "".to_string(),
     };
     let (fixed_link, link_problems) = check_link(config, link.as_str(), version.as_str());
-    for link_prob in link_problems {
-        problems.push(link_prob)
-    }
+    link_problems.into_iter().for_each(|p| problems.push(p));
 
     let date = captures.name("date").unwrap().as_str();
     let fixed = format!("## [{version}]({fixed_link}) - {date}");

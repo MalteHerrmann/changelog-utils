@@ -55,7 +55,7 @@ pub fn parse(config: config::Config, line: &str) -> Result<Entry, EntryError> {
     let description = matches.name("desc").unwrap().as_str();
     let link = matches.name("link").unwrap().as_str();
     let pr_number = matches.name("pr").unwrap().as_str().parse::<u16>().unwrap();
-    let spaces = vec![
+    let spaces = [
         matches.name("ws0").unwrap().as_str(),
         matches.name("ws1").unwrap().as_str(),
         matches.name("ws2").unwrap().as_str(),
@@ -64,30 +64,23 @@ pub fn parse(config: config::Config, line: &str) -> Result<Entry, EntryError> {
     ];
 
     let mut problems: Vec<String> = Vec::new();
-    for whitespace_problem in check_whitespace(spaces) {
-        problems.push(whitespace_problem)
-    }
+
+    check_whitespace(spaces)
+        .into_iter()
+        .for_each(|p| problems.push(p));
 
     let (fixed_category, category_problems) = check_category(&config, category);
-    for category_problem in category_problems {
-        problems.push(category_problem)
-    }
+    category_problems.into_iter().for_each(|p| problems.push(p));
 
-    match matches.name("bs") {
-        Some(_) => problems
-            .push("There should be no backslash in front of the # in the PR link".to_string()),
-        _ => (),
+    if matches.name("bs").is_some() {
+        problems.push("There should be no backslash in front of the # in the PR link".to_string());
     }
 
     let (fixed_link, link_problems) = check_link(&config, link, pr_number);
-    for link_problem in link_problems {
-        problems.push(link_problem)
-    }
+    link_problems.into_iter().for_each(|p| problems.push(p));
 
     let (fixed_desc, desc_problems) = check_description(&config, description);
-    for desc_problem in desc_problems {
-        problems.push(desc_problem)
-    }
+    desc_problems.into_iter().for_each(|p| problems.push(p));
 
     let fixed = build_fixed(
         fixed_category.as_str(),
@@ -136,7 +129,7 @@ fn check_link(config: &config::Config, link: &str, pr_number: u16) -> (String, V
         problems.push(format!("PR link points to wrong repository: {}", link))
     }
 
-    let split_link: Vec<&str> = link.split("/").collect();
+    let split_link: Vec<&str> = link.split('/').collect();
     let contained_pr_number = split_link
         .last()
         .expect("this should never be empty")
@@ -170,15 +163,13 @@ fn check_description(config: &config::Config, desc: &str) -> (String, Vec<String
         .chars()
         .last()
         .expect("no characters found in description");
-    if last_letter.to_string() != ".".to_string() {
+    if last_letter.to_string() != '.'.to_string() {
         fixed = desc.to_string() + ".";
         problems.push(format!("PR description should end with a dot: '{}'", desc))
     }
 
     let (fixed, spelling_problems) = check_spelling(config, fixed.as_str());
-    for prob in spelling_problems {
-        problems.push(prob)
-    }
+    spelling_problems.into_iter().for_each(|p| problems.push(p));
 
     (fixed, problems)
 }
@@ -221,13 +212,13 @@ fn compile_regex(pattern: &str) -> Result<Regex, Error> {
 /// Matching patterns inside of code blocks, links or within another word are ignored.
 fn get_spelling_match(pattern: &str, text: &str) -> Result<String, MatchError> {
     // Check if pattern is inside a code block
-    match RegexBuilder::new(format!(r"`[^`]*({pattern})[^`]*`").as_str())
+    if RegexBuilder::new(format!(r"`[^`]*({pattern})[^`]*`").as_str())
         .case_insensitive(true)
         .build()?
         .find(text)
+        .is_some()
     {
-        Some(_) => return Err(MatchError::MatchInCodeblock),
-        None => (),
+        return Err(MatchError::MatchInCodeblock);
     }
 
     // Check isolated words (i.e. pattern is not included in another word)
@@ -243,23 +234,16 @@ fn get_spelling_match(pattern: &str, text: &str) -> Result<String, MatchError> {
     // TODO: merge with match above to avoid double matching?
     match found.get(2) {
         Some(m) => Ok(m.as_str().to_string()),
-        None => return Err(MatchError::NoMatchFound),
+        None => Err(MatchError::NoMatchFound),
     }
 }
 
 /// Checks the used whitespace in the entry.
-fn check_whitespace(spaces: Vec<&str>) -> Vec<String> {
-    if spaces.len() != 5 {
-        panic!(
-            "unexpected amount of whitespace values passed; expected 5; got {}",
-            spaces.len()
-        )
-    }
-
+fn check_whitespace(spaces: [&str; 5]) -> Vec<String> {
     let mut problems: Vec<String> = Vec::new();
     let separator = " ";
 
-    let errors = vec![
+    let errors = [
         "There should be no leading whitespace before the dash",
         "There should be exactly one space between the leading dash and the category",
         "There should be exactly one space between the category and the PR link",
@@ -370,7 +354,7 @@ mod entry_tests {
         assert_eq!(entry.problems.len(), 2);
         assert_eq!(
             entry.problems,
-            vec![
+            [
                 "There should be exactly one space between the category and the PR link",
                 "There should be no whitespace inside of the markdown link",
             ]
@@ -393,14 +377,14 @@ mod category_tests {
     fn test_fail_invalid_category() {
         let (fixed, problems) = check_category(&load_test_config(), "invalid");
         assert_eq!(fixed, "invalid");
-        assert_eq!(problems, vec!["invalid change category: (invalid)"]);
+        assert_eq!(problems, ["invalid change category: (invalid)"]);
     }
 
     #[test]
     fn test_fail_non_lower_category() {
         let (fixed, problems) = check_category(&load_test_config(), "cLi");
         assert_eq!(fixed, "cli");
-        assert_eq!(problems, vec!["category should be lowercase: (cLi)"]);
+        assert_eq!(problems, ["category should be lowercase: (cLi)"]);
     }
 }
 
@@ -513,10 +497,7 @@ mod spelling_tests {
         let example = "Fix web--SdK.";
         let (fixed, problems) = check_spelling(&load_test_config(), example);
         assert_eq!(fixed, "Fix Web-SDK.");
-        assert_eq!(
-            problems,
-            vec!["'Web-SDK' should be used instead of 'web--SdK'"]
-        )
+        assert_eq!(problems, ["'Web-SDK' should be used instead of 'web--SdK'"])
     }
 
     #[test]
@@ -588,52 +569,52 @@ mod whitespace_tests {
     #[test]
     fn test_pass() {
         // TODO: rather pass as &str?
-        let example_spaces = vec!["", " ", " ", "", " "];
+        let example_spaces = ["", " ", " ", "", " "];
         assert!(check_whitespace(example_spaces).is_empty());
     }
 
     #[test]
     fn test_fail_leading_space() {
-        let example_spaces = vec![" ", " ", " ", "", " "];
+        let example_spaces = [" ", " ", " ", "", " "];
         assert_eq!(
             check_whitespace(example_spaces),
-            vec!["There should be no leading whitespace before the dash"]
+            ["There should be no leading whitespace before the dash"]
         );
     }
 
     #[test]
     fn test_fail_space_between_category_and_link() {
-        let example_spaces = vec!["", " ", "", "", " "];
+        let example_spaces = ["", " ", "", "", " "];
         assert_eq!(
             check_whitespace(example_spaces),
-            vec!["There should be exactly one space between the category and the PR link"]
+            ["There should be exactly one space between the category and the PR link"]
         );
     }
 
     #[test]
     fn test_fail_multiple_spaces() {
-        let example_spaces = vec!["", "", " ", "", " "];
+        let example_spaces = ["", "", " ", "", " "];
         assert_eq!(
             check_whitespace(example_spaces),
-            vec!["There should be exactly one space between the leading dash and the category"]
+            ["There should be exactly one space between the leading dash and the category"]
         );
     }
 
     #[test]
     fn test_fail_multiple_spaces_before_description() {
-        let example_spaces = vec!["", " ", " ", "", "  "];
+        let example_spaces = ["", " ", " ", "", "  "];
         assert_eq!(
             check_whitespace(example_spaces),
-            vec!["There should be exactly one space between the PR link and the description"]
+            ["There should be exactly one space between the PR link and the description"]
         );
     }
 
     #[test]
     fn test_fail_space_in_link() {
-        let example_spaces = vec!["", " ", " ", " ", " "];
+        let example_spaces = ["", " ", " ", " ", " "];
         assert_eq!(
             check_whitespace(example_spaces),
-            vec!["There should be no whitespace inside of the markdown link"]
+            ["There should be no whitespace inside of the markdown link"]
         );
     }
 }

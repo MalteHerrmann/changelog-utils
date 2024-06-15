@@ -16,7 +16,10 @@ pub async fn run() -> Result<(), AddError> {
 
     let pr_number = match Text::new("Please provide the PR number:")
         .with_initial_value(
-            check_for_open_pr(&config).await.unwrap_or("".to_string()).as_str()
+            check_for_open_pr(&config)
+                .await
+                .unwrap_or("".to_string())
+                .as_str(),
         )
         .prompt()?
         .parse::<u16>()
@@ -75,7 +78,7 @@ pub fn add_entry(
         }
     }
 
-    let new_entry = entry::Entry::new(&config, cat, desc, pr);
+    let new_entry = entry::Entry::new(config, cat, desc, pr);
 
     // Get the mutable change type to add the entry into.
     // NOTE: If it's not found yet, we add a new section to the changelog.

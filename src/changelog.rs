@@ -26,18 +26,18 @@ impl Changelog {
         exported_string.push_str("# Changelog\n");
 
         for release in &self.releases {
-            exported_string.push_str("\n");
+            exported_string.push('\n');
             exported_string.push_str(release.fixed.as_str());
-            exported_string.push_str("\n");
+            exported_string.push('\n');
 
             for change_type in &release.change_types {
-                exported_string.push_str("\n");
+                exported_string.push('\n');
                 exported_string.push_str(change_type.fixed.as_str());
                 exported_string.push_str("\n\n");
 
                 for entry in &change_type.entries {
                     exported_string.push_str(entry.fixed.as_str());
-                    exported_string.push_str("\n");
+                    exported_string.push('\n');
                 }
             }
         }
@@ -123,7 +123,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
             n_releases += 1;
             match seen_releases.contains(&current_release.version) {
                 true => problems.push(format!("duplicate release: {}", &current_release.version)),
-                false => seen_releases.push((&current_release.version).to_string()),
+                false => seen_releases.push((current_release.version).to_string()),
             };
 
             // reset the seen change types for the current release
@@ -180,7 +180,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
 
         // TODO: check how to handle legacy content with the type based export?
         // TODO: this can actually be removed now with the new type-based exports
-        if !trimmed_line.starts_with("-") || is_legacy {
+        if !trimmed_line.starts_with('-') || is_legacy {
             fixed.push(line.to_string());
             continue;
         }
