@@ -18,6 +18,11 @@ pub struct Changelog {
 impl Changelog {
     /// Exports the changelog contents to the given filepath.
     pub fn write(&self, export_path: &Path) -> Result<(), ChangelogError> {
+        Ok(fs::write(export_path, self.get_fixed())?)
+    }
+
+    /// Returns the fixed contents as a String to be exported.
+    pub fn get_fixed(&self) -> String {
         let mut exported_string = "".to_string();
 
         self.comments
@@ -42,7 +47,7 @@ impl Changelog {
             }
         }
 
-        Ok(fs::write(export_path, exported_string)?)
+        exported_string
     }
 }
 
@@ -113,12 +118,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
 
         if trimmed_line.starts_with("## ") {
             current_release = release::parse(&config, line)?;
-            // FIXME: this pushes a copy of the empty release to the hashmap
-            // It would be better to push the reference into the hashmap but that requires lifetime
-            // handling.
-            // Alternatively, the logic should be adjusted to only insert into the hashmap, once
-            // the next release is found but that makes the logic more complicated,
-            // so we'll keep this for now.
+
             releases.push(current_release.clone());
             n_releases += 1;
             match seen_releases.contains(&current_release.version) {
@@ -138,9 +138,10 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
                 is_legacy = true;
             }
 
-            for rel_prob in &current_release.problems {
-                problems.push(rel_prob.to_string())
-            }
+            current_release
+                .problems
+                .into_iter()
+                .for_each(|p| problems.push(p.to_string()));
 
             fixed.push(current_release.fixed);
 
@@ -163,11 +164,12 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
                 seen_change_types.push(current_change_type.name.clone());
             }
 
-            for ct_prob in &current_change_type.problems {
-                problems.push(ct_prob.to_string())
-            }
-
             fixed.push(current_change_type.fixed.clone());
+
+            current_change_type
+                .problems
+                .iter()
+                .for_each(|p| problems.push(p.to_string()));
 
             // TODO: improve this? can this handling be made "more rustic"?
             let last_release = releases
@@ -185,7 +187,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
             continue;
         }
 
-        // TODO: remove clone?
         let current_entry = match entry::parse(&config, line) {
             Ok(e) => e,
             Err(err) => {
@@ -207,9 +208,10 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
             seen_prs.push(current_entry.pr_number)
         }
 
-        for entry_prob in &current_entry.problems {
-            problems.push(entry_prob.to_string());
-        }
+        current_entry
+            .problems
+            .iter()
+            .for_each(|p| problems.push(p.to_string()));
 
         // TODO: can be removed with new type-based exports
         fixed.push(current_entry.clone().fixed);

@@ -1,6 +1,6 @@
 use crate::{config::Config, errors::InitError};
 use serde_json::to_string_pretty;
-use std::{collections::HashMap, fs, path::PathBuf};
+use std::{collections::BTreeMap, fs, path::PathBuf};
 
 /// Runs the logic to initialize the changelog utilities
 /// in the current working directory.
@@ -26,7 +26,7 @@ pub fn init_in_folder(target: PathBuf) -> Result<(), InitError> {
 
 /// Creates a new default configuration file for the tool.
 fn create_default_config() -> String {
-    let mut default_change_types: HashMap<String, String> = HashMap::new();
+    let mut default_change_types: BTreeMap<String, String> = BTreeMap::new();
     default_change_types.insert("Bug Fixes".into(), "bug\\s*fixes".into());
     default_change_types.insert("Features".into(), "features".into());
     default_change_types.insert("Improvements".into(), "improvements".into());
@@ -34,7 +34,7 @@ fn create_default_config() -> String {
     let default_config = Config {
         categories: Vec::new(),
         change_types: default_change_types,
-        expected_spellings: HashMap::new(),
+        expected_spellings: BTreeMap::new(),
         legacy_version: None,
         target_repo: "".to_string(),
     };
