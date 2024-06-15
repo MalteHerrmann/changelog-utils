@@ -8,6 +8,7 @@ This changelog was created using the `clu` binary
 
 ### Improvements
 
+- (all) [#28](https://github.com/MalteHerrmann/changelog-utils/pull/28) Update Cargo manifest with more information and updated version.
 - (config) [#27](https://github.com/MalteHerrmann/changelog-utils/pull/27) Adjust configuration to have sorted entries.
 - (all) [#26](https://github.com/MalteHerrmann/changelog-utils/pull/26) Add clippy and address linter warnings.
 
