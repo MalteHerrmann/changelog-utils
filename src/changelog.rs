@@ -186,7 +186,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
         }
 
         // TODO: remove clone?
-        let current_entry = match entry::parse(config.clone(), line) {
+        let current_entry = match entry::parse(&config, line) {
             Ok(e) => e,
             Err(err) => {
                 problems.push(err.to_string());
@@ -263,7 +263,7 @@ mod changelog_tests {
             comments: Vec::new(),
             problems: Vec::new(),
         };
-        let e = entry::parse(cfg.clone(), example).expect("failed to parse entry");
+        let e = entry::parse(&cfg, example).expect("failed to parse entry");
         let ct =
             change_type::parse(cfg.clone(), "### Bug Fixes").expect("failed to parse change type");
 

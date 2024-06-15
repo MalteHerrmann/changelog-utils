@@ -35,7 +35,7 @@ impl Entry {
     }
 }
 
-pub fn parse(config: config::Config, line: &str) -> Result<Entry, EntryError> {
+pub fn parse(config: &config::Config, line: &str) -> Result<Entry, EntryError> {
     let entry_pattern = Regex::new(concat!(
         r"^(?P<ws0>\s*)-(?P<ws1>\s*)\((?P<category>[a-zA-Z0-9\-]+)\)",
         r"(?P<ws2>\s*)\[(?P<bs>\\)?#(?P<pr>\d+)]",
@@ -69,17 +69,17 @@ pub fn parse(config: config::Config, line: &str) -> Result<Entry, EntryError> {
         .into_iter()
         .for_each(|p| problems.push(p));
 
-    let (fixed_category, category_problems) = check_category(&config, category);
+    let (fixed_category, category_problems) = check_category(config, category);
     category_problems.into_iter().for_each(|p| problems.push(p));
 
     if matches.name("bs").is_some() {
         problems.push("There should be no backslash in front of the # in the PR link".to_string());
     }
 
-    let (fixed_link, link_problems) = check_link(&config, link, pr_number);
+    let (fixed_link, link_problems) = check_link(config, link, pr_number);
     link_problems.into_iter().for_each(|p| problems.push(p));
 
-    let (fixed_desc, desc_problems) = check_description(&config, description);
+    let (fixed_desc, desc_problems) = check_description(config, description);
     desc_problems.into_iter().for_each(|p| problems.push(p));
 
     let fixed = build_fixed(
@@ -92,7 +92,6 @@ pub fn parse(config: config::Config, line: &str) -> Result<Entry, EntryError> {
     Ok(Entry {
         fixed, // TODO: why is it not possible to have this as &'a str too?
         pr_number,
-        // TODO: implement describing problems in line
         problems,
     })
 }
@@ -122,7 +121,6 @@ fn check_category(config: &config::Config, category: &str) -> (String, Vec<Strin
 fn check_link(config: &config::Config, link: &str, pr_number: u16) -> (String, Vec<String>) {
     let mut problems: Vec<String> = Vec::new();
 
-    // TODO: check the base url of the used Git repository automatically
     let fixed = format!("{}/pull/{}", config.target_repo, pr_number);
 
     if !link.starts_with(config.target_repo.as_str()) {
@@ -277,7 +275,7 @@ mod entry_tests {
             "- (cli) [#1](https://github.com/MalteHerrmann/changelog-utils/pull/1) ",
             "Add initial Python implementation."
         );
-        let entry_res = parse(load_test_config(), example);
+        let entry_res = parse(&load_test_config(), example);
         assert!(entry_res.is_ok());
         let entry = entry_res.unwrap();
         assert_eq!(entry.fixed, example); // NOTE: since line is okay there are no changes to it in the fixed version
@@ -289,8 +287,7 @@ mod entry_tests {
     fn test_fail_has_backslash_in_link() {
         let example =
             r"- (cli) [\#1](https://github.com/MalteHerrmann/changelog-utils/pull/1) Test.";
-        let entry_res = parse(load_test_config(), example);
-        // TODO: should this actually return an error? Not really, because parsing has worked??
+        let entry_res = parse(&load_test_config(), example);
         assert!(entry_res.is_ok());
         let entry = entry_res.unwrap();
         assert_eq!(entry.fixed, example.replace(r"\", ""));
@@ -306,7 +303,7 @@ mod entry_tests {
     fn test_fail_wrong_pr_link_and_missing_dot() {
         let example = r"- (cli) [#2](https://github.com/MalteHerrmann/changelog-utils/pull/1) Test";
         let fixed = r"- (cli) [#2](https://github.com/MalteHerrmann/changelog-utils/pull/2) Test.";
-        let entry_res = parse(load_test_config(), example);
+        let entry_res = parse(&load_test_config(), example);
         assert!(entry_res.is_ok());
         let entry = entry_res.unwrap();
         assert_eq!(entry.fixed, fixed);
@@ -328,7 +325,7 @@ mod entry_tests {
     fn test_malformed_entry() {
         let example = r"- (cli) [#13tps://github.com/Ma/2";
         // TODO: figure how to still return an entry but with the corresponding array of problems filled
-        assert!(parse(load_test_config(), example).is_err());
+        assert!(parse(&load_test_config(), example).is_err());
     }
 
     #[test]
@@ -337,7 +334,7 @@ mod entry_tests {
             r"- (cli)   [#1] (https://github.com/MalteHerrmann/changelog-utils/pull/1) Run test.";
         let expected =
             r"- (cli) [#1](https://github.com/MalteHerrmann/changelog-utils/pull/1) Run test.";
-        let entry_res = parse(load_test_config(), example);
+        let entry_res = parse(&load_test_config(), example);
         assert!(entry_res.is_ok());
         let entry = entry_res.unwrap();
         assert_eq!(entry.fixed, expected);
@@ -559,7 +556,6 @@ mod whitespace_tests {
 
     #[test]
     fn test_pass() {
-        // TODO: rather pass as &str?
         let example_spaces = ["", " ", " ", "", " "];
         assert!(check_whitespace(example_spaces).is_empty());
     }
