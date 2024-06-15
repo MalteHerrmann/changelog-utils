@@ -222,18 +222,15 @@ fn get_spelling_match(pattern: &str, text: &str) -> Result<String, MatchError> {
     }
 
     // Check isolated words (i.e. pattern is not included in another word)
-    let found = match RegexBuilder::new(format!(r"(^|\s)({pattern})($|[\s.])").as_str())
+    match RegexBuilder::new(format!(r"(^|\s)({pattern})($|[\s.])").as_str())
         .case_insensitive(true)
         .build()?
         .captures(text)
     {
-        Some(m) => m,
-        None => return Err(MatchError::NoMatchFound),
-    };
-
-    // TODO: merge with match above to avoid double matching?
-    match found.get(2) {
-        Some(m) => Ok(m.as_str().to_string()),
+        Some(m) => match m.get(2) {
+            Some(m) => Ok(m.as_str().to_string()),
+            None => Err(MatchError::NoMatchFound),
+        },
         None => Err(MatchError::NoMatchFound),
     }
 }
@@ -241,8 +238,8 @@ fn get_spelling_match(pattern: &str, text: &str) -> Result<String, MatchError> {
 /// Checks the used whitespace in the entry.
 fn check_whitespace(spaces: [&str; 5]) -> Vec<String> {
     let mut problems: Vec<String> = Vec::new();
-    let separator = " ";
 
+    let expected_whitespace = ["", " ", " ", "", " "];
     let errors = [
         "There should be no leading whitespace before the dash",
         "There should be exactly one space between the leading dash and the category",
@@ -251,19 +248,13 @@ fn check_whitespace(spaces: [&str; 5]) -> Vec<String> {
         "There should be exactly one space between the PR link and the description",
     ];
 
-    for (i, val) in spaces.iter().enumerate() {
-        match i {
-            // The whitespace at these indices should be empty instead of the separator
-            0 | 3 => {
-                if (*val).ne("") {
-                    problems.push(errors[i].to_string())
-                }
-            }
-            _ => {
-                if (*val).ne(separator) {
-                    problems.push(errors[i].to_string())
-                }
-            }
+    for ((got, expected), error) in spaces
+        .into_iter()
+        .zip(expected_whitespace.into_iter())
+        .zip(errors.into_iter())
+    {
+        if (*got).ne(expected) {
+            problems.push(error.to_string())
         }
     }
 
