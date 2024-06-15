@@ -4,6 +4,12 @@ This changelog was created using the `clu` binary
 -->
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- (all) [#26](https://github.com/MalteHerrmann/changelog-utils/pull/26) Add clippy and address linter warnings.
+
 ## [v1.0.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.0.0) - 2024-06-15
 
 ### Features
