@@ -93,7 +93,7 @@ pub fn add_into_collection(
     key: String,
     value: String,
 ) -> Result<(), ConfigAdjustError> {
-    if let Some(_) = hm.insert(key, value) {
+    if hm.insert(key, value).is_some() {
         return Err(ConfigAdjustError::KeyAlreadyFound);
     };
 
