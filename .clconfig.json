@@ -4,12 +4,13 @@
     "test",
     "config",
     "crud",
-    "docker"
+    "docker",
+    "all"
   ],
   "change_types": {
     "Improvements": "improvements",
-    "Features": "features",
-    "Bug Fixes": "bug\\s*fixes"
+    "Bug Fixes": "bug\\s*fixes",
+    "Features": "features"
   },
   "expected_spellings": {
     "CLI": "cli"

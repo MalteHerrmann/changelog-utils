@@ -16,7 +16,7 @@ pub fn new(name: String, entries: Option<Vec<Entry>>) -> ChangeType {
         name: name.clone(),
         fixed: format!("### {name}"),
         problems: Vec::new(),
-        entries: entries.unwrap_or(Vec::new()),
+        entries: entries.unwrap_or_default(),
     }
 }
 
@@ -55,7 +55,7 @@ pub fn parse(config: config::Config, line: &str) -> Result<ChangeType, ChangeTyp
                 problems.push(format!(
                     "'{change_type}' should be used instead of '{name}'"
                 ));
-                fixed_name = change_type.to_owned();
+                change_type.clone_into(&mut fixed_name);
             }
             found = true;
             break;

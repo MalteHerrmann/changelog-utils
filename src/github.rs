@@ -1,15 +1,16 @@
+use crate::config::Config;
 use crate::errors::GitHubError;
 use octocrab;
 use regex::Regex;
 use std::process::Command;
-use crate::config::Config;
 
 /// Returns an option for an open PR from the current local branch in the configured target
 /// repository if it exists.
 pub async fn check_for_open_pr(config: &Config) -> Result<String, GitHubError> {
     let captures = match Regex::new(r"github.com/(?P<owner>[\w-]+)/(?P<repo>[\w-]+)\.*")
         .expect("failed to build regular expression")
-        .captures(config.target_repo.as_str()) {
+        .captures(config.target_repo.as_str())
+    {
         Some(r) => r,
         None => return Ok("".to_string()),
     };
@@ -19,20 +20,18 @@ pub async fn check_for_open_pr(config: &Config) -> Result<String, GitHubError> {
 
     let octocrab = octocrab::instance();
     let pulls = octocrab.pulls(owner, repo).list().send().await?.items;
-    match pulls
-        .iter()
-        .find(|pr| pr.head.label.as_ref().is_some_and(
-            |l| {
-                let branch_parts: Vec<&str> = l.split(":").collect();
-                let got_branch = branch_parts.get(1..)
-                    .expect("unexpected branch identifier format")
-                    .join("/");
-                got_branch.eq(branch.as_str())
-            })
-        )
-    {
+    match pulls.iter().find(|pr| {
+        pr.head.label.as_ref().is_some_and(|l| {
+            let branch_parts: Vec<&str> = l.split(':').collect();
+            let got_branch = branch_parts
+                .get(1..)
+                .expect("unexpected branch identifier format")
+                .join("/");
+            got_branch.eq(branch.as_str())
+        })
+    }) {
         Some(pr) => Ok(format!("{}", pr.number)),
-        None => Ok("".to_string())
+        None => Err(GitHubError::NoOpenPR),
     }
 }
 
@@ -45,7 +44,7 @@ fn get_current_local_branch() -> Result<String, GitHubError> {
 
     match output.status.success() {
         true => Ok(String::from_utf8(output.stdout)?.trim().to_string()),
-        false => Err(GitHubError::CurrentBranch)
+        false => Err(GitHubError::CurrentBranch),
     }
 }
 
