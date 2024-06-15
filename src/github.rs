@@ -31,7 +31,7 @@ pub async fn check_for_open_pr(config: &Config) -> Result<String, GitHubError> {
         })
     }) {
         Some(pr) => Ok(format!("{}", pr.number)),
-        None => Ok("".to_string()),
+        None => Err(GitHubError::NoOpenPR),
     }
 }
 
