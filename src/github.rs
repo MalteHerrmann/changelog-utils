@@ -1,5 +1,6 @@
-use crate::config::Config;
+use crate::entry::check_category;
 use crate::errors::GitHubError;
+use crate::{config::Config, entry::check_description};
 use octocrab;
 use octocrab::models::pulls::PullRequest;
 use regex::{Regex, RegexBuilder};
@@ -15,7 +16,7 @@ pub struct PRInfo {
 
 /// Extracts the pull request information from the given
 /// instance.
-fn extract_pr_info(pr: &PullRequest) -> Result<PRInfo, GitHubError> {
+fn extract_pr_info(config: &Config, pr: &PullRequest) -> Result<PRInfo, GitHubError> {
     let mut change_type = String::new();
     let mut category = String::new();
     let mut description = String::new();
@@ -28,22 +29,19 @@ fn extract_pr_info(pr: &PullRequest) -> Result<PRInfo, GitHubError> {
     {
         if let Some(ct) = i.name("ct") {
             match ct.as_str() {
-                "fix" => change_type.push_str("Bug Fixes"),
-                "imp" => change_type.push_str("Improvements"),
-                "feat" => change_type.push_str("Features"),
+                "fix" => change_type = "Bug Fixes".to_string(),
+                "imp" => change_type = "Improvements".to_string(),
+                "feat" => change_type = "Features".to_string(),
                 _ => (),
             }
         };
 
         if let Some(cat) = i.name("cat") {
-            category.push_str(cat.as_str())
+            (category, _) = check_category(config, cat.as_str());
         };
 
         if let Some(desc) = i.name("desc") {
-            description.push_str(desc.as_str());
-            if !description.ends_with('.') {
-                description.push('.')
-            };
+            (description, _) = check_description(config, desc.as_str());
         };
     };
 
@@ -82,7 +80,7 @@ pub async fn get_open_pr(config: &Config) -> Result<PRInfo, GitHubError> {
             got_branch.eq(branch.as_str())
         })
     }) {
-        Some(pr) => Ok(extract_pr_info(pr)?),
+        Some(pr) => Ok(extract_pr_info(config, pr)?),
         None => Err(GitHubError::NoOpenPR),
     }
 }
