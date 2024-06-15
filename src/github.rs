@@ -13,18 +13,6 @@ pub struct PRInfo {
     pub number: String,
 }
 
-impl PRInfo {
-    /// Returns an empty PRInfo struct with default values for all fields.
-    fn new_empty() -> PRInfo {
-        PRInfo {
-            change_type: String::new(),
-            category: String::new(),
-            description: String::new(),
-            number: String::new(),
-        }
-    }
-}
-
 /// Extracts the pull request information from the given
 /// instance.
 fn extract_pr_info(pr: &PullRequest) -> Result<PRInfo, GitHubError> {
@@ -34,7 +22,7 @@ fn extract_pr_info(pr: &PullRequest) -> Result<PRInfo, GitHubError> {
 
     let pr_title = pr.title.clone().unwrap_or("".to_string());
 
-    if let Some(i) = RegexBuilder::new(r"^(?P<ct>\w+)?(?P<cat>\(\w+\))?:?(?P<desc>.+)$")
+    if let Some(i) = RegexBuilder::new(r"^(?P<ct>\w+)?\s*(\((?P<cat>\w+)\))?[:\s]*(?P<desc>.+)$")
         .build()?
         .captures(pr_title.as_str())
     {
@@ -52,7 +40,10 @@ fn extract_pr_info(pr: &PullRequest) -> Result<PRInfo, GitHubError> {
         };
 
         if let Some(desc) = i.name("desc") {
-            description.push_str(desc.as_str())
+            description.push_str(desc.as_str());
+            if !description.ends_with('.') {
+                description.push('.')
+            };
         };
     };
 
