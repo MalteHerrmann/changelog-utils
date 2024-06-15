@@ -1,6 +1,7 @@
 {
   "categories": [
     "all",
+    "ci",
     "config",
     "crud",
     "docker",
