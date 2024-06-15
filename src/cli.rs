@@ -36,13 +36,13 @@ pub enum ConfigSubcommands {
     #[command(
         about = "Adjust the allowed change types within releases (like 'Bug Fixes', 'Features', etc.)"
     )]
-    ChangeType(HashMapArgs),
+    ChangeType(KeyValueArgs),
     #[command(about = "Set or unset the optional legacy version")]
     LegacyVersion(ConditionalArgs),
     #[command(about = "Shows the current configuration")]
     Show,
     #[command(about = "Adjust the expected spellings that should be enforced in the changelog")]
-    Spelling(HashMapArgs),
+    Spelling(KeyValueArgs),
     #[command(about = "Sets the target repository for the changelog entries")]
     TargetRepo(StringValue),
 }
@@ -72,13 +72,13 @@ pub enum CategoryOperation {
 }
 
 #[derive(Args, Debug)]
-pub struct HashMapArgs {
+pub struct KeyValueArgs {
     #[command(subcommand)]
-    pub command: HashMapOperation,
+    pub command: KeyValueOperation,
 }
 
 #[derive(Debug, Subcommand)]
-pub enum HashMapOperation {
+pub enum KeyValueOperation {
     #[command(about = "Adds a new key-value pair to the configuration")]
     Add { key: String, value: String },
     #[command(about = "Removes a key if it is found in the hash map")]

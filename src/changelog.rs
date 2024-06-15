@@ -118,12 +118,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
 
         if trimmed_line.starts_with("## ") {
             current_release = release::parse(&config, line)?;
-            // FIXME: this pushes a copy of the empty release to the hashmap
-            // It would be better to push the reference into the hashmap but that requires lifetime
-            // handling.
-            // Alternatively, the logic should be adjusted to only insert into the hashmap, once
-            // the next release is found but that makes the logic more complicated,
-            // so we'll keep this for now.
+
             releases.push(current_release.clone());
             n_releases += 1;
             match seen_releases.contains(&current_release.version) {
