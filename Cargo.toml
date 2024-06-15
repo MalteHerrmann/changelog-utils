@@ -1,7 +1,11 @@
 [package]
 name = "clu"
-version = "0.1.0"
+authors = ["Malte Herrmann"]
+version = "1.0.0"
 edition = "2021"
+description = "Everything you need to handle your changelogs."
+repository = "https://github.com/MalteHerrmann/changelog-utils"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
