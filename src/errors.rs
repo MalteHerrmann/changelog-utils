@@ -38,6 +38,8 @@ pub enum AddError {
     Input(#[from] InputError),
     #[error("first release is not unreleased section: {0}")]
     FirstReleaseNotUnreleased(String),
+    #[error("failed to get pull request information: {0}")]
+    PRInfo(#[from] GitHubError),
     #[error("failed to parse changelog: {0}")]
     InvalidChangelog(#[from] ChangelogError),
     #[error("failed to prompt user: {0}")]
@@ -96,6 +98,10 @@ pub enum GitHubError {
     CurrentBranch,
     #[error("failed to call GitHub API: {0}")]
     GitHub(#[from] octocrab::Error),
+    #[error("failed to build regex: {0}")]
+    InvalidRegex(#[from] Error),
+    #[error("target repository in configuration is no GitHub repository")]
+    NoGitHubRepo,
     #[error("no pull request open for branch")]
     NoOpenPR,
     #[error("failed to decode output: {0}")]

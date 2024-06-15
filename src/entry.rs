@@ -103,7 +103,7 @@ fn build_fixed(cat: &str, link: &str, desc: &str, pr: u16) -> String {
 
 /// Check if the category is valid and return a fixed version that addresses
 /// well-known problems.
-fn check_category(config: &config::Config, category: &str) -> (String, Vec<String>) {
+pub fn check_category(config: &config::Config, category: &str) -> (String, Vec<String>) {
     let mut problems: Vec<String> = Vec::new();
     let fixed = category.to_lowercase();
     if category.to_lowercase() != category {
@@ -144,7 +144,7 @@ fn check_link(config: &config::Config, link: &str, pr_number: u16) -> (String, V
     (fixed, problems)
 }
 
-fn check_description(config: &config::Config, desc: &str) -> (String, Vec<String>) {
+pub fn check_description(config: &config::Config, desc: &str) -> (String, Vec<String>) {
     let mut fixed = desc.to_string();
     let mut problems: Vec<String> = Vec::new();
 
