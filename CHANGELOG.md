@@ -8,6 +8,7 @@ This changelog was created using the `clu` binary
 
 ### Improvements
 
+- (ci) [#36](https://github.com/MalteHerrmann/changelog-utils/pull/36) Add changelog linter as CI action.
 - (crud) [#31](https://github.com/MalteHerrmann/changelog-utils/pull/31) Prefill input to add an entry with pull request information.
 - (ci) [#30](https://github.com/MalteHerrmann/changelog-utils/pull/30) Add changelog diff check to CI actions.
 - (all) [#28](https://github.com/MalteHerrmann/changelog-utils/pull/28) Update Cargo manifest with more information and updated version.
