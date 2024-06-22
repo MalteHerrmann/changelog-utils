@@ -11,6 +11,7 @@ pub struct Changelog {
     pub path: PathBuf,
     pub fixed: Vec<String>,
     comments: Vec<String>,
+    legacy_contents: Vec<String>,
     pub releases: Vec<release::Release>,
     pub problems: Vec<String>,
 }
@@ -47,6 +48,10 @@ impl Changelog {
             }
         }
 
+        self.legacy_contents
+            .iter()
+            .for_each(|l| exported_string.push_str(format!("{}\n", l).as_str()));
+
         exported_string
     }
 }
@@ -76,6 +81,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
 
     let mut comments: Vec<String> = Vec::new();
     let mut fixed: Vec<String> = Vec::new();
+    let mut legacy_contents: Vec<String> = Vec::new();
     let mut releases: Vec<release::Release> = Vec::new();
     let mut problems: Vec<String> = Vec::new();
 
@@ -92,9 +98,13 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
     let exit_comment_regex = Regex::new("-->")?;
 
     for line in contents.lines() {
+        if is_legacy {
+            legacy_contents.push(line.to_string());
+            continue;
+        }
+
         let trimmed_line = line.trim();
 
-        // TODO: improve this?
         if enter_comment_regex.is_match(trimmed_line) && !exit_comment_regex.is_match(trimmed_line)
         {
             is_comment = true;
@@ -133,7 +143,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
             if current_release
                 .is_legacy(&config)
                 .expect("failed to check legacy")
-                && !is_legacy
             {
                 is_legacy = true;
             }
@@ -234,6 +243,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
         releases,
         comments,
         problems,
+        legacy_contents,
     })
 }
 
@@ -263,6 +273,7 @@ mod changelog_tests {
             fixed: Vec::new(),
             releases: Vec::new(),
             comments: Vec::new(),
+            legacy_contents: Vec::new(),
             problems: Vec::new(),
         };
         let e = entry::parse(&cfg, example).expect("failed to parse entry");

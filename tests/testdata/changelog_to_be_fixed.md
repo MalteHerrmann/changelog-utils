@@ -37,3 +37,7 @@ Some comments at head of file...
 - (vesting) [#1862](https://github.com/evmos/evmos/pull/1862) Add Authorization Grants to the Vesting extension.
 - (app) [#555](https://github.com/evmos/evmos/pull/555) `v4.0.0` upgrade logic.
 
+## [v2.0.0](https://github.com/evmos/evmos/releases/tag/v2.0.0) - 2021-10-31
+### State Machine Breaking
+
+- legacy entries do not have to be fully correct
