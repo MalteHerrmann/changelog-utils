@@ -98,15 +98,46 @@ fn get_current_local_branch() -> Result<String, GitHubError> {
     }
 }
 
+/// Checks if there is a origin repository defined and returns the name
+/// if that's the case.
+pub fn get_origin() -> Result<String, GitHubError> {
+    let output = Command::new("git")
+        .args(vec!["remote", "get-url", "origin"])
+        .output()?;
+
+    if !output.status.success() {
+        return Err(GitHubError::Origin);
+    };
+
+    let origin = String::from_utf8(output.stdout)?;
+    match Regex::new(r"(https://github.com/[^.\s]+/[^.\s]+)(\.git)?")?.captures(origin.as_str()) {
+        Some(o) => Ok(o
+            .get(1)
+            .expect("unexpected matching condition")
+            .as_str()
+            .to_string()),
+        None => Err(GitHubError::RegexMatch(origin)),
+    }
+}
+
 // Ignore these tests when running on CI because there won't be a local branch
-#[cfg(not(feature = "remote"))]
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[cfg(not(feature = "remote"))]
     #[test]
     fn test_current_branch() {
         let branch = get_current_local_branch().expect("failed to get current branch");
         assert_ne!(branch, "", "expected non-empty current branch")
+    }
+
+    #[test]
+    fn test_get_origin() {
+        let origin = get_origin().expect("failed to get origin");
+        assert_eq!(
+            origin, "https://github.com/MalteHerrmann/changelog-utils",
+            "expected different origin"
+        )
     }
 }
