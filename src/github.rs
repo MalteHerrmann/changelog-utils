@@ -107,10 +107,13 @@ pub fn get_origin() -> Result<String, GitHubError> {
 
     match output.status.success() {
         true => {
-            Ok(String::from_utf8(output.stdout)?
+            let origin = String::from_utf8(output.stdout)?;
+            Ok(origin
                 .trim() // Trim whitespace from end of output
                 .strip_suffix(".git")
-                .expect("expected .git suffix in remote repository")
+                .expect(
+                    format!("expected .git suffix in remote repository; got: {}", origin).as_str(),
+                )
                 .to_string())
         }
         false => Err(GitHubError::Origin),
