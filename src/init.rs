@@ -20,15 +20,15 @@ pub fn init_in_folder(target: PathBuf) -> Result<(), InitError> {
     let mut config = create_default_config();
 
     if let Ok(origin) = get_origin() {
-        config.target_repo = origin.clone();
+        config.target_repo.clone_from(&origin);
         println!("configured target repository: {}", origin);
     };
 
-    if let Ok(_) = fs::read_to_string(&config_path) {
+    if fs::read_to_string(&config_path).is_ok() {
         return Err(InitError::ConfigAlreadyFound);
     };
 
-    Ok(config.export(&config_path.as_path())?)
+    Ok(config.export(config_path.as_path())?)
 }
 
 /// Creates a new default configuration file for the tool.
