@@ -54,6 +54,10 @@ pub enum InitError {
     FailedToWrite(#[from] io::Error),
     #[error("config already created")]
     ConfigAlreadyFound,
+    #[error("error exporting config: {0}")]
+    ConfigError(#[from] ConfigError),
+    #[error("failed to get origin")]
+    OriginError(#[from] GitHubError),
 }
 
 #[derive(Error, Debug)]
@@ -104,6 +108,8 @@ pub enum GitHubError {
     NoGitHubRepo,
     #[error("no pull request open for branch")]
     NoOpenPR,
+    #[error("failed to get origin")]
+    Origin,
     #[error("failed to decode output: {0}")]
     OutputDecoding(#[from] FromUtf8Error),
     #[error("failed to execute command: {0}")]

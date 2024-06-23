@@ -98,6 +98,25 @@ fn get_current_local_branch() -> Result<String, GitHubError> {
     }
 }
 
+/// Checks if there is a origin repository defined and returns the name
+/// if that's the case.
+pub fn get_origin() -> Result<String, GitHubError> {
+    let output = Command::new("git")
+        .args(vec!["remote", "get-url", "origin"])
+        .output()?;
+
+    match output.status.success() {
+        true => {
+            Ok(String::from_utf8(output.stdout)?
+                .trim() // Trim whitespace from end of output
+                .strip_suffix(".git")
+                .expect("expected .git suffix in remote repository")
+                .to_string())
+        }
+        false => Err(GitHubError::Origin),
+    }
+}
+
 // Ignore these tests when running on CI because there won't be a local branch
 #[cfg(not(feature = "remote"))]
 #[cfg(test)]
@@ -108,5 +127,11 @@ mod tests {
     fn test_current_branch() {
         let branch = get_current_local_branch().expect("failed to get current branch");
         assert_ne!(branch, "", "expected non-empty current branch")
+    }
+
+    #[test]
+    fn test_get_origin() {
+        let origin = get_origin().expect("failed to get origin");
+        assert_ne!(origin, "", "expected non-empty origin")
     }
 }
