@@ -112,6 +112,8 @@ pub enum GitHubError {
     Origin,
     #[error("failed to decode output: {0}")]
     OutputDecoding(#[from] FromUtf8Error),
+    #[error("failed to match GitHub repo: {0}")]
+    RegexMatch(String),
     #[error("failed to execute command: {0}")]
     StdCommand(#[from] io::Error),
 }

@@ -105,27 +105,27 @@ pub fn get_origin() -> Result<String, GitHubError> {
         .args(vec!["remote", "get-url", "origin"])
         .output()?;
 
-    match output.status.success() {
-        true => {
-            let origin = String::from_utf8(output.stdout)?;
-            Ok(origin
-                .trim() // Trim whitespace from end of output
-                .strip_suffix(".git")
-                .expect(
-                    format!("expected .git suffix in remote repository; got: {}", origin).as_str(),
-                )
-                .to_string())
-        }
-        false => Err(GitHubError::Origin),
+    if !output.status.success() {
+        return Err(GitHubError::Origin);
+    };
+
+    let origin = String::from_utf8(output.stdout)?;
+    match Regex::new(r"(https://github.com/[^.\s]+/[^.\s]+)(\.git)?")?.captures(origin.as_str()) {
+        Some(o) => Ok(o
+            .get(1)
+            .expect("unexpected matching condition")
+            .as_str()
+            .to_string()),
+        None => Err(GitHubError::RegexMatch(origin)),
     }
 }
 
 // Ignore these tests when running on CI because there won't be a local branch
-#[cfg(not(feature = "remote"))]
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[cfg(not(feature = "remote"))]
     #[test]
     fn test_current_branch() {
         let branch = get_current_local_branch().expect("failed to get current branch");
@@ -135,6 +135,9 @@ mod tests {
     #[test]
     fn test_get_origin() {
         let origin = get_origin().expect("failed to get origin");
-        assert_ne!(origin, "", "expected non-empty origin")
+        assert_eq!(
+            origin, "https://github.com/MalteHerrmann/changelog-utils",
+            "expected different origin"
+        )
     }
 }
