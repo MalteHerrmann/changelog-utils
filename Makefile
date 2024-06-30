@@ -4,11 +4,11 @@ test:
 
 # Build binary locally
 build:
-	cargo build .
+	cargo build . --locked
 
 # Install binary
 install:
-	cargo install --path .
+	cargo install --path . --locked
 
 # Run Docker image
 docker-run:
