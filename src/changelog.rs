@@ -247,8 +247,10 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
 }
 
 /// Used for formatting the problem statements in the changelog.
+/// 
+/// NOTE: The line ID will be incremented by one based on the loop enumeration where it is used.
 fn add_to_problems(problems: &mut Vec<String>, fp: &Path, line: usize, problem: impl Into<String>) {
-    problems.push(format!("{}:{}: {}", fp.to_string_lossy(), line, problem.into()))
+    problems.push(format!("{}:{}: {}", fp.to_string_lossy(), line+1, problem.into()))
 }
 
 #[cfg(test)]
