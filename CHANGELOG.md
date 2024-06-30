@@ -4,6 +4,12 @@ This changelog was created using the `clu` binary
 -->
 # Changelog
 
+## Unreleased
+
+### Bug Fixes
+
+- (all) [#44](https://github.com/MalteHerrmann/changelog-utils/pull/44) Update cargo lock file.
+
 ## [v1.1.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.1.0) - 2024-06-30
 
 ### Improvements
