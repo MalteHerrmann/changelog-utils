@@ -8,6 +8,7 @@ This changelog was created using the `clu` binary
 
 ### Improvements
 
+- (lint) [#42](https://github.com/MalteHerrmann/changelog-utils/pull/42) Add line numbers to lint output and add reviewdog to Dockerfile.
 - (config) [#41](https://github.com/MalteHerrmann/changelog-utils/pull/41) Add Git origin to initialized configuration.
 - (ci) [#36](https://github.com/MalteHerrmann/changelog-utils/pull/36) Add changelog linter as CI action.
 - (crud) [#31](https://github.com/MalteHerrmann/changelog-utils/pull/31) Prefill input to add an entry with pull request information.
