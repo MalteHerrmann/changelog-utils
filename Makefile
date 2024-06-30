@@ -4,7 +4,7 @@ test:
 
 # Build binary locally
 build:
-	cargo build . --locked
+	cargo build --locked
 
 # Install binary
 install:
