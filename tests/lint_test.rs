@@ -29,16 +29,16 @@ fn it_should_pass_for_incorrect_changelogs_that_has_no_critical_flaws() {
     assert_eq!(
         changelog.problems,
         vec![
-            "PR link is not matching PR number 1948: 'https://github.com/evmos/evmos/pull/1949'",
-            "There should be no backslash in front of the # in the PR link",
-            "'ABI' should be used instead of 'ABi'",
-            "PR description should end with a dot: 'Fixed the problem `gas_used` is 0'",
-            "'Invalid Category' is not a valid change type",
-            "duplicate change type in release Unreleased: Bug Fixes",
-            "duplicate PR in v15.0.0->API Breaking: 1801",
-            "duplicate release: v15.0.0",
-            "duplicate PR in v15.0.0->API Breaking: 1862",
-            "invalid entry: - malformed entry in changelog",
+            "tests/testdata/changelog_fail.md:10: PR link is not matching PR number 1948: 'https://github.com/evmos/evmos/pull/1949'",
+            "tests/testdata/changelog_fail.md:19: There should be no backslash in front of the # in the PR link",
+            "tests/testdata/changelog_fail.md:20: 'ABI' should be used instead of 'ABi'",
+            "tests/testdata/changelog_fail.md:24: PR description should end with a dot: 'Fixed the problem `gas_used` is 0'",
+            "tests/testdata/changelog_fail.md:26: 'Invalid Category' is not a valid change type",
+            "tests/testdata/changelog_fail.md:30: duplicate change type in release Unreleased: Bug Fixes",
+            "tests/testdata/changelog_fail.md:39: duplicate PR: #1801",
+            "tests/testdata/changelog_fail.md:41: duplicate release: v15.0.0",
+            "tests/testdata/changelog_fail.md:45: duplicate PR: #1862",
+            "tests/testdata/changelog_fail.md:46: invalid entry: - malformed entry in changelog",
         ]
     );
 }
