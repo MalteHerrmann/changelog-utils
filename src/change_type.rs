@@ -20,15 +20,6 @@ pub fn new(name: String, entries: Option<Vec<Entry>>) -> ChangeType {
     }
 }
 
-pub fn new_empty_change_type() -> ChangeType {
-    ChangeType {
-        name: "".to_string(),
-        fixed: "".to_string(),
-        problems: Vec::new(),
-        entries: Vec::new(),
-    }
-}
-
 pub fn parse(config: config::Config, line: &str) -> Result<ChangeType, ChangeTypeError> {
     let captures = match Regex::new(r"^\s*###\s*(?P<name>[a-zA-Z0-9\- ]+)\s*$")
         .expect("regex pattern should be valid")

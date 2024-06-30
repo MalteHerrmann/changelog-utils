@@ -87,7 +87,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
 
     let mut current_release = release::new_empty_release();
     let mut seen_releases: Vec<String> = Vec::new();
-    let mut current_change_type = change_type::new_empty_change_type();
+    let mut current_change_type: change_type::ChangeType;
     let mut seen_change_types: Vec<String> = Vec::new();
     let mut seen_prs: Vec<u16> = Vec::new();
 
@@ -97,7 +97,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
     let enter_comment_regex = Regex::new("<!--")?;
     let exit_comment_regex = Regex::new("-->")?;
 
-    for line in contents.lines() {
+    for (i, line) in contents.lines().enumerate() {
         if is_legacy {
             legacy_contents.push(line.to_string());
             continue;
@@ -132,7 +132,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
             releases.push(current_release.clone());
             n_releases += 1;
             match seen_releases.contains(&current_release.version) {
-                true => problems.push(format!("duplicate release: {}", &current_release.version)),
+                true => add_to_problems(&mut problems, file_path, i, format!("duplicate release: {}", &current_release.version)),
                 false => seen_releases.push((current_release.version).to_string()),
             };
 
@@ -150,7 +150,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
             current_release
                 .problems
                 .into_iter()
-                .for_each(|p| problems.push(p.to_string()));
+                .for_each(|p| add_to_problems(&mut problems, file_path, i, p.to_string()));
 
             fixed.push(current_release.fixed);
 
@@ -164,11 +164,13 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
             // It's only a quick and dirty implementation for now.
             n_change_types += 1;
             if seen_change_types.contains(&current_change_type.name) {
-                problems.push(format!(
-                    "duplicate change type in release {}: {}",
-                    current_release.version.clone(),
-                    current_change_type.name.clone(),
-                ))
+                add_to_problems(&mut problems, file_path, i,
+                    format!(
+                        "duplicate change type in release {}: {}",
+                        current_release.version.clone(),
+                        current_change_type.name.clone(),
+                    ),
+                )
             } else {
                 seen_change_types.push(current_change_type.name.clone());
             }
@@ -178,7 +180,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
             current_change_type
                 .problems
                 .iter()
-                .for_each(|p| problems.push(p.to_string()));
+                .for_each(|p| add_to_problems(&mut problems, file_path, i, p.to_string()));
 
             // TODO: improve this? can this handling be made "more rustic"?
             let last_release = releases
@@ -199,7 +201,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
         let current_entry = match entry::parse(&config, line) {
             Ok(e) => e,
             Err(err) => {
-                problems.push(err.to_string());
+                add_to_problems(&mut problems, file_path, i, err.to_string());
                 fixed.push(line.to_string());
                 continue;
             }
@@ -207,11 +209,8 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
 
         // TODO: ditto, handling could be improved here like with change types, etc.
         if seen_prs.contains(&current_entry.pr_number) {
-            problems.push(format!(
-                "duplicate PR in {}->{}: {}",
-                &current_release.version.clone(),
-                current_change_type.name.clone(),
-                &current_entry.pr_number,
+            add_to_problems(&mut problems, file_path, i, format!(
+                "duplicate PR: #{}", &current_entry.pr_number,
             ));
         } else {
             seen_prs.push(current_entry.pr_number)
@@ -220,7 +219,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
         current_entry
             .problems
             .iter()
-            .for_each(|p| problems.push(p.to_string()));
+            .for_each(|p| add_to_problems(&mut problems, file_path, i, p.to_string()));
 
         // TODO: can be removed with new type-based exports
         fixed.push(current_entry.clone().fixed);
@@ -245,6 +244,11 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
         problems,
         legacy_contents,
     })
+}
+
+/// Used for formatting the problem statements in the changelog.
+fn add_to_problems(problems: &mut Vec<String>, fp: &Path, line: usize, problem: impl Into<String>) {
+    problems.push(format!("{}:{}: {}", fp.to_string_lossy(), line, problem.into()))
 }
 
 #[cfg(test)]
