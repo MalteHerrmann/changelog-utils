@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 
 ARG RUST_VERSION=1.78.0
+ARG REVIEWDOG_VERSION=v0.17.1
 
 ################################################################################
 # Create a stage for building the application.
@@ -29,6 +30,9 @@ RUN --mount=type=bind,source=src,target=src \
 cargo build --locked --release && \
 cp ./target/release/clu /bin/clu
 
+# Install the review dog binary from GitHub
+RUN wget -O - -q https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh| sh -s -- -b /usr/local/bin/ ${REVIEWDOG_VERSION}
+
 ################################################################################
 # Create a new stage for running the application that contains the minimal
 # runtime dependencies for the application. This often uses a different base
@@ -56,8 +60,9 @@ RUN adduser \
     appuser
 USER appuser
 
-# Copy the executable from the "build" stage.
+# Copy the required executables from the "build" stage.
 COPY --from=build /bin/clu /bin/clu
+COPY --from=build /usr/local/bin/reviewdog /bin/reviewdog
 
 ENTRYPOINT ["/bin/clu"]
 
