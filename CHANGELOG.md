@@ -4,6 +4,12 @@ This changelog was created using the `clu` binary
 -->
 # Changelog
 
+## [v1.1.2](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.1.2) - 2024-06-30
+
+### Bug Fixes
+
+- (lint) [#45](https://github.com/MalteHerrmann/changelog-utils/pull/45) Use correct line number.
+
 ## [v1.1.1](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.1.1) - 2024-06-30
 
 ### Bug Fixes
