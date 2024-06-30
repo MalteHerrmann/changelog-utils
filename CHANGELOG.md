@@ -4,7 +4,7 @@ This changelog was created using the `clu` binary
 -->
 # Changelog
 
-## Unreleased
+## [v1.1.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.1.0) - 2024-06-30
 
 ### Improvements
 
