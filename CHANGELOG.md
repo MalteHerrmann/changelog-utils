@@ -8,7 +8,7 @@ This changelog was created using the `clu` binary
 
 ### Bug Fixes
 
-- (all) [#44](https://github.com/MalteHerrmann/changelog-utils/pull/44) Update cargo lock file.
+- (all) [#44](https://github.com/MalteHerrmann/changelog-utils/pull/44) Update cargo lock file and check for this going forward.
 
 ## [v1.1.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.1.0) - 2024-06-30
 
