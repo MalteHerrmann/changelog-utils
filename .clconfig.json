@@ -6,6 +6,7 @@
     "crud",
     "docker",
     "lint",
+    "release",
     "test"
   ],
   "change_types": {
