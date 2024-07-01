@@ -35,10 +35,9 @@ fn it_should_pass_for_incorrect_changelogs_that_has_no_critical_flaws() {
             "tests/testdata/changelog_fail.md:25: PR description should end with a dot: 'Fixed the problem `gas_used` is 0'",
             "tests/testdata/changelog_fail.md:27: 'Invalid Category' is not a valid change type",
             "tests/testdata/changelog_fail.md:31: duplicate change type in release Unreleased: Bug Fixes",
-            "tests/testdata/changelog_fail.md:40: duplicate PR: #1801",
-            "tests/testdata/changelog_fail.md:42: duplicate release: v15.0.0",
-            "tests/testdata/changelog_fail.md:46: duplicate PR: #1862",
-            "tests/testdata/changelog_fail.md:47: invalid entry: - malformed entry in changelog",
+            "tests/testdata/changelog_fail.md:43: duplicate release: v15.0.0",
+            "tests/testdata/changelog_fail.md:47: duplicate PR: #1862",
+            "tests/testdata/changelog_fail.md:50: invalid entry: - another malformed entry in changelog",
         ]
     );
 }

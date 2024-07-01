@@ -24,10 +24,9 @@ docker pull ghcr.io/malteherrmann/changelog-utils:[TAG]
 
 ## Usage
 
-The available subcommands can be listed when running
+The available subcommands can be listed when running `clu help`:
 
-```bash
- $ clu --help
+```yaml
 Usage: clu <COMMAND>
 
 Commands:
@@ -58,7 +57,7 @@ in existing projects. In that case, it will only create the default configuratio
 You can add or remove configurations as you like with the
 corresponding subcommands of `clu config`.
 
-```bash
+```yaml
 Usage: clu config <COMMAND>
 
 Commands:
@@ -73,3 +72,19 @@ Commands:
 Options:
   -h, --help  Print help
 ```
+
+## Linter Escape Patterns
+
+The linter can be escaped for a given line or just for specific sublinters.
+To keep a consistent changelog structure we only allow for escapes to be effective for
+individual PR changes instead of release (e.g. `## [v0.1.0](...)`) or change type lines (e.g. `### Bug Fixes`).
+
+The following escape patterns are available:
+
+| Escape Pattern | Description |
+|----------------------------------------------------------|---------------------------------------|
+| `<!-- clu-disable-next-line -->` | Escapes any checks for the next line. |
+| `<!-- clu-disable-next-line-duplicate-pr` | Escapes a potential duplicate PR warning in the next line. This applies especially for backported changes that occur in multiple releases. |
+
+All available escape patterns can be appended by an optional description that is separated by a colon,
+e.g. `<!-- clu-disable-next-line-duplicate-pr: known duplicate (backported PR) -->`.
