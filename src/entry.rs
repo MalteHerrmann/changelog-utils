@@ -35,7 +35,10 @@ impl Entry {
     }
 }
 
-pub fn parse(config: &config::Config, line: &str) -> Result<Entry, EntryError> {
+pub fn parse(
+    config: &config::Config,
+    line: &str,
+) -> Result<Entry, EntryError> {
     let entry_pattern = Regex::new(concat!(
         r"^(?P<ws0>\s*)-(?P<ws1>\s*)\((?P<category>[a-zA-Z0-9\-]+)\)",
         r"(?P<ws2>\s*)\[(?P<bs>\\)?#(?P<pr>\d+)]",
@@ -49,8 +52,6 @@ pub fn parse(config: &config::Config, line: &str) -> Result<Entry, EntryError> {
     };
 
     // NOTE: calling unwrap here is okay because we checked that the pattern matched above
-    //
-    // TODO: This should definitely improved if possible, using some iterator stuff maybe?
     let category = matches.name("category").unwrap().as_str();
     let description = matches.name("desc").unwrap().as_str();
     let link = matches.name("link").unwrap().as_str();

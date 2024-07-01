@@ -1,12 +1,11 @@
 use assert_fs::{prelude::*, TempDir};
+use clu::errors::InitError;
 use clu::init;
 use predicates::prelude::*;
-use clu::errors::InitError;
 
 #[test]
 fn test_init_empty_folder() {
-    let temp_dir = TempDir::new()
-        .expect("failed to create temporary directory");
+    let temp_dir = TempDir::new().expect("failed to create temporary directory");
 
     assert!(
         init::init_in_folder(temp_dir.path().to_path_buf()).is_ok(),
@@ -24,8 +23,7 @@ fn test_init_empty_folder() {
 
 #[test]
 fn test_init_changelog_exists() {
-    let temp_dir = TempDir::new()
-        .expect("failed to create temporary directory");
+    let temp_dir = TempDir::new().expect("failed to create temporary directory");
 
     temp_dir
         .child("CHANGELOG.md")
@@ -44,12 +42,10 @@ fn test_init_changelog_exists() {
     temp_dir
         .child(".clconfig.json")
         .assert(predicate::path::exists());
-
 }
 #[test]
 fn test_init_changelog_and_config_exists() {
-    let temp_dir = TempDir::new()
-        .expect("failed to create temporary directory");
+    let temp_dir = TempDir::new().expect("failed to create temporary directory");
 
     temp_dir
         .child("CHANGELOG.md")
@@ -62,6 +58,12 @@ fn test_init_changelog_and_config_exists() {
         .expect("failed to create dummy config");
 
     let res = init::init_in_folder(temp_dir.path().to_path_buf());
-    assert!(res.is_err(), "expected failure trying to initialize with config already existing");
-    assert_eq!(res.unwrap_err().to_string(), InitError::ConfigAlreadyFound.to_string())
+    assert!(
+        res.is_err(),
+        "expected failure trying to initialize with config already existing"
+    );
+    assert_eq!(
+        res.unwrap_err().to_string(),
+        InitError::ConfigAlreadyFound.to_string()
+    )
 }
