@@ -4,6 +4,12 @@ This changelog was created using the `clu` binary
 -->
 # Changelog
 
+## Unreleased
+
+### Features
+
+- (lint) [#46](https://github.com/MalteHerrmann/changelog-utils/pull/46) Add support for linter escapes.
+
 ## [v1.1.2](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.1.2) - 2024-06-30
 
 ### Bug Fixes
