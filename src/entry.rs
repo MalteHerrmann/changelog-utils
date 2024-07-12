@@ -35,10 +35,7 @@ impl Entry {
     }
 }
 
-pub fn parse(
-    config: &config::Config,
-    line: &str,
-) -> Result<Entry, EntryError> {
+pub fn parse(config: &config::Config, line: &str) -> Result<Entry, EntryError> {
     let entry_pattern = Regex::new(concat!(
         r"^(?P<ws0>\s*)-(?P<ws1>\s*)\((?P<category>[a-zA-Z0-9\-]+)\)",
         r"(?P<ws2>\s*)\[(?P<bs>\\)?#(?P<pr>\d+)]",

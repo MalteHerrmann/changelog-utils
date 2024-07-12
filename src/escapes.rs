@@ -10,12 +10,18 @@ pub enum LinterEscape {
 /// Checks the given comment for an escape pattern.
 pub fn check_escape_pattern(line: &str) -> Option<LinterEscape> {
     // TODO: improve handling here with associated traits for the linter escapes?
-    match Regex::new(r"<!--\s*clu-disable-next-line-duplicate-pr(:.+)?\s*-->").unwrap().is_match(line) {
+    match Regex::new(r"<!--\s*clu-disable-next-line-duplicate-pr(:.+)?\s*-->")
+        .unwrap()
+        .is_match(line)
+    {
         true => Some(LinterEscape::DuplicatePR),
-        false => match Regex::new(r"<!--\s*clu-disable-next-line(:.+)?\s*-->").unwrap().is_match(line) {
+        false => match Regex::new(r"<!--\s*clu-disable-next-line(:.+)?\s*-->")
+            .unwrap()
+            .is_match(line)
+        {
             true => Some(LinterEscape::FullLine),
             false => None,
-        }
+        },
     }
 }
 
@@ -30,21 +36,35 @@ mod escape_tests {
 
     #[test]
     fn test_escape_full_line() {
-        assert_eq!(check_escape_pattern("<!-- clu-disable-next-line -->"), Some(LinterEscape::FullLine));
+        assert_eq!(
+            check_escape_pattern("<!-- clu-disable-next-line -->"),
+            Some(LinterEscape::FullLine)
+        );
     }
 
     #[test]
     fn test_escape_full_line_with_comment() {
-        assert_eq!(check_escape_pattern("<!-- clu-disable-next-line: optional description -->"), Some(LinterEscape::FullLine));
+        assert_eq!(
+            check_escape_pattern("<!-- clu-disable-next-line: optional description -->"),
+            Some(LinterEscape::FullLine)
+        );
     }
 
     #[test]
     fn test_escape_duplicate() {
-        assert_eq!(check_escape_pattern("<!-- clu-disable-next-line-duplicate-pr -->"), Some(LinterEscape::DuplicatePR));
+        assert_eq!(
+            check_escape_pattern("<!-- clu-disable-next-line-duplicate-pr -->"),
+            Some(LinterEscape::DuplicatePR)
+        );
     }
 
     #[test]
     fn test_escape_duplicate_with_comment() {
-        assert_eq!(check_escape_pattern("<!-- clu-disable-next-line-duplicate-pr: optional description -->"), Some(LinterEscape::DuplicatePR));
+        assert_eq!(
+            check_escape_pattern(
+                "<!-- clu-disable-next-line-duplicate-pr: optional description -->"
+            ),
+            Some(LinterEscape::DuplicatePR)
+        );
     }
 }

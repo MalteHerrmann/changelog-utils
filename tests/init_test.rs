@@ -1,7 +1,7 @@
 use assert_fs::{prelude::*, TempDir};
-use clu::errors::InitError;
-use clu::init;
+use clu::{config, errors::InitError, init};
 use predicates::prelude::*;
+use std::fs;
 
 #[test]
 fn test_init_empty_folder() {
@@ -26,9 +26,13 @@ fn test_init_changelog_exists() {
     let temp_dir = TempDir::new().expect("failed to create temporary directory");
 
     temp_dir
-        .child("CHANGELOG.md")
-        .touch()
+        .copy_from("tests/testdata", &["changelog_fail.md"])
         .expect("failed to create dummy changelog");
+
+    assert!(fs::rename(
+        temp_dir.child("changelog_fail.md"),
+        temp_dir.child("CHANGELOG.md"),
+    ).is_ok());
 
     assert!(
         init::init_in_folder(temp_dir.path().to_path_buf()).is_ok(),
@@ -42,7 +46,26 @@ fn test_init_changelog_exists() {
     temp_dir
         .child(".clconfig.json")
         .assert(predicate::path::exists());
+
+    let config = config::unpack_config(
+        fs::read_to_string(temp_dir.child(".clconfig.json"))
+            .expect("failed to read config")
+            .as_str(),
+    )
+    .expect("failed to unpack config");
+
+    assert_eq!(config.categories, vec![
+        "p256-precompile".to_string(),
+        "distribution-precompile".to_string(),
+        "evm".to_string(),
+        "testnet".to_string(),
+        "stride-outpost".to_string(),
+        "ante".to_string(),
+        "inflation".to_string(),
+        "vesting".to_string(),
+    ])
 }
+
 #[test]
 fn test_init_changelog_and_config_exists() {
     let temp_dir = TempDir::new().expect("failed to create temporary directory");
