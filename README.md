@@ -88,3 +88,12 @@ The following escape patterns are available:
 
 All available escape patterns can be appended by an optional description that is separated by a colon,
 e.g. `<!-- clu-disable-next-line-duplicate-pr: known duplicate (backported PR) -->`.
+
+## Authentication
+
+Authenticated GitHub requests are made if an environment variable
+`GITHUB_TOKEN` is found.
+This is required to check for available open pull requests
+of the current branch in private repositories.
+
+**NOTE**: The GitHub authentication is only used for read access of open PRs.

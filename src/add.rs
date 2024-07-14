@@ -11,7 +11,7 @@ pub async fn run() -> Result<(), AddError> {
         config.change_types.clone().into_keys().collect();
     selectable_change_types.sort();
 
-    let pr_info = get_open_pr(&config).await?;
+    let pr_info = get_open_pr(&config).await.unwrap_or_default();
 
     let ct_idx = selectable_change_types
         .iter()
