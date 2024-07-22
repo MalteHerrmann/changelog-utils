@@ -8,9 +8,8 @@ pub fn run(version: String) -> Result<(), ReleaseCLIError> {
 
     version::parse(version.as_str())?;
 
-    match changelog.releases.iter().find(|x| x.version.eq(&version)) {
-        Some(_) => return Err(ReleaseCLIError::DuplicateVersion(version.to_string())),
-        None => (),
+    if changelog.releases.iter().any(|x| x.version.eq(&version)) {
+        return Err(ReleaseCLIError::DuplicateVersion(version.to_string()));
     }
 
     let unreleased = match changelog.releases.iter_mut().find(|x| x.is_unreleased()) {
@@ -20,7 +19,7 @@ pub fn run(version: String) -> Result<(), ReleaseCLIError> {
 
     let today = Local::now();
 
-    unreleased.version = version.clone();
+    unreleased.version.clone_from(&version);
     unreleased.fixed = format!(
         "## [{0}]({1}/releases/tag/{0}) - {2}",
         version,

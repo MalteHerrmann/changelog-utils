@@ -1,14 +1,18 @@
 {
   "categories": [
-    "lint",
-    "test",
+    "all",
+    "ci",
     "config",
-    "crud"
+    "crud",
+    "docker",
+    "lint",
+    "release",
+    "test"
   ],
   "change_types": {
+    "Bug Fixes": "bug\\s*fixes",
     "Features": "features",
-    "Improvements": "improvements",
-    "Bug Fixes": "bug\\s*fixes"
+    "Improvements": "improvements"
   },
   "expected_spellings": {
     "CLI": "cli"

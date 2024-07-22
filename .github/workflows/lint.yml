@@ -1,0 +1,17 @@
+name: Lint Codebase
+
+on:
+  pull_request:
+
+jobs:
+  lint:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: auguwu/clippy-action@1.3.0
+        with:
+          token: ${{secrets.GITHUB_TOKEN}}

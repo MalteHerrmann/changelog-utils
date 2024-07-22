@@ -37,6 +37,7 @@ Some comments at head of file...
 ### API Breaking
 
 - (vesting) [#1862](https://github.com/evmos/evmos/pull/1862) Add Authorization Grants to the Vesting extension.
+<!-- clu-disable-next-line-duplicate-pr: known duplicate (backport) -->
 - (evm) [#1801](https://github.com/evmos/evmos/pull/1801) Fixed the problem `gas_used` is 0.
 
 ## [v15.0.0](https://github.com/evmos/evmos/releases/tag/v15.0.0) - 2023-10-31
@@ -44,4 +45,6 @@ Some comments at head of file...
 ### API Breaking
 
 - (vesting) [#1862](https://github.com/evmos/evmos/pull/1862) Add Authorization Grants to the Vesting extension.
+<!-- clu-disable-next-line: malformed line is okay here -->
 - malformed entry in changelog
+- another malformed entry in changelog

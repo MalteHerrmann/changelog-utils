@@ -3,6 +3,7 @@ use regex::Error;
 use serde_json;
 use std::io;
 use std::num::ParseIntError;
+use std::string::FromUtf8Error;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -37,6 +38,8 @@ pub enum AddError {
     Input(#[from] InputError),
     #[error("first release is not unreleased section: {0}")]
     FirstReleaseNotUnreleased(String),
+    #[error("failed to get pull request information: {0}")]
+    PRInfo(#[from] GitHubError),
     #[error("failed to parse changelog: {0}")]
     InvalidChangelog(#[from] ChangelogError),
     #[error("failed to prompt user: {0}")]
@@ -51,6 +54,10 @@ pub enum InitError {
     FailedToWrite(#[from] io::Error),
     #[error("config already created")]
     ConfigAlreadyFound,
+    #[error("error exporting config: {0}")]
+    ConfigError(#[from] ConfigError),
+    #[error("failed to get origin")]
+    OriginError(#[from] GitHubError),
 }
 
 #[derive(Error, Debug)]
@@ -87,6 +94,28 @@ pub enum ChangelogError {
 pub enum EntryError {
     #[error("invalid entry: {0}")]
     InvalidEntry(String),
+}
+
+#[derive(Error, Debug)]
+pub enum GitHubError {
+    #[error("failed to get current branch")]
+    CurrentBranch,
+    #[error("failed to call GitHub API: {0}")]
+    GitHub(#[from] octocrab::Error),
+    #[error("failed to build regex: {0}")]
+    InvalidRegex(#[from] Error),
+    #[error("target repository in configuration is no GitHub repository")]
+    NoGitHubRepo,
+    #[error("no pull request open for branch")]
+    NoOpenPR,
+    #[error("failed to get origin")]
+    Origin,
+    #[error("failed to decode output: {0}")]
+    OutputDecoding(#[from] FromUtf8Error),
+    #[error("failed to match GitHub repo: {0}")]
+    RegexMatch(String),
+    #[error("failed to execute command: {0}")]
+    StdCommand(#[from] io::Error),
 }
 
 #[derive(Error, Debug, PartialEq)]

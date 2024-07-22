@@ -1,5 +1,5 @@
 use clu::{changelog, config};
-use std::path::Path;
+use std::{fs, path::Path};
 
 #[cfg(test)]
 fn load_test_config() -> config::Config {
@@ -29,16 +29,31 @@ fn it_should_pass_for_incorrect_changelogs_that_has_no_critical_flaws() {
     assert_eq!(
         changelog.problems,
         vec![
-            "PR link is not matching PR number 1948: 'https://github.com/evmos/evmos/pull/1949'",
-            "There should be no backslash in front of the # in the PR link",
-            "'ABI' should be used instead of 'ABi'",
-            "PR description should end with a dot: 'Fixed the problem `gas_used` is 0'",
-            "'Invalid Category' is not a valid change type",
-            "duplicate change type in release Unreleased: Bug Fixes",
-            "duplicate PR in v15.0.0->API Breaking: 1801",
-            "duplicate release: v15.0.0",
-            "duplicate PR in v15.0.0->API Breaking: 1862",
-            "invalid entry: - malformed entry in changelog",
+            "tests/testdata/changelog_fail.md:11: PR link is not matching PR number 1948: 'https://github.com/evmos/evmos/pull/1949'",
+            "tests/testdata/changelog_fail.md:20: There should be no backslash in front of the # in the PR link",
+            "tests/testdata/changelog_fail.md:21: 'ABI' should be used instead of 'ABi'",
+            "tests/testdata/changelog_fail.md:25: PR description should end with a dot: 'Fixed the problem `gas_used` is 0'",
+            "tests/testdata/changelog_fail.md:27: 'Invalid Category' is not a valid change type",
+            "tests/testdata/changelog_fail.md:31: duplicate change type in release Unreleased: Bug Fixes",
+            "tests/testdata/changelog_fail.md:43: duplicate release: v15.0.0",
+            "tests/testdata/changelog_fail.md:47: duplicate PR: #1862",
+            "tests/testdata/changelog_fail.md:50: invalid entry: - another malformed entry in changelog",
         ]
+    );
+}
+
+#[test]
+fn it_should_fix_the_changelog_as_expected() {
+    let incorrect_changelog = Path::new("tests/testdata/changelog_to_be_fixed.md");
+    let changelog = changelog::parse_changelog(load_test_config(), incorrect_changelog)
+        .expect("failed to parse changelog");
+
+    let expected = fs::read_to_string(Path::new("tests/testdata/changelog_fixed.md"))
+        .expect("failed to load correct changelog");
+
+    assert_eq!(
+        expected.trim(),
+        changelog.get_fixed().trim(),
+        "expected different fixed changelog"
     );
 }

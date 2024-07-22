@@ -1,7 +1,7 @@
 use crate::errors::{ConfigAdjustError, ConfigError};
 use serde::{Deserialize, Serialize};
 use serde_json;
-use std::{collections::HashMap, fmt, fs};
+use std::{collections::BTreeMap, fmt, fs, path::Path};
 use url::Url;
 
 /// Holds the configuration of the application
@@ -17,14 +17,14 @@ pub struct Config {
     /// Note: The key is the correct spelling and the value is
     /// a regular expression matching all possible (mis-)spellings
     /// of the given category.
-    pub change_types: HashMap<String, String>,
+    pub change_types: BTreeMap<String, String>,
     /// The map of expected spellings.
     ///
     /// Note: The key is the correct spelling and the value
     /// is a string representing a RegEx pattern of possible
     /// (mis-)spellings, that should be associated with the correct
     /// version.
-    pub expected_spellings: HashMap<String, String>,
+    pub expected_spellings: BTreeMap<String, String>,
     /// Optional Version to specify legacy entries, that
     /// don't need to adhere to the given linter standards.
     ///
@@ -36,6 +36,10 @@ pub struct Config {
 }
 
 impl Config {
+    pub fn export(&self, path: &Path) -> Result<(), ConfigError> {
+        Ok(fs::write(path, format!("{}", self))?)
+    }
+
     pub fn has_legacy_version(&self) -> bool {
         self.legacy_version.is_some()
     }
@@ -66,6 +70,8 @@ pub fn add_category(config: &mut Config, value: String) -> Result<(), ConfigAdju
     }
 
     config.categories.push(value);
+    config.categories.sort_unstable();
+
     Ok(())
 }
 
@@ -76,25 +82,27 @@ pub fn remove_category(config: &mut Config, value: String) -> Result<(), ConfigA
         None => return Err(ConfigAdjustError::NotFound),
     };
     config.categories.remove(index);
+
     Ok(())
 }
 
-// Adds a new key-value pair into the given hashmap in case the key is not
+// Adds a new key-value pair into the given collection in case the key is not
 // already present.
-pub fn add_into_hashmap(
-    hm: &mut HashMap<String, String>,
+pub fn add_into_collection(
+    hm: &mut BTreeMap<String, String>,
     key: String,
     value: String,
 ) -> Result<(), ConfigAdjustError> {
-    match hm.insert(key, value) {
-        Some(_) => Err(ConfigAdjustError::KeyAlreadyFound),
-        None => Ok(()),
-    }
+    if hm.insert(key, value).is_some() {
+        return Err(ConfigAdjustError::KeyAlreadyFound);
+    };
+
+    Ok(())
 }
 
-// Removes a key from the given hashmap in case it is found.
-pub fn remove_from_hashmap(
-    hm: &mut HashMap<String, String>,
+// Removes a key from the given collection in case it is found.
+pub fn remove_from_collection(
+    hm: &mut BTreeMap<String, String>,
     key: String,
 ) -> Result<(), ConfigAdjustError> {
     match hm.remove(&key) {
@@ -225,11 +233,11 @@ mod config_adjustment_tests {
     }
 
     #[test]
-    fn test_add_into_hashmap() {
+    fn test_add_into_collection() {
         let mut config = load_example_config();
         assert_eq!(config.change_types.keys().len(), 3);
         assert!(!config.change_types.contains_key("newkey"));
-        assert!(add_into_hashmap(
+        assert!(add_into_collection(
             &mut config.change_types,
             "newkey".to_string(),
             "newvalue".to_string()
@@ -240,12 +248,12 @@ mod config_adjustment_tests {
     }
 
     #[test]
-    fn test_add_into_hashmap_already_present() {
+    fn test_add_into_collection_already_present() {
         let mut config = load_example_config();
         assert_eq!(config.change_types.keys().len(), 3);
         assert!(config.change_types.contains_key("Bug Fixes"));
         assert_eq!(
-            add_into_hashmap(
+            add_into_collection(
                 &mut config.change_types,
                 "Bug Fixes".to_string(),
                 "newvalue".to_string()
@@ -257,21 +265,21 @@ mod config_adjustment_tests {
     }
 
     #[test]
-    fn test_remove_from_hashmap() {
+    fn test_remove_from_collection() {
         let mut config = load_example_config();
         assert_eq!(config.change_types.keys().len(), 3);
         assert!(config.change_types.contains_key("Bug Fixes"));
-        assert!(remove_from_hashmap(&mut config.change_types, "Bug Fixes".to_string()).is_ok());
+        assert!(remove_from_collection(&mut config.change_types, "Bug Fixes".to_string()).is_ok());
         assert_eq!(config.change_types.keys().len(), 2);
         assert!(!config.change_types.contains_key("Bug Fixes"));
     }
 
     #[test]
-    fn test_remove_from_hashmap_not_found() {
+    fn test_remove_from_collection_not_found() {
         let mut config = load_example_config();
         assert_eq!(config.change_types.keys().len(), 3);
         assert_eq!(
-            remove_from_hashmap(&mut config.change_types, "not found".to_string()).unwrap_err(),
+            remove_from_collection(&mut config.change_types, "not found".to_string()).unwrap_err(),
             ConfigAdjustError::NotFound
         );
         assert_eq!(config.change_types.keys().len(), 3);

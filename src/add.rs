@@ -1,22 +1,30 @@
 use crate::errors::AddError;
-use crate::{change_type, changelog, config, entry, release};
+use crate::{change_type, changelog, config, entry, github::get_open_pr, release};
 use inquire::{Select, Text};
 use std::borrow::BorrowMut;
 
 // Runs the logic to add an entry to the unreleased section of the changelog.
-pub fn run() -> Result<(), AddError> {
+pub async fn run() -> Result<(), AddError> {
     let config = config::load()?;
 
     let mut selectable_change_types: Vec<String> =
         config.change_types.clone().into_keys().collect();
     selectable_change_types.sort();
 
-    let selected_change_type =
-        Select::new("Select change type to add into", selectable_change_types).prompt()?;
+    let pr_info = get_open_pr(&config).await.unwrap_or_default();
 
-    // TODO: check for existing PR with GitHub crate (-> octocrab)
-    // TODO: also validate if this is a duplicate in the changelog
-    let pr_number = match Text::new("Please provide the PR number")
+    let ct_idx = selectable_change_types
+        .iter()
+        .position(|ct| ct.eq(&pr_info.change_type))
+        .unwrap_or_default();
+
+    let selected_change_type =
+        Select::new("Select change type to add into:", selectable_change_types)
+            .with_starting_cursor(ct_idx)
+            .prompt()?;
+
+    let pr_number = match Text::new("Please provide the PR number:")
+        .with_initial_value(&pr_info.number)
         .prompt()?
         .parse::<u16>()
     {
@@ -24,12 +32,22 @@ pub fn run() -> Result<(), AddError> {
         Err(e) => return Err(AddError::Input(e.into())),
     };
 
+    let cat_idx = config
+        .categories
+        .iter()
+        .position(|c| c.eq(&pr_info.category))
+        .unwrap_or_default();
+
     let cat = Select::new(
-        "Select the category of the made changes",
+        "Select the category of the made changes:",
         config.categories.clone(),
     )
+    .with_starting_cursor(cat_idx)
     .prompt()?;
-    let desc = Text::new("Please provide a short description of the made changes\n").prompt()?;
+
+    let desc = Text::new("Please provide a short description of the made changes:\n")
+        .with_initial_value(&pr_info.description)
+        .prompt()?;
 
     let mut changelog = changelog::load(config.clone())?;
     add_entry(
@@ -74,7 +92,7 @@ pub fn add_entry(
         }
     }
 
-    let new_entry = entry::Entry::new(&config, cat, desc, pr);
+    let new_entry = entry::Entry::new(config, cat, desc, pr);
 
     // Get the mutable change type to add the entry into.
     // NOTE: If it's not found yet, we add a new section to the changelog.
