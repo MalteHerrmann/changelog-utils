@@ -5,6 +5,7 @@ use crate::{
 use regex::{Error, Regex, RegexBuilder};
 
 /// Represents an individual entry in the changelog.
+/// // nonsende change
 #[derive(Clone, Debug)]
 pub struct Entry {
     /// The fixed line adhering to all standards.
