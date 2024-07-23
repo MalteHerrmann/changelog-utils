@@ -369,25 +369,19 @@ pub fn get_settings_from_existing_changelog(config: &mut Config, contents: &str)
         let trimmed_line = line.trim();
 
         if trimmed_line.starts_with("### ") {
-            match change_type::parse(config.clone(), line) {
-                Ok(ct) => {
-                    if !seen_change_types.contains(&ct.name) {
-                        seen_change_types.push(ct.name)
-                    }
+            if let Ok(ct) = change_type::parse(config.clone(), line) {
+                if !seen_change_types.contains(&ct.name) {
+                    seen_change_types.push(ct.name)
                 }
-                _ => (),
             };
 
             continue;
         }
 
-        match entry::parse(config, line) {
-            Ok(e) => {
-                if !seen_categories.contains(&e.category) {
-                    seen_categories.push(e.category)
-                }
+        if let Ok(e) = entry::parse(config, line) {
+            if !seen_categories.contains(&e.category) {
+                seen_categories.push(e.category)
             }
-            _ => (),
         }
     }
 

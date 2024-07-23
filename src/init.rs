@@ -32,11 +32,11 @@ pub fn init_in_folder(target: PathBuf) -> Result<(), InitError> {
             println!("changelog file found");
             get_settings_from_existing_changelog(&mut config, contents.as_str());
 
-            if config.categories.len() > 0 {
+            if !config.categories.is_empty() {
                 println!("extracted categories: {}", config.categories.join(", "))
             }
 
-            if config.change_types.len() > 0 {
+            if !config.change_types.is_empty() {
                 let mut ct_keys: Vec<String> = Vec::new();
                 config
                     .change_types
