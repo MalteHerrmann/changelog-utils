@@ -7,6 +7,7 @@ use regex::{Regex, RegexBuilder};
 use std::process::Command;
 
 /// Holds the relevant information for a given PR.
+#[derive(Default)]
 pub struct PRInfo {
     pub change_type: String,
     pub category: String,
@@ -68,7 +69,13 @@ pub async fn get_open_pr(config: &Config) -> Result<PRInfo, GitHubError> {
     let repo = captures.name("repo").unwrap().as_str();
     let branch = get_current_local_branch()?;
 
-    let octocrab = octocrab::instance();
+    let octocrab = match std::env::var("GITHUB_TOKEN") {
+        Ok(token) => octocrab::OctocrabBuilder::new()
+            .personal_token(token)
+            .build()?,
+        _ => octocrab::Octocrab::default(),
+    };
+
     let pulls = octocrab.pulls(owner, repo).list().send().await?.items;
     match pulls.iter().find(|pr| {
         pr.head.label.as_ref().is_some_and(|l| {
