@@ -234,7 +234,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
                 .for_each(|p| add_to_problems(&mut problems, file_path, i, p.to_string()));
         }
 
-        // TODO: improve this, seems not ideal because it's also being retrieved in the statements above
         let last_release = releases
             .get_mut(n_releases - 1)
             .expect("failed to get last release");
