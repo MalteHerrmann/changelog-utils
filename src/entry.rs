@@ -498,9 +498,8 @@ mod spelling_tests {
         let (fixed, problems) = check_spelling(&load_test_config(), example);
         assert_eq!(fixed, "Fix API and CLI.");
         assert_eq!(problems.len(), 2);
-        // TODO: this is currently not deterministically in the same order
-        assert!(problems.contains(&"'API' should be used instead of 'aPi'".to_string()));
-        assert!(problems.contains(&"'CLI' should be used instead of 'ClI'".to_string()));
+        assert_eq!(problems[0], "'API' should be used instead of 'aPi'");
+        assert_eq!(problems[1], "'CLI' should be used instead of 'ClI'");
     }
 
     #[test]
