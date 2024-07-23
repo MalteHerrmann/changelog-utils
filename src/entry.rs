@@ -14,8 +14,6 @@ pub struct Entry {
     /// The PR number for the given change.
     pub pr_number: u16,
     /// The list of problems with the given line.
-    ///
-    /// TODO: Should this rather be a Vec<a' str>?
     pub problems: Vec<String>,
 }
 
@@ -92,7 +90,7 @@ pub fn parse(config: &config::Config, line: &str) -> Result<Entry, EntryError> {
 
     Ok(Entry {
         category: fixed_category.to_string(),
-        fixed, // TODO: why is it not possible to have this as &'a str too?
+        fixed,
         pr_number,
         problems,
     })

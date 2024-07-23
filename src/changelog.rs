@@ -131,18 +131,19 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
 
             releases.push(current_release.clone());
             n_releases += 1;
-            match seen_releases.contains(&current_release.version) {
-                true => add_to_problems(
+            if seen_releases.contains(&current_release.version) {
+                add_to_problems(
                     &mut problems,
                     file_path,
                     i,
                     format!("duplicate release: {}", &current_release.version),
-                ),
-                false => seen_releases.push((current_release.version).to_string()),
+                );
+            } else {
+                seen_releases.push((current_release.version).to_string());
             };
 
             // reset the seen change types for the current release
-            seen_change_types = Vec::new();
+            seen_change_types.clear();
             n_change_types = 0;
 
             if current_release
@@ -163,8 +164,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
         if trimmed_line.starts_with("### ") {
             current_change_type = change_type::parse(config.clone(), line)?;
 
-            // TODO: this handling should definitely be improved.
-            // It's only a quick and dirty implementation for now.
             n_change_types += 1;
             if seen_change_types.contains(&current_change_type.name) {
                 add_to_problems(
@@ -186,10 +185,10 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
                 .iter()
                 .for_each(|p| add_to_problems(&mut problems, file_path, i, p.to_string()));
 
-            // TODO: improve this? can this handling be made "more rustic"?
             let last_release = releases
                 .get_mut(n_releases - 1)
                 .expect("failed to get last release");
+
             last_release.change_types.push(current_change_type.clone());
 
             continue;
@@ -213,7 +212,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
             }
         };
 
-        // TODO: ditto, handling could be improved here like with change types, etc.
         if seen_prs.contains(&current_entry.pr_number)
             && (!escapes.contains(&escapes::LinterEscape::DuplicatePR)
                 && !escapes.contains(&escapes::LinterEscape::FullLine))
@@ -245,6 +243,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
             .change_types
             .get_mut(n_change_types - 1)
             .expect("failed to get last change type");
+
         last_change_type.entries.push(current_entry);
 
         // Reset the escapes after an entry line
