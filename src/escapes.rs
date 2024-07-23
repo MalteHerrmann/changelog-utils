@@ -9,20 +9,21 @@ pub enum LinterEscape {
 
 /// Checks the given comment for an escape pattern.
 pub fn check_escape_pattern(line: &str) -> Option<LinterEscape> {
-    // TODO: improve handling here with associated traits for the linter escapes?
-    match Regex::new(r"<!--\s*clu-disable-next-line-duplicate-pr(:.+)?\s*-->")
+    if Regex::new(r"<!--\s*clu-disable-next-line-duplicate-pr(:.+)?\s*-->")
         .unwrap()
         .is_match(line)
     {
-        true => Some(LinterEscape::DuplicatePR),
-        false => match Regex::new(r"<!--\s*clu-disable-next-line(:.+)?\s*-->")
-            .unwrap()
-            .is_match(line)
-        {
-            true => Some(LinterEscape::FullLine),
-            false => None,
-        },
+        return Some(LinterEscape::DuplicatePR);
     }
+
+    if Regex::new(r"<!--\s*clu-disable-next-line(:.+)?\s*-->")
+        .unwrap()
+        .is_match(line)
+    {
+        return Some(LinterEscape::FullLine);
+    }
+
+    None
 }
 
 #[cfg(test)]

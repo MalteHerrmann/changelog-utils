@@ -187,7 +187,12 @@ fn check_spelling(config: &config::Config, text: &str) -> (String, Vec<String>) 
                 };
 
                 fixed = compile_regex(pattern)
-                    .expect("failed to compile regex") // TODO: return Result rather than use expect here?
+                    .unwrap_or_else(|_| {
+                        panic!(
+                            "failed to compile regex for '{}'; check spelling configuration",
+                            pattern
+                        )
+                    })
                     .replace(fixed.as_str(), correct_spelling)
                     .to_string();
 
@@ -326,7 +331,6 @@ mod entry_tests {
     #[test]
     fn test_malformed_entry() {
         let example = r"- (cli) [#13tps://github.com/Ma/2";
-        // TODO: figure how to still return an entry but with the corresponding array of problems filled
         assert!(parse(&load_test_config(), example).is_err());
     }
 

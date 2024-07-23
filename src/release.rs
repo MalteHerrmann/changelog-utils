@@ -2,13 +2,10 @@ use crate::{change_type::ChangeType, config, errors::ReleaseError, version};
 use regex::RegexBuilder;
 
 /// Holds the information about a release section in the changelog.
-///
-/// TODO: check if clone are necessary?
 #[derive(Clone, Debug)]
 pub struct Release {
     pub line: String,
     pub fixed: String,
-    // TODO: use Version type
     pub version: String,
     pub change_types: Vec<ChangeType>,
     pub problems: Vec<String>,
@@ -25,19 +22,14 @@ impl Release {
     ///
     /// If no legacy version is defined, it returns false.
     pub fn is_legacy(&self, config: &config::Config) -> Result<bool, ReleaseError> {
-        if self.is_unreleased() {
+        if self.is_unreleased() || !config.has_legacy_version() {
             return Ok(false);
         }
 
+        let legacy_version = version::parse(config.legacy_version.as_ref().unwrap())?;
         let parsed_version = version::parse(self.version.as_str())?;
-        if config.has_legacy_version() {
-            let legacy_version = version::parse(config.legacy_version.as_ref().unwrap())?;
-            if !parsed_version.gt(&legacy_version) {
-                return Ok(true);
-            }
-        }
 
-        Ok(false)
+        Ok(!parsed_version.gt(&legacy_version))
     }
 }
 
