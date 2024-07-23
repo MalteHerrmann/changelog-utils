@@ -10,7 +10,6 @@ use std::{
 #[derive(Debug)]
 pub struct Changelog {
     pub path: PathBuf,
-    pub fixed: Vec<String>,
     comments: Vec<String>,
     legacy_contents: Vec<String>,
     pub releases: Vec<release::Release>,
@@ -20,11 +19,11 @@ pub struct Changelog {
 impl Changelog {
     /// Exports the changelog contents to the given filepath.
     pub fn write(&self, export_path: &Path) -> Result<(), ChangelogError> {
-        Ok(fs::write(export_path, self.get_fixed())?)
+        Ok(fs::write(export_path, self.get_fixed_contents())?)
     }
 
     /// Returns the fixed contents as a String to be exported.
-    pub fn get_fixed(&self) -> String {
+    pub fn get_fixed_contents(&self) -> String {
         let mut exported_string = "".to_string();
 
         self.comments
@@ -81,7 +80,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
     let mut n_change_types = 0;
 
     let mut comments: Vec<String> = Vec::new();
-    let mut fixed: Vec<String> = Vec::new();
     let mut legacy_contents: Vec<String> = Vec::new();
     let mut releases: Vec<release::Release> = Vec::new();
     let mut problems: Vec<String> = Vec::new();
@@ -114,7 +112,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
         if is_comment && exit_comment_regex.is_match(trimmed_line) {
             is_comment = false;
             comments.push(line.to_string());
-            fixed.push(line.to_string());
 
             // Check inline comments
             if let Some(e) = escapes::check_escape_pattern(trimmed_line) {
@@ -125,7 +122,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
         }
 
         if is_comment {
-            fixed.push(line.to_string());
             comments.push(line.to_string());
             continue;
         }
@@ -161,8 +157,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
                 .into_iter()
                 .for_each(|p| add_to_problems(&mut problems, file_path, i, p.to_string()));
 
-            fixed.push(current_release.fixed);
-
             continue;
         }
 
@@ -187,8 +181,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
                 seen_change_types.push(current_change_type.name.clone());
             }
 
-            fixed.push(current_change_type.fixed.clone());
-
             current_change_type
                 .problems
                 .iter()
@@ -203,10 +195,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
             continue;
         }
 
-        // TODO: check how to handle legacy content with the type based export?
-        // TODO: this can actually be removed now with the new type-based exports
-        if !trimmed_line.starts_with('-') || is_legacy {
-            fixed.push(line.to_string());
+        if !trimmed_line.starts_with('-') {
             continue;
         }
 
@@ -216,7 +205,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
                 if !escapes.contains(&escapes::LinterEscape::FullLine) {
                     add_to_problems(&mut problems, file_path, i, err.to_string());
                 }
-                fixed.push(line.to_string());
 
                 // reset escapes after processing entry
                 escapes.clear();
@@ -248,9 +236,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
                 .for_each(|p| add_to_problems(&mut problems, file_path, i, p.to_string()));
         }
 
-        // TODO: can be removed with new type-based exports
-        fixed.push(current_entry.clone().fixed);
-
         // TODO: improve this, seems not ideal because it's also being retrieved in the statements above
         let last_release = releases
             .get_mut(n_releases - 1)
@@ -268,7 +253,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
 
     Ok(Changelog {
         path: file_path.to_path_buf(),
-        fixed,
         releases,
         comments,
         problems,
@@ -311,7 +295,6 @@ mod changelog_tests {
 
         let mut cl = Changelog {
             path: PathBuf::from_str("test").unwrap(),
-            fixed: Vec::new(),
             releases: Vec::new(),
             comments: Vec::new(),
             legacy_contents: Vec::new(),

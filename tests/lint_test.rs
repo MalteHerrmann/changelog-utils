@@ -53,7 +53,7 @@ fn it_should_fix_the_changelog_as_expected() {
 
     assert_eq!(
         expected.trim(),
-        changelog.get_fixed().trim(),
+        changelog.get_fixed_contents().trim(),
         "expected different fixed changelog"
     );
 }

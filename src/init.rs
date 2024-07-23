@@ -14,8 +14,7 @@ pub fn run() -> Result<(), InitError> {
 /// the given directory.
 pub fn init_in_folder(target: PathBuf) -> Result<(), InitError> {
     let config_path = target.join(".clconfig.json");
-    // TODO: don't read full string but rather check if exists
-    if fs::read_to_string(&config_path).is_ok() {
+    if std::fs::symlink_metadata(&config_path).is_ok() {
         return Err(InitError::ConfigAlreadyFound);
     };
 
@@ -23,31 +22,27 @@ pub fn init_in_folder(target: PathBuf) -> Result<(), InitError> {
 
     if let Ok(origin) = get_origin() {
         config.target_repo.clone_from(&origin);
-        println!("configured target repository: {}", origin);
     };
 
     let changelog_path = target.join("CHANGELOG.md");
     match fs::read_to_string(changelog_path.clone()) {
         Ok(contents) => {
-            println!("changelog file found");
             get_settings_from_existing_changelog(&mut config, contents.as_str());
-
-            if !config.categories.is_empty() {
-                println!("extracted categories: {}", config.categories.join(", "))
-            }
-
-            if !config.change_types.is_empty() {
-                let mut ct_keys: Vec<String> = Vec::new();
-                config
-                    .change_types
-                    .keys()
-                    .for_each(|ct| ct_keys.push(ct.to_string()));
-                println!("extracted change types: {}", ct_keys.join(", "))
-            }
         }
-        Err(_) => fs::write(changelog_path.as_path(), create_empty_changelog())?,
+        Err(_) => {
+            fs::write(changelog_path.as_path(), create_empty_changelog())?;
+            println!(
+                "created empty changelog at {}",
+                changelog_path.as_os_str().to_string_lossy()
+            );
+        }
     }
 
+    println!(
+        "created new configuration at {}:\n{}",
+        &config_path.as_os_str().to_string_lossy(),
+        &config
+    );
     Ok(config.export(config_path.as_path())?)
 }
 
