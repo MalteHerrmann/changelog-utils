@@ -1,7 +1,7 @@
 use assert_fs::{prelude::*, TempDir};
 use clu::{config, errors::InitError, init};
 use predicates::prelude::*;
-use std::fs;
+use std::{collections::BTreeMap, fs};
 
 #[test]
 fn test_init_empty_folder() {
@@ -32,7 +32,8 @@ fn test_init_changelog_exists() {
     assert!(fs::rename(
         temp_dir.child("changelog_fail.md"),
         temp_dir.child("CHANGELOG.md"),
-    ).is_ok());
+    )
+    .is_ok());
 
     assert!(
         init::init_in_folder(temp_dir.path().to_path_buf()).is_ok(),
@@ -54,16 +55,32 @@ fn test_init_changelog_exists() {
     )
     .expect("failed to unpack config");
 
-    assert_eq!(config.categories, vec![
-        "p256-precompile".to_string(),
-        "distribution-precompile".to_string(),
-        "evm".to_string(),
-        "testnet".to_string(),
-        "stride-outpost".to_string(),
-        "ante".to_string(),
-        "inflation".to_string(),
-        "vesting".to_string(),
-    ])
+    assert_eq!(
+        config.categories,
+        vec![
+            "ante".to_string(),
+            "distribution-precompile".to_string(),
+            "evm".to_string(),
+            "inflation".to_string(),
+            "p256-precompile".to_string(),
+            "stride-outpost".to_string(),
+            "testnet".to_string(),
+            "vesting".to_string(),
+        ]
+    );
+
+    let expected_change_types: BTreeMap<String, String> = BTreeMap::from([
+        ("Improvements".into(), "improvements".into()),
+        ("Bug Fixes".into(), "bug\\s*fixes".into()),
+        ("API Breaking".into(), "api\\s*breaking".into()),
+        (
+            "State Machine Breaking".into(),
+            "state\\s*machine\\s*breaking".into(),
+        ),
+        ("Invalid Category".into(), "invalid\\s*category".into()),
+    ]);
+
+    assert_eq!(config.change_types, expected_change_types);
 }
 
 #[test]
