@@ -7,6 +7,8 @@ use regex::{Error, Regex, RegexBuilder};
 /// Represents an individual entry in the changelog.
 #[derive(Clone, Debug)]
 pub struct Entry {
+    /// The category of the entry
+    pub category: String,
     /// The fixed line adhering to all standards.
     pub fixed: String,
     /// The PR number for the given change.
@@ -28,6 +30,7 @@ impl Entry {
         let fixed = build_fixed(category, link.as_str(), description, pr_number);
 
         Entry {
+            category: category.to_string(),
             fixed,
             pr_number,
             problems: Vec::new(),
@@ -35,10 +38,7 @@ impl Entry {
     }
 }
 
-pub fn parse(
-    config: &config::Config,
-    line: &str,
-) -> Result<Entry, EntryError> {
+pub fn parse(config: &config::Config, line: &str) -> Result<Entry, EntryError> {
     let entry_pattern = Regex::new(concat!(
         r"^(?P<ws0>\s*)-(?P<ws1>\s*)\((?P<category>[a-zA-Z0-9\-]+)\)",
         r"(?P<ws2>\s*)\[(?P<bs>\\)?#(?P<pr>\d+)]",
@@ -91,6 +91,7 @@ pub fn parse(
     );
 
     Ok(Entry {
+        category: fixed_category.to_string(),
         fixed, // TODO: why is it not possible to have this as &'a str too?
         pr_number,
         problems,

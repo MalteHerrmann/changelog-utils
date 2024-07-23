@@ -1,6 +1,7 @@
 use crate::{change_type, config::Config, entry, errors::ChangelogError, escapes, release};
 use regex::Regex;
 use std::{
+    collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
 };
@@ -353,4 +354,53 @@ mod changelog_tests {
             1
         );
     }
+}
+
+// Tries to parse the individual entries of an existing changelog
+// to derive a configuration from it.
+//
+// NOTE: Errors while parsing are ignored as the purpose of this method
+// is to simply extract all available information.
+pub fn get_settings_from_existing_changelog(config: &mut Config, contents: &str) {
+    let mut seen_change_types: Vec<String> = Vec::new();
+    let mut seen_categories: Vec<String> = Vec::new();
+
+    for line in contents.lines() {
+        let trimmed_line = line.trim();
+
+        if trimmed_line.starts_with("### ") {
+            match change_type::parse(config.clone(), line) {
+                Ok(ct) => {
+                    if !seen_change_types.contains(&ct.name) {
+                        seen_change_types.push(ct.name)
+                    }
+                }
+                _ => (),
+            };
+
+            continue;
+        }
+
+        match entry::parse(config, line) {
+            Ok(e) => {
+                if !seen_categories.contains(&e.category) {
+                    seen_categories.push(e.category)
+                }
+            }
+            _ => (),
+        }
+    }
+
+    let mut change_types: BTreeMap<String, String> = BTreeMap::new();
+    seen_change_types.into_iter().for_each(|ct| {
+        let pattern = regex::Regex::new(r"\s+")
+            .unwrap()
+            .replace_all(ct.as_str(), "\\s*")
+            .to_ascii_lowercase();
+        change_types.insert(ct, pattern);
+    });
+
+    seen_categories.sort();
+    config.categories = seen_categories;
+    config.change_types = change_types;
 }
