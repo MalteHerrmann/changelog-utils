@@ -1,53 +1,82 @@
-use crate::errors::AddError;
-use crate::{change_type, changelog, config, entry, github::get_open_pr, release};
+use crate::{
+    change_type, changelog, config, entry,
+    errors::AddError,
+    github::{get_open_pr, PRInfo},
+    release,
+};
 use inquire::{Select, Text};
 use std::borrow::BorrowMut;
 
 // Runs the logic to add an entry to the unreleased section of the changelog.
-pub async fn run() -> Result<(), AddError> {
+pub async fn run(accept: bool) -> Result<(), AddError> {
     let config = config::load()?;
 
     let mut selectable_change_types: Vec<String> =
         config.change_types.clone().into_keys().collect();
     selectable_change_types.sort();
 
-    let pr_info = get_open_pr(&config).await.unwrap_or_default();
-
-    let ct_idx = selectable_change_types
-        .iter()
-        .position(|ct| ct.eq(&pr_info.change_type))
-        .unwrap_or_default();
-
-    let selected_change_type =
-        Select::new("Select change type to add into:", selectable_change_types)
-            .with_starting_cursor(ct_idx)
-            .prompt()?;
-
-    let pr_number = match Text::new("Please provide the PR number:")
-        .with_initial_value(&pr_info.number)
-        .prompt()?
-        .parse::<u16>()
-    {
-        Ok(pr) => pr,
-        Err(e) => return Err(AddError::Input(e.into())),
+    let retrieved: bool;
+    let pr_info = match get_open_pr(&config).await {
+        Ok(i) => {
+            retrieved = true;
+            i
+        }
+        Err(_) => {
+            retrieved = false;
+            PRInfo::default()
+        }
     };
 
-    let cat_idx = config
-        .categories
-        .iter()
-        .position(|c| c.eq(&pr_info.category))
-        .unwrap_or_default();
+    let mut selected_change_type = pr_info.change_type.clone();
+    if !accept || !retrieved || !selectable_change_types.contains(&pr_info.change_type) {
+        let ct_idx = selectable_change_types
+            .iter()
+            .position(|ct| ct.eq(&pr_info.change_type))
+            .unwrap_or_default();
 
-    let cat = Select::new(
-        "Select the category of the made changes:",
-        config.categories.clone(),
-    )
-    .with_starting_cursor(cat_idx)
-    .prompt()?;
+        selected_change_type =
+            Select::new("Select change type to add into:", selectable_change_types)
+                .with_starting_cursor(ct_idx)
+                .prompt()?;
+    }
 
-    let desc = Text::new("Please provide a short description of the made changes:\n")
-        .with_initial_value(&pr_info.description)
+    let mut pr_number = pr_info
+        .number
+        .parse::<u16>()
+        .expect("expected valid pr number to be returned");
+    if !accept || !retrieved {
+        pr_number = match Text::new("Please provide the PR number:")
+            .with_initial_value(&pr_info.number)
+            .prompt()?
+            .parse::<u16>()
+        {
+            Ok(pr) => pr,
+            Err(e) => return Err(AddError::Input(e.into())),
+        };
+    }
+
+    let mut cat = pr_info.category.clone();
+    if !accept || !retrieved || !config.categories.contains(&cat) {
+        let cat_idx = config
+            .categories
+            .iter()
+            .position(|c| c.eq(&pr_info.category))
+            .unwrap_or_default();
+
+        cat = Select::new(
+            "Select the category of the made changes:",
+            config.categories.clone(),
+        )
+        .with_starting_cursor(cat_idx)
         .prompt()?;
+    }
+
+    let mut desc = pr_info.description.clone();
+    if !accept || !retrieved {
+        desc = Text::new("Please provide a short description of the made changes:\n")
+            .with_initial_value(&pr_info.description)
+            .prompt()?;
+    }
 
     let mut changelog = changelog::load(config.clone())?;
     add_entry(

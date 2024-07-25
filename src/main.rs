@@ -7,7 +7,7 @@ use clu::{add, cli::ChangelogCLI, cli_config, errors::CLIError, init, lint, rele
 #[tokio::main]
 async fn main() -> Result<(), CLIError> {
     match ChangelogCLI::parse() {
-        ChangelogCLI::Add => Ok(add::run().await?),
+        ChangelogCLI::Add(add_args) => Ok(add::run(add_args.yes).await?),
         ChangelogCLI::Fix => Ok(lint::run(true)?),
         ChangelogCLI::Lint => Ok(lint::run(false)?),
         ChangelogCLI::Init => Ok(init::run()?),
