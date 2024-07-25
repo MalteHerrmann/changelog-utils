@@ -10,7 +10,6 @@ use std::{
 #[derive(Debug)]
 pub struct Changelog {
     pub path: PathBuf,
-    pub fixed: Vec<String>,
     comments: Vec<String>,
     legacy_contents: Vec<String>,
     pub releases: Vec<release::Release>,
@@ -20,11 +19,11 @@ pub struct Changelog {
 impl Changelog {
     /// Exports the changelog contents to the given filepath.
     pub fn write(&self, export_path: &Path) -> Result<(), ChangelogError> {
-        Ok(fs::write(export_path, self.get_fixed())?)
+        Ok(fs::write(export_path, self.get_fixed_contents())?)
     }
 
     /// Returns the fixed contents as a String to be exported.
-    pub fn get_fixed(&self) -> String {
+    pub fn get_fixed_contents(&self) -> String {
         let mut exported_string = "".to_string();
 
         self.comments
@@ -81,7 +80,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
     let mut n_change_types = 0;
 
     let mut comments: Vec<String> = Vec::new();
-    let mut fixed: Vec<String> = Vec::new();
     let mut legacy_contents: Vec<String> = Vec::new();
     let mut releases: Vec<release::Release> = Vec::new();
     let mut problems: Vec<String> = Vec::new();
@@ -114,7 +112,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
         if is_comment && exit_comment_regex.is_match(trimmed_line) {
             is_comment = false;
             comments.push(line.to_string());
-            fixed.push(line.to_string());
 
             // Check inline comments
             if let Some(e) = escapes::check_escape_pattern(trimmed_line) {
@@ -125,7 +122,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
         }
 
         if is_comment {
-            fixed.push(line.to_string());
             comments.push(line.to_string());
             continue;
         }
@@ -135,18 +131,19 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
 
             releases.push(current_release.clone());
             n_releases += 1;
-            match seen_releases.contains(&current_release.version) {
-                true => add_to_problems(
+            if seen_releases.contains(&current_release.version) {
+                add_to_problems(
                     &mut problems,
                     file_path,
                     i,
                     format!("duplicate release: {}", &current_release.version),
-                ),
-                false => seen_releases.push((current_release.version).to_string()),
+                );
+            } else {
+                seen_releases.push((current_release.version).to_string());
             };
 
             // reset the seen change types for the current release
-            seen_change_types = Vec::new();
+            seen_change_types.clear();
             n_change_types = 0;
 
             if current_release
@@ -161,16 +158,12 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
                 .into_iter()
                 .for_each(|p| add_to_problems(&mut problems, file_path, i, p.to_string()));
 
-            fixed.push(current_release.fixed);
-
             continue;
         }
 
         if trimmed_line.starts_with("### ") {
             current_change_type = change_type::parse(config.clone(), line)?;
 
-            // TODO: this handling should definitely be improved.
-            // It's only a quick and dirty implementation for now.
             n_change_types += 1;
             if seen_change_types.contains(&current_change_type.name) {
                 add_to_problems(
@@ -187,26 +180,21 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
                 seen_change_types.push(current_change_type.name.clone());
             }
 
-            fixed.push(current_change_type.fixed.clone());
-
             current_change_type
                 .problems
                 .iter()
                 .for_each(|p| add_to_problems(&mut problems, file_path, i, p.to_string()));
 
-            // TODO: improve this? can this handling be made "more rustic"?
             let last_release = releases
                 .get_mut(n_releases - 1)
                 .expect("failed to get last release");
+
             last_release.change_types.push(current_change_type.clone());
 
             continue;
         }
 
-        // TODO: check how to handle legacy content with the type based export?
-        // TODO: this can actually be removed now with the new type-based exports
-        if !trimmed_line.starts_with('-') || is_legacy {
-            fixed.push(line.to_string());
+        if !trimmed_line.starts_with('-') {
             continue;
         }
 
@@ -216,7 +204,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
                 if !escapes.contains(&escapes::LinterEscape::FullLine) {
                     add_to_problems(&mut problems, file_path, i, err.to_string());
                 }
-                fixed.push(line.to_string());
 
                 // reset escapes after processing entry
                 escapes.clear();
@@ -225,7 +212,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
             }
         };
 
-        // TODO: ditto, handling could be improved here like with change types, etc.
         if seen_prs.contains(&current_entry.pr_number)
             && (!escapes.contains(&escapes::LinterEscape::DuplicatePR)
                 && !escapes.contains(&escapes::LinterEscape::FullLine))
@@ -248,10 +234,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
                 .for_each(|p| add_to_problems(&mut problems, file_path, i, p.to_string()));
         }
 
-        // TODO: can be removed with new type-based exports
-        fixed.push(current_entry.clone().fixed);
-
-        // TODO: improve this, seems not ideal because it's also being retrieved in the statements above
         let last_release = releases
             .get_mut(n_releases - 1)
             .expect("failed to get last release");
@@ -260,6 +242,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
             .change_types
             .get_mut(n_change_types - 1)
             .expect("failed to get last change type");
+
         last_change_type.entries.push(current_entry);
 
         // Reset the escapes after an entry line
@@ -268,7 +251,6 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
 
     Ok(Changelog {
         path: file_path.to_path_buf(),
-        fixed,
         releases,
         comments,
         problems,
@@ -311,7 +293,6 @@ mod changelog_tests {
 
         let mut cl = Changelog {
             path: PathBuf::from_str("test").unwrap(),
-            fixed: Vec::new(),
             releases: Vec::new(),
             comments: Vec::new(),
             legacy_contents: Vec::new(),
@@ -369,25 +350,19 @@ pub fn get_settings_from_existing_changelog(config: &mut Config, contents: &str)
         let trimmed_line = line.trim();
 
         if trimmed_line.starts_with("### ") {
-            match change_type::parse(config.clone(), line) {
-                Ok(ct) => {
-                    if !seen_change_types.contains(&ct.name) {
-                        seen_change_types.push(ct.name)
-                    }
+            if let Ok(ct) = change_type::parse(config.clone(), line) {
+                if !seen_change_types.contains(&ct.name) {
+                    seen_change_types.push(ct.name)
                 }
-                _ => (),
             };
 
             continue;
         }
 
-        match entry::parse(config, line) {
-            Ok(e) => {
-                if !seen_categories.contains(&e.category) {
-                    seen_categories.push(e.category)
-                }
+        if let Ok(e) = entry::parse(config, line) {
+            if !seen_categories.contains(&e.category) {
+                seen_categories.push(e.category)
             }
-            _ => (),
         }
     }
 

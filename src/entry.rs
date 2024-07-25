@@ -14,8 +14,6 @@ pub struct Entry {
     /// The PR number for the given change.
     pub pr_number: u16,
     /// The list of problems with the given line.
-    ///
-    /// TODO: Should this rather be a Vec<a' str>?
     pub problems: Vec<String>,
 }
 
@@ -92,7 +90,7 @@ pub fn parse(config: &config::Config, line: &str) -> Result<Entry, EntryError> {
 
     Ok(Entry {
         category: fixed_category.to_string(),
-        fixed, // TODO: why is it not possible to have this as &'a str too?
+        fixed,
         pr_number,
         problems,
     })
@@ -187,7 +185,12 @@ fn check_spelling(config: &config::Config, text: &str) -> (String, Vec<String>) 
                 };
 
                 fixed = compile_regex(pattern)
-                    .expect("failed to compile regex") // TODO: return Result rather than use expect here?
+                    .unwrap_or_else(|_| {
+                        panic!(
+                            "failed to compile regex for '{}'; check spelling configuration",
+                            pattern
+                        )
+                    })
                     .replace(fixed.as_str(), correct_spelling)
                     .to_string();
 
@@ -326,7 +329,6 @@ mod entry_tests {
     #[test]
     fn test_malformed_entry() {
         let example = r"- (cli) [#13tps://github.com/Ma/2";
-        // TODO: figure how to still return an entry but with the corresponding array of problems filled
         assert!(parse(&load_test_config(), example).is_err());
     }
 
@@ -496,9 +498,8 @@ mod spelling_tests {
         let (fixed, problems) = check_spelling(&load_test_config(), example);
         assert_eq!(fixed, "Fix API and CLI.");
         assert_eq!(problems.len(), 2);
-        // TODO: this is currently not deterministically in the same order
-        assert!(problems.contains(&"'API' should be used instead of 'aPi'".to_string()));
-        assert!(problems.contains(&"'CLI' should be used instead of 'ClI'".to_string()));
+        assert_eq!(problems[0], "'API' should be used instead of 'aPi'");
+        assert_eq!(problems[1], "'CLI' should be used instead of 'ClI'");
     }
 
     #[test]

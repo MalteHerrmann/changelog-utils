@@ -5,8 +5,6 @@ use std::{collections::BTreeMap, fmt, fs, path::Path};
 use url::Url;
 
 /// Holds the configuration of the application
-///
-/// TODO: check if clone is actually necessary?
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
     /// The list of categories for a given entry,
@@ -203,7 +201,6 @@ mod config_adjustment_tests {
     fn test_add_category_duplicate() {
         let mut config = load_example_config();
         assert_eq!(config.categories.len(), 2);
-        // TODO: get value from existing categories instead of hardcoding here
         assert_eq!(
             add_category(&mut config, "test".to_string()).unwrap_err(),
             ConfigAdjustError::CategoryAlreadyFound
@@ -215,7 +212,6 @@ mod config_adjustment_tests {
     fn test_remove_category() {
         let mut config = load_example_config();
         assert_eq!(config.categories.len(), 2);
-        // TODO: get value from existing categories instead of hardcoding here
         assert!(remove_category(&mut config, "test".to_string()).is_ok());
         assert_eq!(config.categories.len(), 1);
     }
@@ -224,7 +220,6 @@ mod config_adjustment_tests {
     fn test_remove_category_not_found() {
         let mut config = load_example_config();
         assert_eq!(config.categories.len(), 2);
-        // TODO: get value from existing categories instead of hardcoding here
         assert_eq!(
             remove_category(&mut config, "not-found".to_string()).unwrap_err(),
             ConfigAdjustError::NotFound

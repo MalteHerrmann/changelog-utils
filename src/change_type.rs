@@ -34,28 +34,28 @@ pub fn parse(config: config::Config, line: &str) -> Result<ChangeType, ChangeTyp
     let mut fixed_name = name.to_string();
     let mut problems: Vec<String> = Vec::new();
 
-    let mut found = false;
-    // TODO: this should probably be done with map or smth. more rusty
-    for (change_type, pattern) in config.change_types.iter() {
-        if RegexBuilder::new(pattern)
+    // Check if the correctness of the current change type.
+    if !config.change_types.iter().any(|(change_type, pattern)| {
+        if !RegexBuilder::new(pattern)
             .case_insensitive(true)
-            .build()?
+            .build()
+            .unwrap()
             .is_match(name)
         {
-            if name != change_type {
-                problems.push(format!(
-                    "'{change_type}' should be used instead of '{name}'"
-                ));
-                change_type.clone_into(&mut fixed_name);
-            }
-            found = true;
-            break;
+            return false;
         }
-    }
 
-    if !found {
+        if name != change_type {
+            problems.push(format!(
+                "'{change_type}' should be used instead of '{name}'"
+            ));
+            change_type.clone_into(&mut fixed_name);
+        }
+
+        true
+    }) {
         problems.push(format!("'{name}' is not a valid change type"))
-    }
+    };
 
     let fixed = format!("### {fixed_name}");
     if format!("### {name}").ne(line) {

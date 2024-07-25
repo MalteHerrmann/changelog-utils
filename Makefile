@@ -6,6 +6,10 @@ test:
 build:
 	cargo build --locked
 
+# Format codebase
+format:
+	cargo fmt
+
 # Install binary
 install:
 	cargo install --path . --locked
