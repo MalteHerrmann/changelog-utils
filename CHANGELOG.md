@@ -8,6 +8,7 @@ This changelog was created using the `clu` binary
 
 ### Features
 
+- (crud) [#54](https://github.com/MalteHerrmann/changelog-utils/pull/54) Add flag to auto-accept retrieved PR information.
 - (lint) [#46](https://github.com/MalteHerrmann/changelog-utils/pull/46) Add support for linter escapes.
 
 ### Improvements

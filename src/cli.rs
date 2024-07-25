@@ -3,7 +3,7 @@ use clap::{Args, Parser, Subcommand};
 #[derive(Parser, Debug)]
 pub enum ChangelogCLI {
     #[command(about = "Adds a new entry to the unreleased section of the changelog")]
-    Add,
+    Add(AddArgs),
     #[command(about = "Applies all possible auto-fixes to the changelog")]
     Fix,
     #[command(about = "Checks if the changelog contents adhere to the defined rules")]
@@ -24,9 +24,9 @@ It creates an empty changelog skeleton if no existing changelog is found as well
 }
 
 #[derive(Args, Debug)]
-pub struct LintArgs {
+pub struct AddArgs {
     #[arg(short, long)]
-    pub fix: bool,
+    pub yes: bool,
 }
 
 #[derive(Subcommand, Debug)]
