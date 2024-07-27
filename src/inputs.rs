@@ -1,5 +1,5 @@
 use crate::{config::Config, errors::InputError};
-use inquire::{Select, Text};
+use inquire::{Editor, Select, Text};
 
 pub fn get_change_type(config: &Config, start: usize) -> Result<String, InputError> {
     let mut selectable_change_types: Vec<String> =
@@ -31,8 +31,15 @@ pub fn get_category(config: &Config, default_idx: usize) -> Result<String, Input
 
 pub fn get_description(default_value: &str) -> Result<String, InputError> {
     Ok(
-        Text::new("Please provide a short description of the made changes:\n")
+        Text::new("Please provide a one-line description of the made changes:\n")
             .with_initial_value(&default_value)
+            .prompt()?
+    )
+}
+
+pub fn get_pr_description() -> Result<String, InputError> {
+    Ok(
+        Editor::new("Please provide the Pull Request body with a description of the made changes.")
             .prompt()?
     )
 }
