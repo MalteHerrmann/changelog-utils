@@ -34,7 +34,7 @@ pub fn extract_pr_info(config: &Config, pr: &PullRequest) -> Result<PRInfo, GitH
                 .iter()
                 .find(|&(_, abbrev)| abbrev.eq(ct.into()))
             {
-                change_type = name.to_owned();
+                change_type.clone_from(name);
             }
         };
 
