@@ -1,15 +1,15 @@
 use inquire::InquireError;
 use regex::Error;
 use serde_json;
-use std::io;
-use std::num::ParseIntError;
-use std::string::FromUtf8Error;
+use std::{env::VarError, io, num::ParseIntError, string::FromUtf8Error};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum CLIError {
     #[error("failed to add changelog entry: {0}")]
     AddError(#[from] AddError),
+    #[error("failed to create pr: {0}")]
+    CreateError(#[from] CreateError),
     #[error("failed to initialize the changelog settings: {0}")]
     InitError(#[from] InitError),
     #[error("failed to run linter: {0}")]
@@ -25,7 +25,25 @@ pub enum CLIError {
 }
 
 #[derive(Error, Debug)]
+pub enum CreateError {
+    #[error("branch not found on remote: {0}")]
+    BranchNotOnRemote(String),
+    #[error("failed to read configuration: {0}")]
+    Config(#[from] ConfigError),
+    #[error("found an existing PR for this branch: {0}")]
+    ExistingPR(u64),
+    #[error("failed to create PR: {0}")]
+    FailedToCreatePR(#[from] octocrab::Error),
+    #[error("error interacting with GitHub: {0}")]
+    GitHub(#[from] GitHubError),
+    #[error("error getting user input: {0}")]
+    Input(#[from] InputError),
+}
+
+#[derive(Error, Debug)]
 pub enum InputError {
+    #[error("failed to prompt user: {0}")]
+    InquireError(#[from] InquireError),
     #[error("failed to parse integer: {0}")]
     ParseError(#[from] ParseIntError),
 }
@@ -34,7 +52,7 @@ pub enum InputError {
 pub enum AddError {
     #[error("failed to load config: {0}")]
     Config(#[from] ConfigError),
-    #[error("failed to parse input: {0}")]
+    #[error("failed to get user input: {0}")]
     Input(#[from] InputError),
     #[error("first release is not unreleased section: {0}")]
     FirstReleaseNotUnreleased(String),
@@ -42,8 +60,6 @@ pub enum AddError {
     PRInfo(#[from] GitHubError),
     #[error("failed to parse changelog: {0}")]
     InvalidChangelog(#[from] ChangelogError),
-    #[error("failed to prompt user: {0}")]
-    InquireError(#[from] InquireError),
     #[error("failed to read/write: {0}")]
     ReadWriteError(#[from] io::Error),
 }
@@ -116,6 +132,8 @@ pub enum GitHubError {
     RegexMatch(String),
     #[error("failed to execute command: {0}")]
     StdCommand(#[from] io::Error),
+    #[error("GITHUB_TOKEN environment variable not found")]
+    Token(#[from] VarError),
 }
 
 #[derive(Error, Debug, PartialEq)]
