@@ -26,13 +26,19 @@ pub async fn run() -> Result<(), CreateError> {
     let desc = inputs::get_description("")?;
     let pr_body = inputs::get_pr_description()?;
 
+    let branches = client
+        .repos(&git_info.owner, &git_info.repo)
+        .list_branches()
+        .send()
+        .await?;
+    let target = inputs::get_target_branch(branches)?;
+
     let ct = config.change_types.get(&change_type).unwrap();
     let title = format!("{ct}({cat}): {desc}");
 
     let created_pr = client
         .pulls(&git_info.owner, &git_info.repo)
-        // TODO: enable targeting another branch other than main
-        .create(title, git_info.branch, "main")
+        .create(title, git_info.branch, target)
         .body(pr_body)
         .send()
         .await?;
