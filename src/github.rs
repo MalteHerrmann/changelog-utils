@@ -28,13 +28,13 @@ pub fn extract_pr_info(config: &Config, pr: &PullRequest) -> Result<PRInfo, GitH
         .build()?
         .captures(pr_title.as_str())
     {
-        // TODO: adjust to reflect logic from PR #55
         if let Some(ct) = i.name("ct") {
-            match ct.as_str() {
-                "fix" => change_type = "Bug Fixes".to_string(),
-                "imp" => change_type = "Improvements".to_string(),
-                "feat" => change_type = "Features".to_string(),
-                _ => (),
+            if let Some((name, _)) = config
+                .change_types
+                .iter()
+                .find(|&(_, abbrev)| abbrev.eq(ct.into()))
+            {
+                change_type.clone_from(name);
             }
         };
 
