@@ -1,8 +1,8 @@
 use crate::entry::check_category;
 use crate::errors::GitHubError;
 use crate::{config::Config, entry::check_description};
-use octocrab;
 use octocrab::models::pulls::PullRequest;
+use octocrab::{self, Octocrab};
 use regex::{Regex, RegexBuilder};
 use std::process::Command;
 
@@ -12,7 +12,7 @@ pub struct PRInfo {
     pub change_type: String,
     pub category: String,
     pub description: String,
-    pub number: String,
+    pub number: u16,
 }
 
 /// Extracts the pull request information from the given
@@ -47,36 +47,41 @@ fn extract_pr_info(config: &Config, pr: &PullRequest) -> Result<PRInfo, GitHubEr
     };
 
     Ok(PRInfo {
-        number: format!("{}", pr.number),
+        number: pr
+            .number
+            .try_into()
+            .expect("failed to convert PR number to u16"),
         change_type,
         category,
         description,
     })
 }
 
+/// Returns an authenticated Octocrab instance if possible.
+pub fn get_authenticated_github_client() -> Result<Octocrab, GitHubError> {
+    let token = std::env::var("GITHUB_TOKEN")?;
+
+    Ok(octocrab::OctocrabBuilder::new()
+        .personal_token(token)
+        .build()?)
+}
+
 /// Returns an option for an open PR from the current local branch in the configured target
 /// repository if it exists.
 pub async fn get_open_pr(config: &Config) -> Result<PRInfo, GitHubError> {
-    let captures = match Regex::new(r"github.com/(?P<owner>[\w-]+)/(?P<repo>[\w-]+)\.*")
-        .expect("failed to build regular expression")
-        .captures(config.target_repo.as_str())
-    {
-        Some(r) => r,
-        None => return Err(GitHubError::NoGitHubRepo),
-    };
+    let git_info = get_git_info(config)?;
 
-    let owner = captures.name("owner").unwrap().as_str();
-    let repo = captures.name("repo").unwrap().as_str();
-    let branch = get_current_local_branch()?;
-
-    let octocrab = match std::env::var("GITHUB_TOKEN") {
-        Ok(token) => octocrab::OctocrabBuilder::new()
-            .personal_token(token)
-            .build()?,
+    let octocrab = match get_authenticated_github_client() {
+        Ok(oc) => oc,
         _ => octocrab::Octocrab::default(),
     };
 
-    let pulls = octocrab.pulls(owner, repo).list().send().await?.items;
+    let pulls = octocrab
+        .pulls(git_info.owner, git_info.repo)
+        .list()
+        .send()
+        .await?
+        .items;
     match pulls.iter().find(|pr| {
         pr.head.label.as_ref().is_some_and(|l| {
             let branch_parts: Vec<&str> = l.split(':').collect();
@@ -84,7 +89,7 @@ pub async fn get_open_pr(config: &Config) -> Result<PRInfo, GitHubError> {
                 .get(1..)
                 .expect("unexpected branch identifier format")
                 .join("/");
-            got_branch.eq(branch.as_str())
+            got_branch.eq(git_info.branch.as_str())
         })
     }) {
         Some(pr) => Ok(extract_pr_info(config, pr)?),
@@ -125,6 +130,35 @@ pub fn get_origin() -> Result<String, GitHubError> {
             .to_string()),
         None => Err(GitHubError::RegexMatch(origin)),
     }
+}
+
+/// Holds the relevant information for the Git configuration.
+pub struct GitInfo {
+    pub owner: String,
+    pub repo: String,
+    pub branch: String,
+}
+
+/// Retrieves the Git information like the currently checked out branch and
+/// repository owner and name.
+pub fn get_git_info(config: &Config) -> Result<GitInfo, GitHubError> {
+    let captures = match Regex::new(r"github.com/(?P<owner>[\w-]+)/(?P<repo>[\w-]+)\.*")
+        .expect("failed to build regular expression")
+        .captures(config.target_repo.as_str())
+    {
+        Some(r) => r,
+        None => return Err(GitHubError::NoGitHubRepo),
+    };
+
+    let owner = captures.name("owner").unwrap().as_str().to_string();
+    let repo = captures.name("repo").unwrap().as_str().to_string();
+    let branch = get_current_local_branch()?;
+
+    Ok(GitInfo {
+        owner,
+        repo,
+        branch,
+    })
 }
 
 // Ignore these tests when running on CI because there won't be a local branch

@@ -2,9 +2,8 @@ use crate::{
     change_type, changelog, config, entry,
     errors::AddError,
     github::{get_open_pr, PRInfo},
-    release,
+    inputs, release,
 };
-use inquire::{Select, Text};
 use std::borrow::BorrowMut;
 
 // Runs the logic to add an entry to the unreleased section of the changelog.
@@ -34,25 +33,12 @@ pub async fn run(accept: bool) -> Result<(), AddError> {
             .position(|ct| ct.eq(&pr_info.change_type))
             .unwrap_or_default();
 
-        selected_change_type =
-            Select::new("Select change type to add into:", selectable_change_types)
-                .with_starting_cursor(ct_idx)
-                .prompt()?;
+        selected_change_type = inputs::get_change_type(&config, ct_idx)?;
     }
 
-    let mut pr_number = pr_info
-        .number
-        .parse::<u16>()
-        .expect("expected valid pr number to be returned");
+    let mut pr_number = pr_info.number;
     if !accept || !retrieved {
-        pr_number = match Text::new("Please provide the PR number:")
-            .with_initial_value(&pr_info.number)
-            .prompt()?
-            .parse::<u16>()
-        {
-            Ok(pr) => pr,
-            Err(e) => return Err(AddError::Input(e.into())),
-        };
+        pr_number = inputs::get_pr_number(pr_info.number)?;
     }
 
     let mut cat = pr_info.category.clone();
@@ -63,19 +49,12 @@ pub async fn run(accept: bool) -> Result<(), AddError> {
             .position(|c| c.eq(&pr_info.category))
             .unwrap_or_default();
 
-        cat = Select::new(
-            "Select the category of the made changes:",
-            config.categories.clone(),
-        )
-        .with_starting_cursor(cat_idx)
-        .prompt()?;
+        cat = inputs::get_category(&config, cat_idx)?;
     }
 
     let mut desc = pr_info.description.clone();
     if !accept || !retrieved {
-        desc = Text::new("Please provide a short description of the made changes:\n")
-            .with_initial_value(&pr_info.description)
-            .prompt()?;
+        desc = inputs::get_description(pr_info.description.as_str())?;
     }
 
     let mut changelog = changelog::load(config.clone())?;
