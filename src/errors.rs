@@ -31,7 +31,7 @@ pub enum CreateError {
     #[error("failed to read configuration: {0}")]
     Config(#[from] ConfigError),
     #[error("found an existing PR for this branch: {0}")]
-    ExistingPR(u16),
+    ExistingPR(u64),
     #[error("failed to create PR: {0}")]
     FailedToCreatePR(#[from] octocrab::Error),
     #[error("error interacting with GitHub: {0}")]

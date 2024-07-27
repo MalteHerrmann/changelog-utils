@@ -32,14 +32,14 @@ pub fn get_category(config: &Config, default_idx: usize) -> Result<String, Input
 pub fn get_description(default_value: &str) -> Result<String, InputError> {
     Ok(
         Text::new("Please provide a one-line description of the made changes:\n")
-            .with_initial_value(&default_value)
-            .prompt()?
+            .with_initial_value(default_value)
+            .prompt()?,
     )
 }
 
 pub fn get_pr_description() -> Result<String, InputError> {
     Ok(
         Editor::new("Please provide the Pull Request body with a description of the made changes.")
-            .prompt()?
+            .prompt()?,
     )
 }

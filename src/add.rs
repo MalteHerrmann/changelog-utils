@@ -1,7 +1,7 @@
 use crate::{
     change_type, changelog, config, entry,
     errors::AddError,
-    github::{get_open_pr, PRInfo},
+    github::{extract_pr_info, get_git_info, get_open_pr, PRInfo},
     inputs, release,
 };
 use std::borrow::BorrowMut;
@@ -9,16 +9,17 @@ use std::borrow::BorrowMut;
 // Runs the logic to add an entry to the unreleased section of the changelog.
 pub async fn run(accept: bool) -> Result<(), AddError> {
     let config = config::load()?;
+    let git_info = get_git_info(&config)?;
 
     let mut selectable_change_types: Vec<String> =
         config.change_types.clone().into_keys().collect();
     selectable_change_types.sort();
 
     let retrieved: bool;
-    let pr_info = match get_open_pr(&config).await {
+    let pr_info = match get_open_pr(git_info).await {
         Ok(i) => {
             retrieved = true;
-            i
+            extract_pr_info(&config, &i)?
         }
         Err(_) => {
             retrieved = false;

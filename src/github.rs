@@ -17,7 +17,7 @@ pub struct PRInfo {
 
 /// Extracts the pull request information from the given
 /// instance.
-fn extract_pr_info(config: &Config, pr: &PullRequest) -> Result<PRInfo, GitHubError> {
+pub fn extract_pr_info(config: &Config, pr: &PullRequest) -> Result<PRInfo, GitHubError> {
     let mut change_type = String::new();
     let mut category = String::new();
     let mut description = String::new();
@@ -28,6 +28,7 @@ fn extract_pr_info(config: &Config, pr: &PullRequest) -> Result<PRInfo, GitHubEr
         .build()?
         .captures(pr_title.as_str())
     {
+        // TODO: adjust to reflect logic from PR #55
         if let Some(ct) = i.name("ct") {
             match ct.as_str() {
                 "fix" => change_type = "Bug Fixes".to_string(),
@@ -68,9 +69,7 @@ pub fn get_authenticated_github_client() -> Result<Octocrab, GitHubError> {
 
 /// Returns an option for an open PR from the current local branch in the configured target
 /// repository if it exists.
-pub async fn get_open_pr(config: &Config) -> Result<PRInfo, GitHubError> {
-    let git_info = get_git_info(config)?;
-
+pub async fn get_open_pr(git_info: GitInfo) -> Result<PullRequest, GitHubError> {
     let octocrab = match get_authenticated_github_client() {
         Ok(oc) => oc,
         _ => octocrab::Octocrab::default(),
@@ -92,7 +91,7 @@ pub async fn get_open_pr(config: &Config) -> Result<PRInfo, GitHubError> {
             got_branch.eq(git_info.branch.as_str())
         })
     }) {
-        Some(pr) => Ok(extract_pr_info(config, pr)?),
+        Some(pr) => Ok(pr.to_owned()),
         None => Err(GitHubError::NoOpenPR),
     }
 }
@@ -133,6 +132,7 @@ pub fn get_origin() -> Result<String, GitHubError> {
 }
 
 /// Holds the relevant information for the Git configuration.
+#[derive(Clone)]
 pub struct GitInfo {
     pub owner: String,
     pub repo: String,
