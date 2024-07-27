@@ -19,6 +19,10 @@ This changelog was created using the `clu` binary
 - (crud) [#48](https://github.com/MalteHerrmann/changelog-utils/pull/48) Use authenticated requests when checking open PRs.
 - (config) [#51](https://github.com/MalteHerrmann/changelog-utils/pull/51) Get available configuration from existing changelog during initialization.
 
+### Bug Fixes
+
+- (crud) [#58](https://github.com/MalteHerrmann/changelog-utils/pull/58) Use abbreviations from config to derive change type from PR info.
+
 ## [v1.1.2](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.1.2) - 2024-06-30
 
 ### Bug Fixes

@@ -40,7 +40,7 @@ pub fn get_description(default_value: &str) -> Result<String, InputError> {
 
 pub fn get_pr_description() -> Result<String, InputError> {
     Ok(
-        Editor::new("Please provide the Pull Request body with a description of the made changes.")
+        Editor::new("Please provide the Pull Request body with a description of the made changes.\n")
             .prompt()?,
     )
 }
