@@ -1,9 +1,9 @@
 {
   "categories": ["cli", "test"],
   "change_types": {
-    "Bug Fixes": "bug\\s*fixes",
-    "Improvements": "improvements",
-    "Features": "features"
+    "Bug Fixes": "fix",
+    "Improvements": "imp",
+    "Features": "feat"
   },
   "expected_spellings": {
     "API": "api",

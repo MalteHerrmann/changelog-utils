@@ -2,7 +2,7 @@ use crate::{
     changelog::get_settings_from_existing_changelog, config::Config, errors::InitError,
     github::get_origin,
 };
-use std::{collections::BTreeMap, fs, path::PathBuf};
+use std::{fs, path::PathBuf};
 
 /// Runs the logic to initialize the changelog utilities
 /// in the current working directory.
@@ -18,7 +18,7 @@ pub fn init_in_folder(target: PathBuf) -> Result<(), InitError> {
         return Err(InitError::ConfigAlreadyFound);
     };
 
-    let mut config = create_default_config();
+    let mut config = Config::default();
 
     if let Ok(origin) = get_origin() {
         config.target_repo.clone_from(&origin);
@@ -44,22 +44,6 @@ pub fn init_in_folder(target: PathBuf) -> Result<(), InitError> {
         &config
     );
     Ok(config.export(config_path.as_path())?)
-}
-
-/// Creates a new default configuration file for the tool.
-fn create_default_config() -> Config {
-    let mut default_change_types: BTreeMap<String, String> = BTreeMap::new();
-    default_change_types.insert("Bug Fixes".into(), "bug\\s*fixes".into());
-    default_change_types.insert("Features".into(), "features".into());
-    default_change_types.insert("Improvements".into(), "improvements".into());
-
-    Config {
-        categories: Vec::new(),
-        change_types: default_change_types,
-        expected_spellings: BTreeMap::new(),
-        legacy_version: None,
-        target_repo: "".to_string(),
-    }
 }
 
 /// Creates an empty skeleton for a changelog.
