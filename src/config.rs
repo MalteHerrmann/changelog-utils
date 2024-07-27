@@ -12,9 +12,9 @@ pub struct Config {
     pub categories: Vec<String>,
     /// The map of allowed change types.
     ///
-    /// Note: The key is the correct spelling and the value is
-    /// a regular expression matching all possible (mis-)spellings
-    /// of the given category.
+    /// Note: The key is the full spelling and the value is
+    /// an abbreviation that is to be used as a short form
+    /// in pull request titles.
     pub change_types: BTreeMap<String, String>,
     /// The map of expected spellings.
     ///
@@ -46,6 +46,23 @@ impl Config {
 impl fmt::Display for Config {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", serde_json::to_string_pretty(&self).unwrap())
+    }
+}
+
+impl Default for Config {
+    fn default() -> Config {
+        let mut default_change_types: BTreeMap<String, String> = BTreeMap::new();
+        default_change_types.insert("Bug Fixes".into(), "fix".into());
+        default_change_types.insert("Features".into(), "feat".into());
+        default_change_types.insert("Improvements".into(), "imp".into());
+
+        Config {
+            categories: Vec::default(),
+            change_types: default_change_types,
+            expected_spellings: BTreeMap::default(),
+            legacy_version: None,
+            target_repo: String::default(),
+        }
     }
 }
 
@@ -145,10 +162,7 @@ mod config_tests {
             config.change_types.len() > 0,
             "expected non-zero length of change types in example config"
         );
-        assert_eq!(
-            config.change_types.get("Bug Fixes").unwrap(),
-            "bug\\s*fixes"
-        );
+        assert_eq!(config.change_types.get("Bug Fixes").unwrap(), "fix");
 
         assert!(
             config.categories.len() > 0,

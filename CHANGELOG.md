@@ -13,6 +13,7 @@ This changelog was created using the `clu` binary
 
 ### Improvements
 
+- (config) [#55](https://github.com/MalteHerrmann/changelog-utils/pull/55) Use change type abbreviations instead of patterns in config.
 - (all) [#53](https://github.com/MalteHerrmann/changelog-utils/pull/53) Minor codebase improvements.
 - (crud) [#48](https://github.com/MalteHerrmann/changelog-utils/pull/48) Use authenticated requests when checking open PRs.
 - (config) [#51](https://github.com/MalteHerrmann/changelog-utils/pull/51) Get available configuration from existing changelog during initialization.

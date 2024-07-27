@@ -15,11 +15,11 @@
     "all"
   ],
   "change_types": {
-    "Bug Fixes": "bug\\s*fixes",
-    "Improvements": "improvements",
-    "Features": "features",
-    "State Machine Breaking": "state\\s*machine\\s*breaking",
-    "API Breaking": "api\\s*breaking"
+    "Bug Fixes": "fix",
+    "Improvements": "imp",
+    "Features": "feat",
+    "State Machine Breaking": "imp",
+    "API Breaking": "imp"
   },
   "expected_spellings": {
     "ABI": "abi",
