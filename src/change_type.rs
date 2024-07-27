@@ -35,8 +35,17 @@ pub fn parse(config: config::Config, line: &str) -> Result<ChangeType, ChangeTyp
     let mut problems: Vec<String> = Vec::new();
 
     // Check if the correctness of the current change type.
-    if !config.change_types.iter().any(|(change_type, pattern)| {
-        if !RegexBuilder::new(pattern)
+    if !config.change_types.iter().any(|(change_type, _)| {
+        // derive the generalized pattern with case insensitivity and whitespace
+        // matching from the given change type
+        let pattern = RegexBuilder::new(r"\s+")
+            .case_insensitive(true)
+            .build()
+            .unwrap()
+            .replace_all(change_type, r"\s*")
+            .into_owned();
+
+        if !RegexBuilder::new(pattern.as_str())
             .case_insensitive(true)
             .build()
             .unwrap()
