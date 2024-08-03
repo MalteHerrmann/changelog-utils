@@ -4,6 +4,12 @@ This changelog was created using the `clu` binary
 -->
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- (ci) [#60](https://github.com/MalteHerrmann/changelog-utils/pull/60) Bump changelog linter to v0.2.0.
+
 ## [v1.2.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.2.0) - 2024-08-03
 
 ### Features
