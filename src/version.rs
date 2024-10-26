@@ -16,12 +16,24 @@ impl Version {
             return true;
         }
 
-        if self.minor > other.major {
+        if self.major < other.major {
+            return false;
+        }
+
+        if self.minor > other.minor {
             return true;
         }
 
-        if self.patch > other.major {
+        if self.minor < other.minor {
+            return false;
+        }
+
+        if self.patch > other.patch {
             return true;
+        }
+
+        if self.patch < other.patch {
+            return false;
         }
 
         match self.rc_version {
@@ -29,6 +41,7 @@ impl Version {
                 Some(v_other) => v > v_other,
                 None => false,
             },
+            // NOTE: if self is not an rc, but other is -> self is greater
             None => other.rc_version.is_some(),
         }
     }
@@ -68,6 +81,28 @@ pub fn parse(version: &str) -> Result<Version, VersionError> {
 #[cfg(test)]
 mod version_tests {
     use super::*;
+
+    #[test]
+    fn test_greater() {
+        let a = parse("v1.1.1-rc1").expect("failed to parse version");
+
+        assert!(a.gt(&parse("v0.2.0").unwrap()));
+        assert!(a.gt(&parse("v0.0.2").unwrap()));
+        assert!(a.gt(&parse("v0.0.2-rc2").unwrap()));
+        assert!(a.gt(&parse("v1.0.1-rc1").unwrap()));
+        assert!(a.gt(&parse("v1.0.2-rc2").unwrap()));
+        assert!(a.gt(&parse("v1.0.1-rc2").unwrap()));
+        assert!(a.gt(&parse("v1.1.0-rc1").unwrap()));
+        assert!(a.gt(&parse("v1.1.1-rc0").unwrap()));
+
+        assert!(!a.gt(&parse("v1.1.1").unwrap()));
+        assert!(!a.gt(&parse("v1.1.1-rc2").unwrap()));
+        assert!(!a.gt(&parse("v1.1.2-rc1").unwrap()));
+        assert!(!a.gt(&parse("v1.2.0").unwrap()));
+        assert!(!a.gt(&parse("v1.2.0-rc1").unwrap()));
+        assert!(!a.gt(&parse("v2.0.0").unwrap()));
+        assert!(!a.gt(&parse("v2.0.0-rc1").unwrap()));
+    }
 
     #[test]
     fn test_is_valid_version_pass() {

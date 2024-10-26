@@ -30,13 +30,14 @@ The available subcommands can be listed when running `clu help`:
 Usage: clu <COMMAND>
 
 Commands:
-  add      Adds a new entry to the unreleased section of the changelog
-  fix      Applies all possible auto-fixes to the changelog
-  lint     Checks if the changelog contents adhere to the defined rules
-  init     Initializes the changelog configuration in the current directory
-  config   Adjust the changelog configuration like allowed categories, change types or other
-  release  Turns the Unreleased section into a new release with the given version
-  help     Print this message or the help of the given subcommand(s)
+  add        Adds a new entry to the unreleased section of the changelog
+  create-pr  Creates a PR in the configured target repository and adds the corresponding changelog entry
+  fix        Applies all possible auto-fixes to the changelog
+  lint       Checks if the changelog contents adhere to the defined rules
+  init       Initializes the changelog configuration in the current directory
+  config     Adjust the changelog configuration like allowed categories, change types or other
+  release    Turns the Unreleased section into a new release with the given version
+  help       Print this message or the help of the given subcommand(s)
 
 Options:
   -h, --help  Print help
