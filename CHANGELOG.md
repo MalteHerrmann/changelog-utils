@@ -6,6 +6,10 @@ This changelog was created using the `clu` binary
 
 ## Unreleased
 
+### Improvements
+
+- (ci) [#60](https://github.com/MalteHerrmann/changelog-utils/pull/60) Bump changelog linter to v0.2.0.
+
 ### Bug Fixes
 
 - (lint) [#61](https://github.com/MalteHerrmann/changelog-utils/pull/61) Fix version comparison.
