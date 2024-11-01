@@ -1,3 +1,4 @@
+use std::fmt;
 use crate::errors::VersionError;
 use regex::Regex;
 
@@ -47,6 +48,17 @@ impl Version {
     }
 }
 
+impl fmt::Display for Version {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut version_string = format!("v{}.{}.{}", self.major, self.minor, self.patch);
+        match self.rc_version {
+            Some(rc) => {version_string = version_string + &format!("-rc{}", rc)},
+            None => (),
+        }
+        write!(f, version_string.as_str())
+    }
+}
+
 /// Tries to parse the given version string.
 /// Returns an instance of Version, in case a valid version is passed.
 pub fn parse(version: &str) -> Result<Version, VersionError> {
@@ -76,6 +88,33 @@ pub fn parse(version: &str) -> Result<Version, VersionError> {
         patch,
         rc_version,
     })
+}
+
+/// Represents the release type.
+pub enum ReleaseType {
+    MAJOR,
+    MINOR,
+    PATCH,
+    RC,
+}
+
+/// Increments the version based on the given release type.
+pub fn bump_version(version: &Version, release_type: &ReleaseType) -> Version {
+    let next_version = version.clone();
+    match release_type {
+        MAJOR => next_version.major += 1,
+        MINOR => next_version.minor += 1,
+        PATCH => next_version.patch += 1,
+        RC => {
+            if let Some(rc_version) = version.rc_version {
+                next_version.rc_version = Some(rc_version + 1);
+            } else {
+                next_version.rc_version = Some(1);
+            }
+        }
+    };
+
+    next_version
 }
 
 #[cfg(test)]

@@ -45,6 +45,10 @@ pub fn get_pr_description() -> Result<String, InputError> {
     .prompt()?)
 }
 
+pub fn get_release_type() -> Result<String, InputError> {
+    Ok("not implemented".to_string())
+}
+
 pub fn get_target_branch(branches_page: Page<Branch>) -> Result<String, InputError> {
     let mut branches = Vec::new();
     let mut start_idx: usize = 0;
