@@ -46,6 +46,8 @@ pub enum InputError {
     InquireError(#[from] InquireError),
     #[error("failed to parse integer: {0}")]
     ParseError(#[from] ParseIntError),
+    #[error("invalid selection")]
+    InvalidSelection,
 }
 
 #[derive(Error, Debug)]
@@ -192,6 +194,8 @@ pub enum ReleaseCLIError {
     Config(#[from] ConfigError),
     #[error("duplicate version: {0}")]
     DuplicateVersion(String),
+    #[error("input error: {0}")]
+    Input(#[from] InputError),
     #[error("failed to parse changelog: {0}")]
     InvalidChangelog(#[from] ChangelogError),
     #[error("invalid version: {0}")]

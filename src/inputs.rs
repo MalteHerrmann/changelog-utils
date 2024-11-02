@@ -1,4 +1,4 @@
-use crate::{config::Config, errors::InputError};
+use crate::{config::Config, errors::InputError, release_type::ReleaseType};
 use inquire::{Editor, Select, Text};
 use octocrab::{models::repos::Branch, Page};
 
@@ -45,8 +45,23 @@ pub fn get_pr_description() -> Result<String, InputError> {
     .prompt()?)
 }
 
-pub fn get_release_type() -> Result<String, InputError> {
-    Ok("not implemented".to_string())
+pub fn get_release_type() -> Result<ReleaseType, InputError> {
+    // TODO: currently the case of the rc is not fully handled, since it's not possible to choose for what type of release the rc is - right now we're creating an rc for the last release, but we want to be able to e.g. increment the major version plus adding the suffix rc1
+    let available_types: Vec<String> = ReleaseType::all().iter()
+        .map(|t| t.as_str().to_string())
+        .collect();
+
+    let selected_type = Select::new("Select the release type:", available_types)
+        .prompt()?;
+
+    // Convert the selected string back to the ReleaseType enum
+    for release_type in ReleaseType::all() {
+        if release_type.as_str() == selected_type {
+            return Ok(release_type);
+        }
+    }
+
+    Err(InputError::InvalidSelection)
 }
 
 pub fn get_target_branch(branches_page: Page<Branch>) -> Result<String, InputError> {

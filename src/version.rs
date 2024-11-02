@@ -1,5 +1,8 @@
 use std::fmt;
-use crate::errors::VersionError;
+use crate::{
+    errors::VersionError,
+    release_type::ReleaseType,
+};
 use regex::Regex;
 
 #[derive(Clone, Debug)]
@@ -51,11 +54,12 @@ impl Version {
 impl fmt::Display for Version {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut version_string = format!("v{}.{}.{}", self.major, self.minor, self.patch);
-        match self.rc_version {
-            Some(rc) => {version_string = version_string + &format!("-rc{}", rc)},
-            None => (),
-        }
-        write!(f, version_string.as_str())
+        version_string = match self.rc_version {
+            Some(rc) => version_string + &format!("-rc{}", rc),
+            None => version_string,
+        };
+
+        write!(f, "{}", version_string)
     }
 }
 
@@ -91,30 +95,25 @@ pub fn parse(version: &str) -> Result<Version, VersionError> {
 }
 
 /// Represents the release type.
-pub enum ReleaseType {
-    MAJOR,
-    MINOR,
-    PATCH,
-    RC,
-}
-
 /// Increments the version based on the given release type.
 pub fn bump_version(version: &Version, release_type: &ReleaseType) -> Version {
-    let next_version = version.clone();
-    match release_type {
-        MAJOR => next_version.major += 1,
-        MINOR => next_version.minor += 1,
-        PATCH => next_version.patch += 1,
-        RC => {
-            if let Some(rc_version) = version.rc_version {
-                next_version.rc_version = Some(rc_version + 1);
-            } else {
-                next_version.rc_version = Some(1);
-            }
-        }
+    let (major, minor, patch, rc) = match release_type {
+        ReleaseType::MAJOR => (version.major + 1, 0, 0, None),
+        ReleaseType::MINOR => (version.major, version.minor + 1, 0, None),
+        ReleaseType::PATCH => (version.major, version.minor, version.patch + 1, None),
+        ReleaseType::RC => (
+            version.major,
+            version.minor,
+            version.patch,
+            Some(version.rc_version.map_or(1, |v| v + 1)), // NOTE: if rc is None, it will be 1 - otherwise increment
+        ),
     };
-
-    next_version
+    Version {
+        major,
+        minor,
+        patch,
+        rc_version: rc,
+    }
 }
 
 #[cfg(test)]
@@ -168,5 +167,48 @@ mod version_tests {
         assert!(parse("v14.0.").is_err());
         assert!(parse("v.0.1").is_err());
         assert!(parse("v11.0.1rc3").is_err());
+    }
+
+    #[test]
+    fn test_bump_version_major() {
+        let version = parse("v1.2.3").expect("failed to parse version");
+        let bumped = bump_version(&version, &ReleaseType::MAJOR);
+        assert_eq!(bumped.to_string(), "v2.0.0");
+    }
+
+    #[test]
+    fn test_bump_version_minor() {
+        let version = parse("v1.2.3").expect("failed to parse version");
+        let bumped = bump_version(&version, &ReleaseType::MINOR);
+        assert_eq!(bumped.to_string(), "v1.3.0");
+    }
+
+    #[test]
+    fn test_bump_version_patch() {
+        let version = parse("v1.2.3").expect("failed to parse version");
+        let bumped = bump_version(&version, &ReleaseType::PATCH);
+        assert_eq!(bumped.to_string(), "v1.2.4");
+    }
+
+    #[test]
+    fn test_bump_version_rc() {
+        let version = parse("v1.2.3").expect("failed to parse version");
+        let bumped = bump_version(&version, &ReleaseType::RC);
+        assert_eq!(bumped.to_string(), "v1.2.3-rc1");
+    }
+
+    #[test]
+    fn test_bump_version_rc_increment() {
+        let version = parse("v1.2.3-rc1").expect("failed to parse version");
+        let bumped = bump_version(&version, &ReleaseType::RC);
+        assert_eq!(bumped.to_string(), "v1.2.3-rc2");
+    }
+
+    #[test]
+    fn test_bump_version_rc_increment_for_major_release() {
+        let version = parse("v1.2.3").expect("failed to parse version");
+        // TODO: create a new release type (e.g. MAJOR_RC) that allows to increment the major version plus adding the suffix rc1
+        let bumped = bump_version(&version, &ReleaseType::MAJOR);
+        assert_eq!(bumped.to_string(), "v2.0.0-rc1");
     }
 }
