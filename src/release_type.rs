@@ -1,3 +1,7 @@
+// This is solved using the Marco implementation to be able to dynamically add options to the `ReleaseType` enum
+// while also generating the corresponding function `ReleaseType::all`, which returns all options.
+//
+// TODO: check if this can be done less complicated
 macro_rules! release_type {
     ($($name:ident),*) => {
         #[derive(Debug, Clone)]
