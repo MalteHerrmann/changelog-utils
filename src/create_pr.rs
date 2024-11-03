@@ -1,5 +1,4 @@
 use crate::{config, errors::CreateError, github, inputs};
-use octocrab::params::repos::Reference::Branch;
 
 /// Runs the main logic to open a new PR for the current branch.
 pub async fn run() -> Result<(), CreateError> {
@@ -7,19 +6,20 @@ pub async fn run() -> Result<(), CreateError> {
     let git_info = github::get_git_info(&config)?;
     let client = github::get_authenticated_github_client()?;
 
-    if client
-        .repos(&git_info.owner, &git_info.repo)
-        .get_ref(&Branch(git_info.branch.clone()))
-        .await
-        .is_err()
-    {
-        // TODO: add option to push the branch?
-        return Err(CreateError::BranchNotOnRemote(git_info.branch.clone()));
-    };
-
     if let Ok(pr_info) = github::get_open_pr(git_info.clone()).await {
         return Err(CreateError::ExistingPR(pr_info.number));
     }
+
+    if !github::branch_exists_on_remote(&client, &git_info).await {
+        if !inputs::get_permission_to_push(git_info.branch.as_str())? {
+            return Err(CreateError::BranchNotOnRemote(git_info.branch.clone()));
+        };
+
+        github::push_to_origin(git_info.branch.as_str())?;
+        if !github::branch_exists_on_remote(&client, &git_info).await {
+            return Err(CreateError::BranchNotOnRemote(git_info.branch.clone()));
+        }
+    };
 
     let change_type = inputs::get_change_type(&config, 0)?;
     let cat = inputs::get_category(&config, 0)?;
