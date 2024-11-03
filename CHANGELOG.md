@@ -14,6 +14,10 @@ This changelog was created using the `clu` binary
 
 - (lint) [#61](https://github.com/MalteHerrmann/changelog-utils/pull/61) Fix version comparison.
 
+### Features
+
+- (cli) [#63](https://github.com/MalteHerrmann/changelog-utils/pull/63) Enable switching between release types when not specifying a version.
+
 ## [v1.2.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.2.0) - 2024-08-03
 
 ### Features
