@@ -1,3 +1,4 @@
+use assert_fs::NamedTempFile;
 use clu::{add, changelog, config};
 use std::{borrow::BorrowMut, path::Path};
 
@@ -71,5 +72,50 @@ fn test_pass_add_with_no_unreleased_section() {
     assert_eq!(
         added_entry.fixed,
         "- (test) [#15](https://github.com/evmos/evmos/pull/15) Test object."
+    );
+}
+
+#[test]
+fn test_pass_add_new_with_auto_fix() {
+    let config = load_example_config();
+    let mut changelog = changelog::parse_changelog(
+        config.clone(),
+        Path::new("tests/testdata/changelog_new_category_after_add.md"),
+    )
+    .expect("failed to parse example changelog");
+    assert_eq!(changelog.releases.len(), 2);
+
+    add::add_entry(
+        &config,
+        &mut changelog,
+        "Bug Fixes",
+        "all",
+        "adding an entry that's auto-fixable",
+        15,
+    );
+
+    // export to temporary file
+    let tmp_path = NamedTempFile::new("tmp_changelog.md").expect("failed to save tmp changelog");
+    changelog
+        .write(tmp_path.path())
+        .expect("failed to write tmp changelog");
+
+    let updated_changelog = changelog::parse_changelog(config.clone(), tmp_path.path()).unwrap();
+    let added_entry = updated_changelog
+        .releases
+        .get(0)
+        .unwrap()
+        .change_types
+        .get(2)
+        .unwrap()
+        .entries
+        .get(0)
+        .unwrap();
+
+    // NOTE: we're expecting to have the first letter capitalized and the dot at the end added
+    let expected: Vec<String> = vec![];
+    assert_eq!(
+        added_entry.problems, expected,
+        "expected line to have been corrected before writing to changelog."
     );
 }

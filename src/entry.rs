@@ -157,12 +157,12 @@ pub fn check_description(config: &config::Config, desc: &str) -> (String, Vec<St
         ))
     }
 
-    let last_letter = desc
+    let last_letter = fixed
         .chars()
         .last()
         .expect("no characters found in description");
     if last_letter.to_string() != '.'.to_string() {
-        fixed = desc.to_string() + ".";
+        fixed = fixed.to_string() + ".";
         problems.push(format!("PR description should end with a dot: '{}'", desc))
     }
 
