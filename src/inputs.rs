@@ -46,13 +46,9 @@ pub fn get_pr_description() -> Result<String, InputError> {
 }
 
 pub fn get_release_type() -> Result<ReleaseType, InputError> {
-    // TODO: currently the case of the rc is not fully handled, since it's not possible to choose for what type of release the rc is - right now we're creating an rc for the last release, but we want to be able to e.g. increment the major version plus adding the suffix rc1
-    let available_types: Vec<String> = ReleaseType::all().iter()
-        .map(|t| t.as_str().to_string())
-        .collect();
+    let available_types: Vec<&str> = ReleaseType::all().iter().map(|t| t.as_str()).collect();
 
-    let selected_type = Select::new("Select the release type:", available_types)
-        .prompt()?;
+    let selected_type = Select::new("Select the release type:", available_types).prompt()?;
 
     // Convert the selected string back to the ReleaseType enum
     for release_type in ReleaseType::all() {

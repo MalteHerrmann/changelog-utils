@@ -4,7 +4,7 @@ use crate::{
     errors::ReleaseCLIError,
     inputs::get_release_type,
     release::Release,
-    version
+    version,
 };
 use chrono::offset::Local;
 
@@ -15,10 +15,14 @@ pub fn run(version_option: Option<String>) -> Result<(), ReleaseCLIError> {
 
     let version = match version_option {
         Some(v) => version::parse(v.as_str())?,
-        None => get_release_version(&changelog)?,
+        None => get_next_release_version(&changelog)?,
     };
 
-    if changelog.releases.iter().any(|x| x.version.eq(&version.to_string())) {
+    if changelog
+        .releases
+        .iter()
+        .any(|x| x.version.eq(&version.to_string()))
+    {
         return Err(ReleaseCLIError::DuplicateVersion(version.to_string()));
     }
 
@@ -45,8 +49,12 @@ pub fn run(version_option: Option<String>) -> Result<(), ReleaseCLIError> {
 ///
 /// Example: If a user selects a patch release with the latest version being `1.2.3`,
 /// the released version would be `1.2.4`.
-fn get_release_version(changelog: &Changelog) -> Result<version::Version, ReleaseCLIError> {
-    let mut prior_releases: Vec<&Release> = changelog.releases.iter().filter(|x| !x.is_unreleased()).collect();
+fn get_next_release_version(changelog: &Changelog) -> Result<version::Version, ReleaseCLIError> {
+    let mut prior_releases: Vec<&Release> = changelog
+        .releases
+        .iter()
+        .filter(|x| !x.is_unreleased())
+        .collect();
 
     // TODO: this should be done when saving the changelog
     prior_releases.sort_by(|a, b| a.version.cmp(&b.version));
