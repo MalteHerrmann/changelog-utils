@@ -93,21 +93,23 @@ pub fn add_entry(
     };
 
     let mut idx = 0;
-    let mut found = false;
+    let mut change_type_is_found = false;
     for (i, ct) in unreleased.clone().change_types.into_iter().enumerate() {
         if ct.name.eq(&change_type) {
             idx = i;
-            found = true;
+            change_type_is_found = true;
         }
     }
 
     let new_entry = entry::Entry::new(config, cat, desc, pr);
+    // NOTE: we're re-parsing the entry from the fixed version to incorporate all possible fixes
+    let new_fixed_entry = entry::parse(config, new_entry.fixed.as_str()).unwrap();
 
     // Get the mutable change type to add the entry into.
     // NOTE: If it's not found yet, we add a new section to the changelog.
-    match found {
+    match change_type_is_found {
         false => {
-            let new_ct = change_type::new(change_type.to_owned(), Some(vec![new_entry]));
+            let new_ct = change_type::new(change_type.to_owned(), Some(vec![new_fixed_entry]));
             unreleased.change_types.push(new_ct);
         }
         true => {
@@ -116,7 +118,7 @@ pub fn add_entry(
                 .get_mut(idx)
                 .expect("failed to get change type");
 
-            mut_ct.entries.insert(0, new_entry);
+            mut_ct.entries.insert(0, new_fixed_entry);
         }
     }
 }
