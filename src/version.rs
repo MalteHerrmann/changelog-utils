@@ -1,5 +1,6 @@
-use crate::errors::VersionError;
+use crate::{errors::VersionError, release_type::ReleaseType};
 use regex::Regex;
+use std::fmt;
 
 #[derive(Clone, Debug)]
 pub struct Version {
@@ -47,6 +48,18 @@ impl Version {
     }
 }
 
+impl fmt::Display for Version {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut version_string = format!("v{}.{}.{}", self.major, self.minor, self.patch);
+        version_string = match self.rc_version {
+            Some(rc) => version_string + &format!("-rc{}", rc),
+            None => version_string,
+        };
+
+        write!(f, "{}", version_string)
+    }
+}
+
 /// Tries to parse the given version string.
 /// Returns an instance of Version, in case a valid version is passed.
 pub fn parse(version: &str) -> Result<Version, VersionError> {
@@ -76,6 +89,34 @@ pub fn parse(version: &str) -> Result<Version, VersionError> {
         patch,
         rc_version,
     })
+}
+
+/// Represents the release type.
+/// Increments the version based on the given release type.
+pub fn bump_version(version: &Version, release_type: &ReleaseType) -> Version {
+    let (major, minor, patch, rc) = match release_type {
+        ReleaseType::Major => (version.major + 1, 0, 0, None),
+        ReleaseType::Minor => (version.major, version.minor + 1, 0, None),
+        ReleaseType::Patch => (version.major, version.minor, version.patch + 1, None),
+        ReleaseType::RcMajor => match version.rc_version {
+            Some(rc) => (version.major, version.minor, version.patch, Some(rc + 1)),
+            None => (version.major + 1, 0, 0, Some(1)),
+        },
+        ReleaseType::RcMinor => match version.rc_version {
+            Some(rc) => (version.major, version.minor, version.patch, Some(rc + 1)),
+            None => (version.major, version.minor + 1, 0, Some(1)),
+        },
+        ReleaseType::RcPatch => match version.rc_version {
+            Some(rc) => (version.major, version.minor, version.patch, Some(rc + 1)),
+            None => (version.major, version.minor, version.patch + 1, Some(1)),
+        },
+    };
+    Version {
+        major,
+        minor,
+        patch,
+        rc_version: rc,
+    }
 }
 
 #[cfg(test)]
@@ -129,5 +170,63 @@ mod version_tests {
         assert!(parse("v14.0.").is_err());
         assert!(parse("v.0.1").is_err());
         assert!(parse("v11.0.1rc3").is_err());
+    }
+
+    struct VersionBumpTestcase {
+        initial: String,
+        release_type: ReleaseType,
+        expected: String,
+    }
+
+    #[test]
+    fn test_version_bump() {
+        let testcases = vec![
+            VersionBumpTestcase {
+                initial: "v1.2.3".into(),
+                release_type: ReleaseType::Major,
+                expected: "v2.0.0".into(),
+            },
+            VersionBumpTestcase {
+                initial: "v1.2.3".into(),
+                release_type: ReleaseType::Minor,
+                expected: "v1.3.0".into(),
+            },
+            VersionBumpTestcase {
+                initial: "v1.2.3".into(),
+                release_type: ReleaseType::Patch,
+                expected: "v1.2.4".into(),
+            },
+            VersionBumpTestcase {
+                initial: "v1.2.3".into(),
+                release_type: ReleaseType::RcMajor,
+                expected: "v2.0.0-rc1".into(),
+            },
+            VersionBumpTestcase {
+                initial: "v1.2.3".into(),
+                release_type: ReleaseType::RcMinor,
+                expected: "v1.3.0-rc1".into(),
+            },
+            VersionBumpTestcase {
+                initial: "v1.2.3".into(),
+                release_type: ReleaseType::RcPatch,
+                expected: "v1.2.4-rc1".into(),
+            },
+            VersionBumpTestcase {
+                initial: "v1.2.3-rc1".into(),
+                release_type: ReleaseType::RcPatch,
+                expected: "v1.2.3-rc2".into(),
+            },
+        ];
+
+        for tc in testcases {
+            assert_eq!(
+                bump_version(
+                    &parse(tc.initial.as_str()).expect("failed to parse initial version"),
+                    &tc.release_type,
+                )
+                .to_string(),
+                tc.expected
+            )
+        }
     }
 }

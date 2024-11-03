@@ -64,7 +64,7 @@ pub struct ConfigArgs {
 
 #[derive(Args, Debug)]
 pub struct ReleaseArgs {
-    pub version: String,
+    pub version: Option<String>,
 }
 
 #[derive(Debug, Subcommand)]

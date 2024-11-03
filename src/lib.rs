@@ -14,4 +14,5 @@ mod inputs;
 pub mod lint;
 mod release;
 pub mod release_cli;
+mod release_type;
 mod version;

@@ -1,4 +1,4 @@
-use crate::{config::Config, errors::InputError};
+use crate::{config::Config, errors::InputError, release_type::ReleaseType};
 use inquire::{Editor, Select, Text};
 use octocrab::{models::repos::Branch, Page};
 
@@ -43,6 +43,21 @@ pub fn get_pr_description() -> Result<String, InputError> {
         "Please provide the Pull Request body with a description of the made changes.\n",
     )
     .prompt()?)
+}
+
+pub fn get_release_type() -> Result<ReleaseType, InputError> {
+    let available_types: Vec<&str> = ReleaseType::all().iter().map(|t| t.as_str()).collect();
+
+    let selected_type = Select::new("Select the release type:", available_types).prompt()?;
+
+    // Convert the selected string back to the ReleaseType enum
+    for release_type in ReleaseType::all() {
+        if release_type.as_str() == selected_type {
+            return Ok(release_type);
+        }
+    }
+
+    Err(InputError::InvalidSelection)
 }
 
 pub fn get_target_branch(branches_page: Page<Branch>) -> Result<String, InputError> {
