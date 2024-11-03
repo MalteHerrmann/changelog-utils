@@ -172,52 +172,61 @@ mod version_tests {
         assert!(parse("v11.0.1rc3").is_err());
     }
 
-    #[test]
-    fn test_bump_version_major() {
-        let version = parse("v1.2.3").expect("failed to parse version");
-        let bumped = bump_version(&version, &ReleaseType::Major);
-        assert_eq!(bumped.to_string(), "v2.0.0");
+    struct VersionBumpTestcase {
+        initial: String,
+        release_type: ReleaseType,
+        expected: String,
     }
 
     #[test]
-    fn test_bump_version_minor() {
-        let version = parse("v1.2.3").expect("failed to parse version");
-        let bumped = bump_version(&version, &ReleaseType::Minor);
-        assert_eq!(bumped.to_string(), "v1.3.0");
-    }
+    fn test_version_bump() {
+        let testcases = vec![
+            VersionBumpTestcase {
+                initial: "v1.2.3".into(),
+                release_type: ReleaseType::Major,
+                expected: "v2.0.0".into(),
+            },
+            VersionBumpTestcase {
+                initial: "v1.2.3".into(),
+                release_type: ReleaseType::Minor,
+                expected: "v1.3.0".into(),
+            },
+            VersionBumpTestcase {
+                initial: "v1.2.3".into(),
+                release_type: ReleaseType::Patch,
+                expected: "v1.2.4".into(),
+            },
+            VersionBumpTestcase {
+                initial: "v1.2.3".into(),
+                release_type: ReleaseType::RcMajor,
+                expected: "v2.0.0-rc1".into(),
+            },
+            VersionBumpTestcase {
+                initial: "v1.2.3".into(),
+                release_type: ReleaseType::RcMinor,
+                expected: "v1.3.0-rc1".into(),
+            },
+            VersionBumpTestcase {
+                initial: "v1.2.3".into(),
+                release_type: ReleaseType::RcPatch,
+                expected: "v1.2.4-rc1".into(),
+            },
+            VersionBumpTestcase {
+                initial: "v1.2.3-rc1".into(),
+                release_type: ReleaseType::RcPatch,
+                expected: "v1.2.3-rc2".into(),
+            },
+        ];
 
-    #[test]
-    fn test_bump_version_patch() {
-        let version = parse("v1.2.3").expect("failed to parse version");
-        let bumped = bump_version(&version, &ReleaseType::Patch);
-        assert_eq!(bumped.to_string(), "v1.2.4");
-    }
-
-    #[test]
-    fn test_bump_version_rc_patch() {
-        let version = parse("v1.2.3").expect("failed to parse version");
-        let bumped = bump_version(&version, &ReleaseType::RcPatch);
-        assert_eq!(bumped.to_string(), "v1.2.4-rc1");
-    }
-
-    #[test]
-    fn test_bump_version_rc_patch_increment() {
-        let version = parse("v1.2.3-rc1").expect("failed to parse version");
-        let bumped = bump_version(&version, &ReleaseType::RcPatch);
-        assert_eq!(bumped.to_string(), "v1.2.3-rc2");
-    }
-
-    #[test]
-    fn test_bump_version_rc_major() {
-        let version = parse("v1.2.3").expect("failed to parse version");
-        let bumped = bump_version(&version, &ReleaseType::RcMajor);
-        assert_eq!(bumped.to_string(), "v2.0.0-rc1");
-    }
-
-    #[test]
-    fn test_bump_version_rc_minor() {
-        let version = parse("v1.2.3").expect("failed to parse version");
-        let bumped = bump_version(&version, &ReleaseType::RcMinor);
-        assert_eq!(bumped.to_string(), "v1.3.0-rc1");
+        for tc in testcases {
+            assert_eq!(
+                bump_version(
+                    &parse(tc.initial.as_str()).expect("failed to parse initial version"),
+                    &tc.release_type,
+                )
+                .to_string(),
+                tc.expected
+            )
+        }
     }
 }
