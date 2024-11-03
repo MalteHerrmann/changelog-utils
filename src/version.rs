@@ -1,9 +1,6 @@
-use std::fmt;
-use crate::{
-    errors::VersionError,
-    release_type::ReleaseType,
-};
+use crate::{errors::VersionError, release_type::ReleaseType};
 use regex::Regex;
+use std::fmt;
 
 #[derive(Clone, Debug)]
 pub struct Version {
@@ -98,15 +95,21 @@ pub fn parse(version: &str) -> Result<Version, VersionError> {
 /// Increments the version based on the given release type.
 pub fn bump_version(version: &Version, release_type: &ReleaseType) -> Version {
     let (major, minor, patch, rc) = match release_type {
-        ReleaseType::MAJOR => (version.major + 1, 0, 0, None),
-        ReleaseType::MINOR => (version.major, version.minor + 1, 0, None),
-        ReleaseType::PATCH => (version.major, version.minor, version.patch + 1, None),
-        ReleaseType::RC => (
-            version.major,
-            version.minor,
-            version.patch,
-            Some(version.rc_version.map_or(1, |v| v + 1)), // NOTE: if rc is None, it will be 1 - otherwise increment
-        ),
+        ReleaseType::Major => (version.major + 1, 0, 0, None),
+        ReleaseType::Minor => (version.major, version.minor + 1, 0, None),
+        ReleaseType::Patch => (version.major, version.minor, version.patch + 1, None),
+        ReleaseType::RcMajor => match version.rc_version {
+            Some(rc) => (version.major, version.minor, version.patch, Some(rc + 1)),
+            None => (version.major + 1, 0, 0, Some(1)),
+        },
+        ReleaseType::RcMinor => match version.rc_version {
+            Some(rc) => (version.major, version.minor, version.patch, Some(rc + 1)),
+            None => (version.major, version.minor + 1, 0, Some(1)),
+        },
+        ReleaseType::RcPatch => match version.rc_version {
+            Some(rc) => (version.major, version.minor, version.patch, Some(rc + 1)),
+            None => (version.major, version.minor, version.patch + 1, Some(1)),
+        },
     };
     Version {
         major,
@@ -172,43 +175,49 @@ mod version_tests {
     #[test]
     fn test_bump_version_major() {
         let version = parse("v1.2.3").expect("failed to parse version");
-        let bumped = bump_version(&version, &ReleaseType::MAJOR);
+        let bumped = bump_version(&version, &ReleaseType::Major);
         assert_eq!(bumped.to_string(), "v2.0.0");
     }
 
     #[test]
     fn test_bump_version_minor() {
         let version = parse("v1.2.3").expect("failed to parse version");
-        let bumped = bump_version(&version, &ReleaseType::MINOR);
+        let bumped = bump_version(&version, &ReleaseType::Minor);
         assert_eq!(bumped.to_string(), "v1.3.0");
     }
 
     #[test]
     fn test_bump_version_patch() {
         let version = parse("v1.2.3").expect("failed to parse version");
-        let bumped = bump_version(&version, &ReleaseType::PATCH);
+        let bumped = bump_version(&version, &ReleaseType::Patch);
         assert_eq!(bumped.to_string(), "v1.2.4");
     }
 
     #[test]
-    fn test_bump_version_rc() {
+    fn test_bump_version_rc_patch() {
         let version = parse("v1.2.3").expect("failed to parse version");
-        let bumped = bump_version(&version, &ReleaseType::RC);
-        assert_eq!(bumped.to_string(), "v1.2.3-rc1");
+        let bumped = bump_version(&version, &ReleaseType::RcPatch);
+        assert_eq!(bumped.to_string(), "v1.2.4-rc1");
     }
 
     #[test]
-    fn test_bump_version_rc_increment() {
+    fn test_bump_version_rc_patch_increment() {
         let version = parse("v1.2.3-rc1").expect("failed to parse version");
-        let bumped = bump_version(&version, &ReleaseType::RC);
+        let bumped = bump_version(&version, &ReleaseType::RcPatch);
         assert_eq!(bumped.to_string(), "v1.2.3-rc2");
     }
 
     #[test]
-    fn test_bump_version_rc_increment_for_major_release() {
+    fn test_bump_version_rc_major() {
         let version = parse("v1.2.3").expect("failed to parse version");
-        // TODO: create a new release type (e.g. MAJOR_RC) that allows to increment the major version plus adding the suffix rc1
-        let bumped = bump_version(&version, &ReleaseType::MAJOR);
+        let bumped = bump_version(&version, &ReleaseType::RcMajor);
         assert_eq!(bumped.to_string(), "v2.0.0-rc1");
+    }
+
+    #[test]
+    fn test_bump_version_rc_minor() {
+        let version = parse("v1.2.3").expect("failed to parse version");
+        let bumped = bump_version(&version, &ReleaseType::RcMinor);
+        assert_eq!(bumped.to_string(), "v1.3.0-rc1");
     }
 }

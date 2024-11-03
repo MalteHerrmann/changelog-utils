@@ -20,7 +20,7 @@ macro_rules! release_type {
 }
 
 // Define the ReleaseType enum using the macro
-release_type!(MAJOR, MINOR, PATCH, RC);
+release_type!(Major, Minor, Patch, RcMajor, RcMinor, RcPatch);
 
 #[cfg(test)]
 mod tests {
@@ -28,6 +28,6 @@ mod tests {
 
     #[test]
     fn test_all() {
-        assert_eq!(ReleaseType::all().len(), 4);
+        assert_eq!(ReleaseType::all().len(), 6);
     }
 }
