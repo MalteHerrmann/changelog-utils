@@ -40,7 +40,11 @@ pub fn get_description(default_value: &str) -> Result<String, InputError> {
 
 pub fn get_permission_to_push(branch: &str) -> Result<bool, InputError> {
     match Select::new(
-        format!("Branch {} not found on remote. Push the branch?", branch).as_str(),
+        format!(
+            "Branch {} not found on remote 'origin'. Push the branch?",
+            branch
+        )
+        .as_str(),
         vec!["yes", "no"],
     )
     .prompt()?
