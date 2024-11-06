@@ -50,5 +50,6 @@ pub async fn run() -> Result<(), CreateError> {
             .expect("received no error creating the PR but html_url was None")
     );
 
-    Ok(())
+    let cm = inputs::get_commit_message(&config)?;
+    Ok(github::commit_and_push(&cm)?)
 }

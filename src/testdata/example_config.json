@@ -5,6 +5,7 @@
     "Improvements": "imp",
     "Features": "feat"
   },
+  "commit_message": "add changelog entry",
   "expected_spellings": {
     "API": "api",
     "CLI": "cli",
