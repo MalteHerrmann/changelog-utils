@@ -2,6 +2,7 @@ use crate::entry::check_category;
 use crate::errors::GitHubError;
 use crate::{config::Config, entry::check_description};
 use octocrab::models::pulls::PullRequest;
+use octocrab::params::repos::Reference::Branch;
 use octocrab::{self, Octocrab};
 use regex::{Regex, RegexBuilder};
 use std::process::Command;
@@ -67,6 +68,15 @@ pub fn get_authenticated_github_client() -> Result<Octocrab, GitHubError> {
         .build()?)
 }
 
+/// Checks if the given branch exists on the GitHub repository.
+pub async fn branch_exists_on_remote(client: &Octocrab, git_info: &GitInfo) -> bool {
+    client
+        .repos(&git_info.owner, &git_info.repo)
+        .get_ref(&Branch(git_info.branch.clone()))
+        .await
+        .is_err()
+}
+
 /// Returns an option for an open PR from the current local branch in the configured target
 /// repository if it exists.
 pub async fn get_open_pr(git_info: GitInfo) -> Result<PullRequest, GitHubError> {
@@ -106,6 +116,18 @@ fn get_current_local_branch() -> Result<String, GitHubError> {
     match output.status.success() {
         true => Ok(String::from_utf8(output.stdout)?.trim().to_string()),
         false => Err(GitHubError::CurrentBranch),
+    }
+}
+
+/// Tries to push the current branch to the origin repository.
+pub fn push_to_origin(branch_name: &str) -> Result<(), GitHubError> {
+    match Command::new("git")
+        .args(vec!["push", "-u", "origin", branch_name])
+        .status()?
+        .success()
+    {
+        true => Ok(()),
+        false => Err(GitHubError::FailedToPush),
     }
 }
 

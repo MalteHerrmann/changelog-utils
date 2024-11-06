@@ -17,6 +17,7 @@ This changelog was created using the `clu` binary
 
 ### Features
 
+- (cli) [#67](https://github.com/MalteHerrmann/changelog-utils/pull/67) Add option to push branch to remote.
 - (cli) [#63](https://github.com/MalteHerrmann/changelog-utils/pull/63) Enable switching between release types when not specifying a version.
 
 ## [v1.2.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.2.0) - 2024-08-03
