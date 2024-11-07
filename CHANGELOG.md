@@ -8,6 +8,7 @@ This changelog was created using the `clu` binary
 
 ### Improvements
 
+- (all) [#69](https://github.com/MalteHerrmann/changelog-utils/pull/69) Add Nix flake for dev environment.
 - (cli) [#65](https://github.com/MalteHerrmann/changelog-utils/pull/65) Apply auto fixes to new entries.
 - (ci) [#60](https://github.com/MalteHerrmann/changelog-utils/pull/60) Bump changelog linter to v0.2.0.
 
