@@ -1,12 +1,17 @@
 use crate::{
     change_type, changelog, config, entry,
     errors::AddError,
-    github::{extract_pr_info, get_git_info, get_open_pr, PRInfo},
+    github::{commit, extract_pr_info, get_git_info, get_open_pr, PRInfo},
     inputs, release,
 };
 use std::borrow::BorrowMut;
 
 // Runs the logic to add an entry to the unreleased section of the changelog.
+//
+// After adding the new entry, the user is queried for a commit message to use
+// to commit the changes.
+//
+// NOTE: the changes are NOT pushed to the origin when running the `add` command.
 pub async fn run(accept: bool) -> Result<(), AddError> {
     let config = config::load()?;
     let git_info = get_git_info(&config)?;
@@ -68,7 +73,10 @@ pub async fn run(accept: bool) -> Result<(), AddError> {
         pr_number,
     );
 
-    Ok(changelog.write(&changelog.path)?)
+    changelog.write(&changelog.path)?;
+
+    let cm = inputs::get_commit_message(&config)?;
+    Ok(commit(cm.as_str())?)
 }
 
 /// Adds the given contents into a new entry in the unreleased section
