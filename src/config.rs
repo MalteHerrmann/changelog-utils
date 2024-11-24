@@ -16,6 +16,9 @@ pub struct Config {
     /// an abbreviation that is to be used as a short form
     /// in pull request titles.
     pub change_types: BTreeMap<String, String>,
+    /// The default commit message to be used when committing
+    /// the new changelog entry.
+    pub commit_message: String,
     /// The map of expected spellings.
     ///
     /// Note: The key is the correct spelling and the value
@@ -56,9 +59,12 @@ impl Default for Config {
         default_change_types.insert("Features".into(), "feat".into());
         default_change_types.insert("Improvements".into(), "imp".into());
 
+        let commit_message = "add changelog entry".to_string();
+
         Config {
             categories: Vec::default(),
             change_types: default_change_types,
+            commit_message,
             expected_spellings: BTreeMap::default(),
             legacy_version: None,
             target_repo: String::default(),

@@ -30,6 +30,14 @@ pub fn get_category(config: &Config, default_idx: usize) -> Result<String, Input
     .prompt()?)
 }
 
+pub fn get_commit_message(config: &Config) -> Result<String, InputError> {
+    Ok(
+        Text::new("Please provide the commit message:\n")
+            .with_initial_value(config.commit_message.as_str())
+            .prompt()?
+    )
+}
+
 pub fn get_description(default_value: &str) -> Result<String, InputError> {
     Ok(
         Text::new("Please provide a one-line description of the made changes:\n")

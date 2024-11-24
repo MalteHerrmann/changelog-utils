@@ -119,6 +119,61 @@ fn get_current_local_branch() -> Result<String, GitHubError> {
     }
 }
 
+/// Commits the current changes with the given commit message and pushes to the origin.
+pub fn commit_and_push(message: &str) -> Result<(), GitHubError> {
+    stage_changelog_changes()?;
+    
+    match Command::new("git")
+        .args(vec!["commit", "-a", "-m", message])
+        .status()?
+        .success()
+    {
+        true => Ok(push()?),
+        false => Err(GitHubError::FailedToCommit),
+    }
+}
+
+/// Commits the current changes with the given commit message and pushes to the origin.
+pub fn commit(message: &str) -> Result<(), GitHubError> {
+    stage_changelog_changes()?;
+    
+    if !Command::new("git")
+        .args(vec!["commit", "-m", message])
+        .status()?
+        .success()
+    {
+        return Err(GitHubError::FailedToCommit);
+    }
+
+    Ok(())
+}
+
+/// Adds the changelog to the staged changes in Git.
+fn stage_changelog_changes() -> Result<(), GitHubError> {
+    // TODO: pass the changelog filename / path
+    if !Command::new("git")
+        .args(vec!["add", "CHANGELOG.md"])
+        .status()?
+        .success()
+    {
+        return Err(GitHubError::FailedToCommit)
+    }
+
+    Ok(())
+}
+
+/// Tries to push the latest commits on the current branch.
+pub fn push() -> Result<(), GitHubError> {
+    match Command::new("git")
+        .args(vec!["push"])
+        .status()?
+        .success()
+    {
+        true => Ok(()),
+        false => Err(GitHubError::FailedToPush),
+    }
+}
+
 /// Tries to push the current branch to the origin repository.
 pub fn push_to_origin(branch_name: &str) -> Result<(), GitHubError> {
     match Command::new("git")
