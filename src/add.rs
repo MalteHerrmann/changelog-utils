@@ -76,7 +76,7 @@ pub async fn run(accept: bool) -> Result<(), AddError> {
     changelog.write(&changelog.path)?;
 
     let cm = inputs::get_commit_message(&config)?;
-    Ok(commit(cm.as_str())?)
+    Ok(commit(&config, &cm)?)
 }
 
 /// Adds the given contents into a new entry in the unreleased section

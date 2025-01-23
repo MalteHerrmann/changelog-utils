@@ -24,6 +24,7 @@ pub fn init_in_folder(target: PathBuf) -> Result<(), InitError> {
         config.target_repo.clone_from(&origin);
     };
 
+    // TODO: check for available changelog file names and adjust config if something else other than the default is found
     let changelog_path = target.join("CHANGELOG.md");
     match fs::read_to_string(changelog_path.clone()) {
         Ok(contents) => {

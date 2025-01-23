@@ -5,6 +5,7 @@
     "Improvements": "imp",
     "Features": "feat"
   },
+  "changelog_path": "CHANGELOG.md",
   "commit_message": "add changelog entry",
   "expected_spellings": {
     "API": "api",

@@ -120,9 +120,9 @@ fn get_current_local_branch() -> Result<String, GitHubError> {
 }
 
 /// Commits the current changes with the given commit message and pushes to the origin.
-pub fn commit_and_push(message: &str) -> Result<(), GitHubError> {
-    stage_changelog_changes()?;
-    
+pub fn commit_and_push(config: &Config, message: &str) -> Result<(), GitHubError> {
+    stage_changelog_changes(config)?;
+
     match Command::new("git")
         .args(vec!["commit", "-a", "-m", message])
         .status()?
@@ -134,8 +134,8 @@ pub fn commit_and_push(message: &str) -> Result<(), GitHubError> {
 }
 
 /// Commits the current changes with the given commit message and pushes to the origin.
-pub fn commit(message: &str) -> Result<(), GitHubError> {
-    stage_changelog_changes()?;
+pub fn commit(config: &Config, message: &str) -> Result<(), GitHubError> {
+    stage_changelog_changes(config)?;
     
     if !Command::new("git")
         .args(vec!["commit", "-m", message])
@@ -149,10 +149,9 @@ pub fn commit(message: &str) -> Result<(), GitHubError> {
 }
 
 /// Adds the changelog to the staged changes in Git.
-fn stage_changelog_changes() -> Result<(), GitHubError> {
-    // TODO: pass the changelog filename / path
+fn stage_changelog_changes(config: &Config) -> Result<(), GitHubError> {
     if !Command::new("git")
-        .args(vec!["add", "CHANGELOG.md"])
+        .args(vec!["add", config.changelog_path.as_str()])
         .status()?
         .success()
     {

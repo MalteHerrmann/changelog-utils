@@ -21,6 +21,7 @@
     "State Machine Breaking": "imp",
     "API Breaking": "imp"
   },
+  "changelog_path": "CHANGELOG.md",
   "commit_message": "add changelog entry",
   "expected_spellings": {
     "ABI": "abi",

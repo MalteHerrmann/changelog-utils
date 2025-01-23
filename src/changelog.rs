@@ -58,6 +58,8 @@ impl Changelog {
 
 /// Loads the changelog from the default changelog path.
 pub fn load(config: Config) -> Result<Changelog, ChangelogError> {
+    let contents = fs::read_to_string(&config.changelog_path)?;
+    // TODO: adjust to use the changelog_path from the config
     let changelog_file = match fs::read_dir(Path::new("./"))?.find(|e| {
         e.as_ref()
             .is_ok_and(|e| e.file_name().to_ascii_lowercase() == "changelog.md")
