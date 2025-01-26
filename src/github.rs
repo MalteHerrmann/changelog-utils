@@ -61,6 +61,8 @@ pub fn extract_pr_info(config: &Config, pr: &PullRequest) -> Result<PRInfo, GitH
 
 /// Returns an authenticated Octocrab instance if possible.
 pub fn get_authenticated_github_client() -> Result<Octocrab, GitHubError> {
+    // NOTE: make sure to export the token and not only define using GITHUB_TOKEN=... because Rust executes
+    // in a child process, that cannot pick it up without using `export`
     let token = std::env::var("GITHUB_TOKEN")?;
 
     Ok(octocrab::OctocrabBuilder::new()
@@ -136,7 +138,7 @@ pub fn commit_and_push(config: &Config, message: &str) -> Result<(), GitHubError
 /// Commits the current changes with the given commit message and pushes to the origin.
 pub fn commit(config: &Config, message: &str) -> Result<(), GitHubError> {
     stage_changelog_changes(config)?;
-    
+
     if !Command::new("git")
         .args(vec!["commit", "-m", message])
         .status()?
@@ -155,7 +157,7 @@ fn stage_changelog_changes(config: &Config) -> Result<(), GitHubError> {
         .status()?
         .success()
     {
-        return Err(GitHubError::FailedToCommit)
+        return Err(GitHubError::FailedToCommit);
     }
 
     Ok(())
@@ -163,11 +165,7 @@ fn stage_changelog_changes(config: &Config) -> Result<(), GitHubError> {
 
 /// Tries to push the latest commits on the current branch.
 pub fn push() -> Result<(), GitHubError> {
-    match Command::new("git")
-        .args(vec!["push"])
-        .status()?
-        .success()
-    {
+    match Command::new("git").args(vec!["push"]).status()?.success() {
         true => Ok(()),
         false => Err(GitHubError::FailedToPush),
     }
