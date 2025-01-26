@@ -61,6 +61,8 @@ pub fn extract_pr_info(config: &Config, pr: &PullRequest) -> Result<PRInfo, GitH
 
 /// Returns an authenticated Octocrab instance if possible.
 pub fn get_authenticated_github_client() -> Result<Octocrab, GitHubError> {
+    // NOTE: make sure to export the token and not only define using GITHUB_TOKEN=... because Rust executes
+    // in a child process, that cannot pick it up without using `export`
     let token = std::env::var("GITHUB_TOKEN")?;
 
     Ok(octocrab::OctocrabBuilder::new()
@@ -120,9 +122,9 @@ fn get_current_local_branch() -> Result<String, GitHubError> {
 }
 
 /// Commits the current changes with the given commit message and pushes to the origin.
-pub fn commit_and_push(message: &str) -> Result<(), GitHubError> {
-    stage_changelog_changes()?;
-    
+pub fn commit_and_push(config: &Config, message: &str) -> Result<(), GitHubError> {
+    stage_changelog_changes(config)?;
+
     match Command::new("git")
         .args(vec!["commit", "-a", "-m", message])
         .status()?
@@ -134,9 +136,9 @@ pub fn commit_and_push(message: &str) -> Result<(), GitHubError> {
 }
 
 /// Commits the current changes with the given commit message and pushes to the origin.
-pub fn commit(message: &str) -> Result<(), GitHubError> {
-    stage_changelog_changes()?;
-    
+pub fn commit(config: &Config, message: &str) -> Result<(), GitHubError> {
+    stage_changelog_changes(config)?;
+
     if !Command::new("git")
         .args(vec!["commit", "-m", message])
         .status()?
@@ -149,14 +151,13 @@ pub fn commit(message: &str) -> Result<(), GitHubError> {
 }
 
 /// Adds the changelog to the staged changes in Git.
-fn stage_changelog_changes() -> Result<(), GitHubError> {
-    // TODO: pass the changelog filename / path
+fn stage_changelog_changes(config: &Config) -> Result<(), GitHubError> {
     if !Command::new("git")
-        .args(vec!["add", "CHANGELOG.md"])
+        .args(vec!["add", config.changelog_path.as_str()])
         .status()?
         .success()
     {
-        return Err(GitHubError::FailedToCommit)
+        return Err(GitHubError::FailedToCommit);
     }
 
     Ok(())
@@ -164,11 +165,7 @@ fn stage_changelog_changes() -> Result<(), GitHubError> {
 
 /// Tries to push the latest commits on the current branch.
 pub fn push() -> Result<(), GitHubError> {
-    match Command::new("git")
-        .args(vec!["push"])
-        .status()?
-        .success()
-    {
+    match Command::new("git").args(vec!["push"]).status()?.success() {
         true => Ok(()),
         false => Err(GitHubError::FailedToPush),
     }

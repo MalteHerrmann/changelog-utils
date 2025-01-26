@@ -19,6 +19,8 @@ pub struct Config {
     /// The default commit message to be used when committing
     /// the new changelog entry.
     pub commit_message: String,
+    /// The relative path of the changelog file.
+    pub changelog_path: String,
     /// The map of expected spellings.
     ///
     /// Note: The key is the correct spelling and the value
@@ -60,11 +62,13 @@ impl Default for Config {
         default_change_types.insert("Improvements".into(), "imp".into());
 
         let commit_message = "add changelog entry".to_string();
+        let changelog_path = "CHANGELOG.md".to_string();
 
         Config {
             categories: Vec::default(),
             change_types: default_change_types,
             commit_message,
+            changelog_path,
             expected_spellings: BTreeMap::default(),
             legacy_version: None,
             target_repo: String::default(),

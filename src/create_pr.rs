@@ -51,5 +51,5 @@ pub async fn run() -> Result<(), CreateError> {
     );
 
     let cm = inputs::get_commit_message(&config)?;
-    Ok(github::commit_and_push(&cm)?)
+    Ok(github::commit_and_push(&config, &cm)?)
 }

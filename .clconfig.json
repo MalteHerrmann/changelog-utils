@@ -15,6 +15,7 @@
     "Features": "feat",
     "Improvements": "imp"
   },
+  "changelog_path": "CHANGELOG.md",
   "commit_message": "add changelog entry",
   "expected_spellings": {
     "CLI": "cli"
