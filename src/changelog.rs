@@ -57,8 +57,6 @@ impl Changelog {
 }
 
 /// Loads the changelog from the default changelog path.
-///
-/// TODO: this should definitely be improved because the current format is unnecessarily complex
 pub fn load(config: Config) -> Result<Changelog, ChangelogError> {
     let changelog_file = match fs::read_dir(Path::new("./"))?.find(|e| {
         e.as_ref()
