@@ -100,6 +100,7 @@ pub fn add_entry(
         }
     };
 
+    // TODO: improve this to avoid using the lookup via the for loop, but rather use map
     let mut idx = 0;
     let mut change_type_is_found = false;
     for (i, ct) in unreleased.clone().change_types.into_iter().enumerate() {
@@ -115,6 +116,8 @@ pub fn add_entry(
 
     // Get the mutable change type to add the entry into.
     // NOTE: If it's not found yet, we add a new section to the changelog.
+    //
+    // TODO: this should be refactored to its own method to make code more readable
     match change_type_is_found {
         false => {
             let new_ct = change_type::new(change_type.to_owned(), Some(vec![new_fixed_entry]));

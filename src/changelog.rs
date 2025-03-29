@@ -31,22 +31,22 @@ impl Changelog {
             .for_each(|x| exported_string.push_str(format!("{x}\n").as_str()));
         exported_string.push_str("# Changelog\n");
 
-        for release in &self.releases {
+        self.releases.iter().for_each(|release| {
             exported_string.push('\n');
             exported_string.push_str(release.fixed.as_str());
             exported_string.push('\n');
 
-            for change_type in &release.change_types {
+            release.change_types.iter().for_each(|change_type| {
                 exported_string.push('\n');
                 exported_string.push_str(change_type.fixed.as_str());
                 exported_string.push_str("\n\n");
 
-                for entry in &change_type.entries {
+                change_type.entries.iter().for_each(|entry| {
                     exported_string.push_str(entry.fixed.as_str());
                     exported_string.push('\n');
-                }
-            }
-        }
+                });
+            });
+        });
 
         self.legacy_contents
             .iter()
@@ -57,6 +57,8 @@ impl Changelog {
 }
 
 /// Loads the changelog from the default changelog path.
+///
+/// TODO: this should definitely be improved because the current format is unnecessarily complex
 pub fn load(config: Config) -> Result<Changelog, ChangelogError> {
     let changelog_file = match fs::read_dir(Path::new("./"))?.find(|e| {
         e.as_ref()

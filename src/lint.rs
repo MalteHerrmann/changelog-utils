@@ -10,29 +10,25 @@ use std::path::Path;
 /// current directory and then executing the linting on the found file.
 pub fn run(fix: bool) -> Result<(), LintError> {
     let changelog = changelog::load(config::load()?)?;
-    match changelog.problems.is_empty() {
-        true => {
-            println!("changelog has no problems");
-            Ok(())
-        }
-        false => match fix {
-            false => {
-                println!("found problems in changelog:");
-                for problem in changelog.problems {
-                    println!("{}", problem);
-                }
-                Err(LintError::ProblemsInChangelog)
-            }
-            true => {
-                changelog.write(changelog.path.as_path())?;
-                println!(
-                    "automated fixes were applied to {}",
-                    changelog.path.to_string_lossy()
-                );
-                Ok(())
-            }
-        },
+    if changelog.problems.is_empty() {
+        println!("changelog has no problems");
+        return Ok(());
     }
+
+    if fix {
+        changelog.write(changelog.path.as_path())?;
+        println!(
+            "automated fixes were applied to {}",
+            changelog.path.to_string_lossy()
+        );
+
+        return Ok(());
+    }
+
+    println!("found problems in changelog:");
+    changelog.problems.iter().for_each(|p| println!("{}", p));
+
+    Err(LintError::ProblemsInChangelog)
 }
 
 /// Executes the linter logic.

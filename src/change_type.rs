@@ -34,7 +34,7 @@ pub fn parse(config: config::Config, line: &str) -> Result<ChangeType, ChangeTyp
     let mut fixed_name = name.to_string();
     let mut problems: Vec<String> = Vec::new();
 
-    // Check if the correctness of the current change type.
+    // Check the correctness of the current change type.
     if !config.change_types.iter().any(|(change_type, _)| {
         // derive the generalized pattern with case insensitivity and whitespace
         // matching from the given change type
@@ -67,6 +67,7 @@ pub fn parse(config: config::Config, line: &str) -> Result<ChangeType, ChangeTyp
     };
 
     let fixed = format!("### {fixed_name}");
+
     if format!("### {name}").ne(line) {
         problems.push(format!(
             "Change type line is malformed; should be: '{fixed}'"

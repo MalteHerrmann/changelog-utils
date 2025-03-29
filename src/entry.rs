@@ -251,15 +251,16 @@ fn check_whitespace(spaces: [&str; 5]) -> Vec<String> {
         "There should be exactly one space between the PR link and the description",
     ];
 
-    for ((got, expected), error) in spaces
+    spaces
         .into_iter()
         .zip(expected_whitespace.into_iter())
         .zip(errors.into_iter())
-    {
-        if (*got).ne(expected) {
-            problems.push(error.to_string())
-        }
-    }
+        .into_iter()
+        .for_each(|((got, expected), error)| {
+            if (*got).ne(expected) {
+                problems.push(error.to_string())
+            }
+        });
 
     problems
 }
