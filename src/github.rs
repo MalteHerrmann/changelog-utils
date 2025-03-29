@@ -82,10 +82,8 @@ pub async fn branch_exists_on_remote(client: &Octocrab, git_info: &GitInfo) -> b
 /// Returns an option for an open PR from the current local branch in the configured target
 /// repository if it exists.
 pub async fn get_open_pr(git_info: GitInfo) -> Result<PullRequest, GitHubError> {
-    let octocrab = match get_authenticated_github_client() {
-        Ok(oc) => oc,
-        _ => octocrab::Octocrab::default(),
-    };
+    let octocrab = get_authenticated_github_client()
+        .unwrap_or_default();
 
     let pulls = octocrab
         .pulls(git_info.owner, git_info.repo)

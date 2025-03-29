@@ -60,7 +60,7 @@ impl Changelog {
 pub fn load(config: Config) -> Result<Changelog, ChangelogError> {
     let changelog_file = match fs::read_dir(Path::new("./"))?.find(|e| {
         e.as_ref()
-            .is_ok_and(|e| e.file_name().to_ascii_lowercase() == "changelog.md")
+            .is_ok_and(|e| e.file_name().eq_ignore_ascii_case("changelog.md"))
     }) {
         Some(f) => f.unwrap(),
         None => {
