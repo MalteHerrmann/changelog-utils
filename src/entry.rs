@@ -253,9 +253,8 @@ fn check_whitespace(spaces: [&str; 5]) -> Vec<String> {
 
     spaces
         .into_iter()
-        .zip(expected_whitespace.into_iter())
-        .zip(errors.into_iter())
-        .into_iter()
+        .zip(expected_whitespace)
+        .zip(errors)
         .for_each(|((got, expected), error)| {
             if (*got).ne(expected) {
                 problems.push(error.to_string())

@@ -25,3 +25,5 @@ docker-build:
 # Lint codebase
 lint:
 	cargo clippy
+
+PHONY: test build format install docker-run docker-build lint

@@ -18,7 +18,7 @@ pub struct PRInfo {
 
 /// Extracts the pull request information from the given
 /// instance.
-pub fn extract_pr_info(config: &Config, pr: &PullRequest) -> Result<PRInfo, GitHubError> {
+fn extract_pr_info(config: &Config, pr: &PullRequest) -> Result<PRInfo, GitHubError> {
     let mut change_type = String::new();
     let mut category = String::new();
     let mut description = String::new();
@@ -82,10 +82,7 @@ pub async fn branch_exists_on_remote(client: &Octocrab, git_info: &GitInfo) -> b
 /// Returns an option for an open PR from the current local branch in the configured target
 /// repository if it exists.
 pub async fn get_open_pr(git_info: GitInfo) -> Result<PullRequest, GitHubError> {
-    let octocrab = match get_authenticated_github_client() {
-        Ok(oc) => oc,
-        _ => octocrab::Octocrab::default(),
-    };
+    let octocrab = get_authenticated_github_client().unwrap_or_default();
 
     let pulls = octocrab
         .pulls(git_info.owner, git_info.repo)
@@ -233,6 +230,36 @@ pub fn get_git_info(config: &Config) -> Result<GitInfo, GitHubError> {
         repo,
         branch,
     })
+}
+
+/// Returns a PR from the repository by its number.
+async fn get_pr_by_number(
+    git_info: &GitInfo,
+    pr_number: u16,
+) -> Result<PullRequest, GitHubError> {
+    let client = get_authenticated_github_client()?;
+    client
+        .pulls(&git_info.owner, &git_info.repo)
+        .get(pr_number as u64)
+        .await
+        .map_err(|_| GitHubError::NoOpenPR)
+}
+
+/// Retrieves PR information either from a specific PR number or from an open PR.
+/// If a PR number is provided but no PR is found, returns an error.
+pub async fn get_pr_info(config: &Config, git_info: &GitInfo, pr_number: Option<u16>) -> Result<PRInfo, GitHubError> {
+    if let Some(pr_number) = pr_number {
+        // Try to fetch PR information using the provided PR number
+        let pr = get_pr_by_number(git_info, pr_number).await?;
+        return extract_pr_info(config, &pr);
+    }
+
+    // If no PR number was provided, try to get open PR for current branch
+    if let Ok(pr) = get_open_pr(git_info.clone()).await {
+        return extract_pr_info(config, &pr);
+    }
+
+    Ok(PRInfo::default())
 }
 
 // Ignore these tests when running on CI because there won't be a local branch

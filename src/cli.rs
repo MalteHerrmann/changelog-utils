@@ -29,6 +29,7 @@ It creates an empty changelog skeleton if no existing changelog is found as well
 
 #[derive(Args, Debug)]
 pub struct AddArgs {
+    pub number: Option<u16>,
     #[arg(short, long)]
     pub yes: bool,
 }
