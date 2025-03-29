@@ -1,9 +1,7 @@
 use crate::{
     change_type, changelog, config, entry,
     errors::AddError,
-    github::{
-        commit, extract_pr_info, get_git_info, get_open_pr, get_pr_by_number, GitInfo, PRInfo,
-    },
+    github::{commit, get_git_info, get_pr_info, PRInfo},
     inputs, release,
 };
 use std::borrow::BorrowMut;
@@ -12,26 +10,6 @@ use std::collections::HashMap;
 /// Determines if user input is required based on the accept flag and whether PR info was retrieved.
 fn should_get_user_input(accept: bool, retrieved: bool) -> bool {
     !accept || !retrieved
-}
-
-/// Retrieves PR information either from a specific PR number or from an open PR.
-/// If a PR number is provided but no PR is found, returns an error.
-async fn get_pr_info(
-    config: &config::Config,
-    git_info: &GitInfo,
-    pr_number: Option<u16>,
-) -> Result<PRInfo, AddError> {
-    if let Some(pr_number) = pr_number {
-        // Try to fetch PR information using the provided PR number
-        let pr = get_pr_by_number(git_info, pr_number).await?;
-        return Ok(extract_pr_info(config, &pr)?);
-    }
-
-    // If no PR number was provided, try to get open PR
-    match get_open_pr(git_info.clone()).await {
-        Ok(pr) => Ok(extract_pr_info(config, &pr)?),
-        Err(_) => Ok(PRInfo::default()),
-    }
 }
 
 /// Handles all user input for the changelog entry, either using existing PR info or prompting for input.
