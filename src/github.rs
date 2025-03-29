@@ -72,11 +72,16 @@ pub fn get_authenticated_github_client() -> Result<Octocrab, GitHubError> {
 
 /// Checks if the given branch exists on the GitHub repository.
 pub async fn branch_exists_on_remote(client: &Octocrab, git_info: &GitInfo) -> bool {
-    client
+    if let Ok(r) = client
         .repos(&git_info.owner, &git_info.repo)
         .get_ref(&Branch(git_info.branch.clone()))
         .await
-        .is_err()
+    {
+        println!("url: {:?}", r.url);
+        return true;
+    };
+
+    false
 }
 
 /// Returns an option for an open PR from the current local branch in the configured target

@@ -10,12 +10,16 @@ pub async fn run() -> Result<(), CreateError> {
         return Err(CreateError::ExistingPR(pr_info.number));
     }
 
-    if !github::branch_exists_on_remote(&client, &git_info).await {
+    let exists = github::branch_exists_on_remote(&client, &git_info).await;
+    println!("exists: {}", exists);
+    if !exists {
         if !inputs::get_permission_to_push(git_info.branch.as_str())? {
             return Err(CreateError::BranchNotOnRemote(git_info.branch.clone()));
         };
 
         github::push_to_origin(git_info.branch.as_str())?;
+        println!("pushed to origin");
+
         if !github::branch_exists_on_remote(&client, &git_info).await {
             return Err(CreateError::BranchNotOnRemote(git_info.branch.clone()));
         }
