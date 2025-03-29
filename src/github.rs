@@ -82,8 +82,7 @@ pub async fn branch_exists_on_remote(client: &Octocrab, git_info: &GitInfo) -> b
 /// Returns an option for an open PR from the current local branch in the configured target
 /// repository if it exists.
 pub async fn get_open_pr(git_info: GitInfo) -> Result<PullRequest, GitHubError> {
-    let octocrab = get_authenticated_github_client()
-        .unwrap_or_default();
+    let octocrab = get_authenticated_github_client().unwrap_or_default();
 
     let pulls = octocrab
         .pulls(git_info.owner, git_info.repo)
@@ -231,6 +230,19 @@ pub fn get_git_info(config: &Config) -> Result<GitInfo, GitHubError> {
         repo,
         branch,
     })
+}
+
+/// Returns a PR from the repository by its number.
+pub async fn get_pr_by_number(
+    git_info: &GitInfo,
+    pr_number: u16,
+) -> Result<PullRequest, GitHubError> {
+    let client = get_authenticated_github_client()?;
+    client
+        .pulls(&git_info.owner, &git_info.repo)
+        .get(pr_number as u64)
+        .await
+        .map_err(|_| GitHubError::NoOpenPR)
 }
 
 // Ignore these tests when running on CI because there won't be a local branch
