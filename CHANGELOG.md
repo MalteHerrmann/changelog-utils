@@ -8,12 +8,12 @@ This changelog was created using the `clu` binary
 
 ### Improvements
 
-- (cli) [#71](https://github.com/MalteHerrmann/changelog-utils/pull/71) Fix creating PRs functionality plus refactors and TODOs.
 - (cli) [#65](https://github.com/MalteHerrmann/changelog-utils/pull/65) Apply auto fixes to new entries.
 - (ci) [#60](https://github.com/MalteHerrmann/changelog-utils/pull/60) Bump changelog linter to v0.2.0.
 
 ### Bug Fixes
 
+- (cli) [#71](https://github.com/MalteHerrmann/changelog-utils/pull/71) Fix creating PRs functionality plus refactors and TODOs.
 - (lint) [#61](https://github.com/MalteHerrmann/changelog-utils/pull/61) Fix version comparison.
 
 ### Features
