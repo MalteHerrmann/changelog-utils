@@ -100,6 +100,7 @@ pub fn add_entry(
         }
     };
 
+    // TODO: improve this to avoid using the lookup via the for loop, but rather use map
     let mut idx = 0;
     let mut change_type_is_found = false;
     for (i, ct) in unreleased.clone().change_types.into_iter().enumerate() {
@@ -115,18 +116,15 @@ pub fn add_entry(
 
     // Get the mutable change type to add the entry into.
     // NOTE: If it's not found yet, we add a new section to the changelog.
-    match change_type_is_found {
-        false => {
-            let new_ct = change_type::new(change_type.to_owned(), Some(vec![new_fixed_entry]));
-            unreleased.change_types.push(new_ct);
-        }
-        true => {
-            let mut_ct = unreleased
-                .change_types
-                .get_mut(idx)
-                .expect("failed to get change type");
+    if change_type_is_found {
+        let mut_ct = unreleased
+            .change_types
+            .get_mut(idx)
+            .expect("failed to get change type");
 
-            mut_ct.entries.insert(0, new_fixed_entry);
-        }
+        mut_ct.entries.insert(0, new_fixed_entry);
+    } else {
+        let new_ct = change_type::new(change_type.to_owned(), Some(vec![new_fixed_entry]));
+        unreleased.change_types.push(new_ct);
     }
 }

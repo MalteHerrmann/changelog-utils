@@ -16,6 +16,7 @@ pub async fn run() -> Result<(), CreateError> {
         };
 
         github::push_to_origin(git_info.branch.as_str())?;
+
         if !github::branch_exists_on_remote(&client, &git_info).await {
             return Err(CreateError::BranchNotOnRemote(git_info.branch.clone()));
         }
@@ -31,6 +32,7 @@ pub async fn run() -> Result<(), CreateError> {
         .list_branches()
         .send()
         .await?;
+
     let target = inputs::get_target_branch(branches)?;
 
     let ct = config.change_types.get(&change_type).unwrap();

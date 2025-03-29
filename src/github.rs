@@ -76,7 +76,7 @@ pub async fn branch_exists_on_remote(client: &Octocrab, git_info: &GitInfo) -> b
         .repos(&git_info.owner, &git_info.repo)
         .get_ref(&Branch(git_info.branch.clone()))
         .await
-        .is_err()
+        .is_ok()
 }
 
 /// Returns an option for an open PR from the current local branch in the configured target

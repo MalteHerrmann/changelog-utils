@@ -13,6 +13,7 @@ This changelog was created using the `clu` binary
 
 ### Bug Fixes
 
+- (cli) [#71](https://github.com/MalteHerrmann/changelog-utils/pull/71) Fix creating PRs functionality plus refactors and TODOs.
 - (lint) [#61](https://github.com/MalteHerrmann/changelog-utils/pull/61) Fix version comparison.
 
 ### Features

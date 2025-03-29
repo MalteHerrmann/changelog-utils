@@ -218,7 +218,7 @@ mod version_tests {
             },
         ];
 
-        for tc in testcases {
+        testcases.iter().for_each(|tc| {
             assert_eq!(
                 bump_version(
                     &parse(tc.initial.as_str()).expect("failed to parse initial version"),
@@ -227,6 +227,6 @@ mod version_tests {
                 .to_string(),
                 tc.expected
             )
-        }
+        });
     }
 }

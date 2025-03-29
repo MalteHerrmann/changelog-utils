@@ -31,22 +31,22 @@ impl Changelog {
             .for_each(|x| exported_string.push_str(format!("{x}\n").as_str()));
         exported_string.push_str("# Changelog\n");
 
-        for release in &self.releases {
+        self.releases.iter().for_each(|release| {
             exported_string.push('\n');
             exported_string.push_str(release.fixed.as_str());
             exported_string.push('\n');
 
-            for change_type in &release.change_types {
+            release.change_types.iter().for_each(|change_type| {
                 exported_string.push('\n');
                 exported_string.push_str(change_type.fixed.as_str());
                 exported_string.push_str("\n\n");
 
-                for entry in &change_type.entries {
+                change_type.entries.iter().for_each(|entry| {
                     exported_string.push_str(entry.fixed.as_str());
                     exported_string.push('\n');
-                }
-            }
-        }
+                });
+            });
+        });
 
         self.legacy_contents
             .iter()

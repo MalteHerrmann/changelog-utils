@@ -31,11 +31,9 @@ pub fn get_category(config: &Config, default_idx: usize) -> Result<String, Input
 }
 
 pub fn get_commit_message(config: &Config) -> Result<String, InputError> {
-    Ok(
-        Text::new("Please provide the commit message:\n")
-            .with_initial_value(config.commit_message.as_str())
-            .prompt()?
-    )
+    Ok(Text::new("Please provide the commit message:\n")
+        .with_initial_value(config.commit_message.as_str())
+        .prompt()?)
 }
 
 pub fn get_description(default_value: &str) -> Result<String, InputError> {
@@ -76,10 +74,11 @@ pub fn get_release_type() -> Result<ReleaseType, InputError> {
     let selected_type = Select::new("Select the release type:", available_types).prompt()?;
 
     // Convert the selected string back to the ReleaseType enum
-    for release_type in ReleaseType::all() {
-        if release_type.as_str() == selected_type {
-            return Ok(release_type);
-        }
+    if let Some(r) = ReleaseType::all()
+        .iter()
+        .find(|&r| r.as_str() == selected_type)
+    {
+        return Ok(r.clone());
     }
 
     Err(InputError::InvalidSelection)
