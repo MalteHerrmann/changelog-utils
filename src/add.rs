@@ -1,14 +1,26 @@
 use crate::{
     change_type, changelog, config, entry,
     errors::AddError,
-    github::{commit, extract_pr_info, get_git_info, get_open_pr, get_pr_by_number, PRInfo, GitInfo},
+    github::{
+        commit, extract_pr_info, get_git_info, get_open_pr, get_pr_by_number, GitInfo, PRInfo,
+    },
     inputs, release,
 };
 use std::borrow::BorrowMut;
+use std::collections::HashMap;
+
+/// Determines if user input is required based on the accept flag and whether PR info was retrieved.
+fn should_get_user_input(accept: bool, retrieved: bool) -> bool {
+    !accept || !retrieved
+}
 
 /// Retrieves PR information either from a specific PR number or from an open PR.
 /// If a PR number is provided but no PR is found, returns an error.
-async fn get_pr_info(config: &config::Config, git_info: &GitInfo, pr_number: Option<u16>) -> Result<PRInfo, AddError> {
+async fn get_pr_info(
+    config: &config::Config,
+    git_info: &GitInfo,
+    pr_number: Option<u16>,
+) -> Result<PRInfo, AddError> {
     if let Some(pr_number) = pr_number {
         // Try to fetch PR information using the provided PR number
         let pr = get_pr_by_number(git_info, pr_number).await?;
@@ -22,6 +34,66 @@ async fn get_pr_info(config: &config::Config, git_info: &GitInfo, pr_number: Opt
     }
 }
 
+/// Handles all user input for the changelog entry, either using existing PR info or prompting for input.
+fn get_entry_inputs(
+    config: &config::Config,
+    pr_info: &mut PRInfo,
+    accept: bool,
+    retrieved: bool,
+) -> Result<(String, u16, String, String), AddError> {
+    let mut selectable_change_types: Vec<String> =
+        config.change_types.clone().into_keys().collect();
+    selectable_change_types.sort();
+
+    // populate the map with false if user input is not required, otherwise true
+    let mut get_inputs: HashMap<&str, bool> =
+        ["change_type", "pr_number", "category", "description"]
+            .into_iter()
+            .map(|key| (key, should_get_user_input(accept, retrieved)))
+            .collect();
+
+    let mut selected_change_type = pr_info.change_type.clone();
+    if !selectable_change_types.contains(&pr_info.change_type) {
+        get_inputs.insert("change_type", true);
+    }
+
+    if get_inputs["change_type"] {
+        let ct_idx = selectable_change_types
+            .iter()
+            .position(|ct| ct.eq(&pr_info.change_type))
+            .unwrap_or_default();
+
+        selected_change_type = inputs::get_change_type(config, ct_idx)?;
+    }
+
+    let mut pr_number = pr_info.number;
+    if get_inputs["pr_number"] {
+        pr_number = inputs::get_pr_number(pr_info.number)?;
+    }
+
+    let mut cat = pr_info.category.clone();
+    if !config.categories.contains(&cat) {
+        get_inputs.insert("category", true);
+    }
+
+    if get_inputs["category"] {
+        let cat_idx = config
+            .categories
+            .iter()
+            .position(|c| c.eq(&pr_info.category))
+            .unwrap_or_default();
+
+        cat = inputs::get_category(config, cat_idx)?;
+    }
+
+    let mut desc = pr_info.description.clone();
+    if get_inputs["description"] {
+        desc = inputs::get_description(pr_info.description.as_str())?;
+    }
+
+    Ok((selected_change_type, pr_number, cat, desc))
+}
+
 // Runs the logic to add an entry to the unreleased section of the changelog.
 //
 // After adding the new entry, the user is queried for a commit message to use
@@ -32,51 +104,19 @@ pub async fn run(pr_number: Option<u16>, accept: bool) -> Result<(), AddError> {
     let config = config::load()?;
     let git_info = get_git_info(&config)?;
 
-    let mut selectable_change_types: Vec<String> =
-        config.change_types.clone().into_keys().collect();
-    selectable_change_types.sort();
+    let mut pr_info = get_pr_info(&config, &git_info, pr_number).await?;
+    let retrieved = pr_info.number != 0;
 
-    let pr_info = get_pr_info(&config, &git_info, pr_number).await?;
-    let retrieved = pr_info.number != 0; // NOTE: 0 is the default value if no error occurred but it wasn't found either
-
-    let mut selected_change_type = pr_info.change_type.clone();
-    if !accept || !retrieved || !selectable_change_types.contains(&pr_info.change_type) {
-        let ct_idx = selectable_change_types
-            .iter()
-            .position(|ct| ct.eq(&pr_info.change_type))
-            .unwrap_or_default();
-
-        selected_change_type = inputs::get_change_type(&config, ct_idx)?;
-    }
-
-    let mut pr_number = pr_info.number;
-    if !accept || !retrieved {
-        pr_number = inputs::get_pr_number(pr_info.number)?;
-    }
-
-    let mut cat = pr_info.category.clone();
-    if !accept || !retrieved || !config.categories.contains(&cat) {
-        let cat_idx = config
-            .categories
-            .iter()
-            .position(|c| c.eq(&pr_info.category))
-            .unwrap_or_default();
-
-        cat = inputs::get_category(&config, cat_idx)?;
-    }
-
-    let mut desc = pr_info.description.clone();
-    if !accept || !retrieved {
-        desc = inputs::get_description(pr_info.description.as_str())?;
-    }
+    let (selected_change_type, pr_number, cat, desc) =
+        get_entry_inputs(&config, &mut pr_info, accept, retrieved)?;
 
     let mut changelog = changelog::load(config.clone())?;
     add_entry(
         &config,
         changelog.borrow_mut(),
-        selected_change_type.as_str(),
-        cat.as_str(),
-        desc.as_str(),
+        &selected_change_type,
+        &cat,
+        &desc,
         pr_number,
     );
 
