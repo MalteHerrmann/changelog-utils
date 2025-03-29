@@ -1,6 +1,6 @@
 use crate::{
     change_type, changelog, config, entry,
-    errors::{AddError, GitHubError},
+    errors::AddError,
     github::{commit, extract_pr_info, get_git_info, get_open_pr, get_pr_by_number, PRInfo, GitInfo},
     inputs, release,
 };
@@ -8,30 +8,17 @@ use std::borrow::BorrowMut;
 
 /// Retrieves PR information either from a specific PR number or from an open PR.
 /// If a PR number is provided but no PR is found, returns an error.
-async fn get_pr_info(config: &config::Config, git_info: &GitInfo, pr_number: Option<u16>) -> Result<(PRInfo, bool), AddError> {
-    let pr_info: PRInfo;
-
+async fn get_pr_info(config: &config::Config, git_info: &GitInfo, pr_number: Option<u16>) -> Result<PRInfo, AddError> {
     if let Some(pr_number) = pr_number {
         // Try to fetch PR information using the provided PR number
-        match get_pr_by_number(git_info, pr_number).await {
-            Ok(pr) => {
-                pr_info = extract_pr_info(config, &pr)?;
-                return Ok((pr_info, true));
-            }
-            Err(_) => {
-                return Err(AddError::PRInfo(GitHubError::NoOpenPR));
-            }
-        }
+        let pr = get_pr_by_number(git_info, pr_number).await?;
+        return Ok(extract_pr_info(config, &pr)?);
     }
+
     // If no PR number was provided, try to get open PR
-    return match get_open_pr(git_info.clone()).await {
-        Ok(pr) => {
-            pr_info = extract_pr_info(config, &pr)?;
-            Ok((pr_info, true))
-        }
-        Err(_) => {
-            Ok((PRInfo::default(), false))
-        }
+    match get_open_pr(git_info.clone()).await {
+        Ok(pr) => Ok(extract_pr_info(config, &pr)?),
+        Err(_) => Ok(PRInfo::default()),
     }
 }
 
@@ -49,7 +36,8 @@ pub async fn run(pr_number: Option<u16>, accept: bool) -> Result<(), AddError> {
         config.change_types.clone().into_keys().collect();
     selectable_change_types.sort();
 
-    let (mut pr_info, retrieved) = get_pr_info(&config, &git_info, pr_number).await?;
+    let pr_info = get_pr_info(&config, &git_info, pr_number).await?;
+    let retrieved = pr_info.number != 0; // NOTE: 0 is the default value if no error occurred but it wasn't found either
 
     let mut selected_change_type = pr_info.change_type.clone();
     if !accept || !retrieved || !selectable_change_types.contains(&pr_info.change_type) {
