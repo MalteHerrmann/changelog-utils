@@ -1,7 +1,7 @@
 [package]
 name = "clu"
 authors = ["Malte Herrmann"]
-version = "1.2.0"
+version = "1.3.0"
 edition = "2021"
 description = "Everything you need to handle your changelogs."
 repository = "https://github.com/MalteHerrmann/changelog-utils"
