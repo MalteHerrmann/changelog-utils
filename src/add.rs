@@ -12,7 +12,11 @@ use std::borrow::BorrowMut;
 // to commit the changes.
 //
 // NOTE: the changes are NOT pushed to the origin when running the `add` command.
-pub async fn run(accept: bool) -> Result<(), AddError> {
+pub async fn run(pr_number: Option<u16>, accept: bool) -> Result<(), AddError> {
+    if let Some(pr_number) = pr_number {
+        println!("got pr number: {}", pr_number);
+    }
+
     let config = config::load()?;
     let git_info = get_git_info(&config)?;
 
