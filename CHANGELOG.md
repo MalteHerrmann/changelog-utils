@@ -18,6 +18,7 @@ This changelog was created using the `clu` binary
 
 ### Features
 
+- (cli) [#74](https://github.com/MalteHerrmann/changelog-utils/pull/74) Enable adding entries for previous PRs.
 - (config) [#70](https://github.com/MalteHerrmann/changelog-utils/pull/70) Add changelog path to the configuration.
 - (cli) [#68](https://github.com/MalteHerrmann/changelog-utils/pull/68) Commit and push changelog entry after adding.
 - (cli) [#67](https://github.com/MalteHerrmann/changelog-utils/pull/67) Add option to push branch to remote.
