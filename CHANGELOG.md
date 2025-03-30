@@ -4,6 +4,12 @@ This changelog was created using the `clu` binary
 -->
 # Changelog
 
+## Unreleased
+
+### Bug Fixes
+
+- (docker) [#75](https://github.com/MalteHerrmann/changelog-utils/pull/75) Adjust required Rust version in Dockerfile.
+
 ## [v1.3.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.3.0) - 2025-03-30
 
 ### Improvements
