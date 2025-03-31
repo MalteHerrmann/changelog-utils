@@ -53,5 +53,10 @@ pub async fn run() -> Result<(), CreateError> {
     );
 
     let cm = inputs::get_commit_message(&config)?;
-    Ok(github::commit_and_push(&config, &cm)?)
+    if let Err(e) = github::commit_and_push(&config, &cm) {
+        // NOTE: we don't want to fail here since the PR was created successfully, just the commit of the changelog failed
+        println!("failed to commit and push changes: {}", e);
+    }
+
+    Ok(())
 }
