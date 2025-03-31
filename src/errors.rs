@@ -28,6 +28,8 @@ pub enum CLIError {
 pub enum CreateError {
     #[error("branch not found on remote: {0}")]
     BranchNotOnRemote(String),
+    #[error("changelog error: {0}")]
+    Changelog(#[from] ChangelogError),
     #[error("failed to read configuration: {0}")]
     Config(#[from] ConfigError),
     #[error("found an existing PR for this branch: {0}")]
