@@ -1,4 +1,4 @@
-use crate::{config, errors::CreateError, github, inputs};
+use crate::{add, changelog, config, errors::CreateError, github, inputs};
 
 /// Runs the main logic to open a new PR for the current branch.
 pub async fn run() -> Result<(), CreateError> {
@@ -51,6 +51,18 @@ pub async fn run() -> Result<(), CreateError> {
             .html_url
             .expect("received no error creating the PR but html_url was None")
     );
+
+    let mut changelog = changelog::load(config.clone())?;
+    add::add_entry(
+        &config,
+        &mut changelog,
+        &ct,
+        &cat,
+        &desc,
+        created_pr.id.0 as u16,
+    );
+
+    changelog.write(&changelog.path)?;
 
     let cm = inputs::get_commit_message(&config)?;
     if let Err(e) = github::commit_and_push(&config, &cm) {
