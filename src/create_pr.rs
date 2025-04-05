@@ -22,11 +22,6 @@ pub async fn run() -> Result<(), CreateError> {
         }
     };
 
-    let change_type = inputs::get_change_type(&config, 0)?;
-    let cat = inputs::get_category(&config, 0)?;
-    let desc = inputs::get_description("")?;
-    let pr_body = inputs::get_pr_description()?;
-
     let branches = client
         .repos(&git_info.owner, &git_info.repo)
         .list_branches()
@@ -34,6 +29,20 @@ pub async fn run() -> Result<(), CreateError> {
         .await?;
 
     let target = inputs::get_target_branch(branches)?;
+
+    // TODO: get input to check if user wants to use ai to suggest contents.
+    // TODO: implement getting diff to target branch
+    let diff = github::get_diff(git_info.branch.as_str(), target.as_str())?;
+    _ = diff;
+
+    // TODO: implement sending diff to LLM and get suggestions for change type, cat, desc and pr
+    // body.
+
+    // TODO: get default chosen values from the recommendations above
+    let change_type = inputs::get_change_type(&config, 0)?;
+    let cat = inputs::get_category(&config, 0)?;
+    let desc = inputs::get_description("")?;
+    let pr_body = inputs::get_pr_description()?;
 
     let ct = config.change_types.get(&change_type).unwrap();
     let title = format!("{ct}({cat}): {desc}");

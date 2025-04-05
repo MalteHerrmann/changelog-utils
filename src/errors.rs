@@ -120,6 +120,8 @@ pub enum EntryError {
 pub enum GitHubError {
     #[error("failed to get current branch")]
     CurrentBranch,
+    #[error("failed to get diff")]
+    Diff,
     #[error("failed to commit changes")]
     FailedToCommit,
     #[error("failed to push to origin")]

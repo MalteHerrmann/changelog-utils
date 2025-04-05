@@ -32,8 +32,6 @@ pub struct AddArgs {
     pub number: Option<u16>,
     #[arg(short, long)]
     pub yes: bool,
-    #[arg(long)]
-    pub ai: bool,
 }
 
 #[derive(Subcommand, Debug)]

@@ -147,6 +147,19 @@ pub fn commit(config: &Config, message: &str) -> Result<(), GitHubError> {
     Ok(())
 }
 
+/// Gets the diff between the two defined branches.
+pub fn get_diff(branch: &str, target: &str) -> Result<String, GitHubError> {
+    let diff_str = format!("{}...{}", target, branch);
+    let out = Command::new("git")
+        .args(vec!["diff", diff_str.as_str()])
+        .output()?;
+
+    match out.status.success() {
+        true => Ok(String::from_utf8(out.stdout)?),
+        false => Err(GitHubError::Diff),
+    }
+}
+
 /// Adds the changelog to the staged changes in Git.
 fn stage_changelog_changes(config: &Config) -> Result<(), GitHubError> {
     if !Command::new("git")
@@ -233,10 +246,7 @@ pub fn get_git_info(config: &Config) -> Result<GitInfo, GitHubError> {
 }
 
 /// Returns a PR from the repository by its number.
-async fn get_pr_by_number(
-    git_info: &GitInfo,
-    pr_number: u16,
-) -> Result<PullRequest, GitHubError> {
+async fn get_pr_by_number(git_info: &GitInfo, pr_number: u16) -> Result<PullRequest, GitHubError> {
     let client = get_authenticated_github_client()?;
     client
         .pulls(&git_info.owner, &git_info.repo)
@@ -247,7 +257,11 @@ async fn get_pr_by_number(
 
 /// Retrieves PR information either from a specific PR number or from an open PR.
 /// If a PR number is provided but no PR is found, returns an error.
-pub async fn get_pr_info(config: &Config, git_info: &GitInfo, pr_number: Option<u16>) -> Result<PRInfo, GitHubError> {
+pub async fn get_pr_info(
+    config: &Config,
+    git_info: &GitInfo,
+    pr_number: Option<u16>,
+) -> Result<PRInfo, GitHubError> {
     if let Some(pr_number) = pr_number {
         // Try to fetch PR information using the provided PR number
         let pr = get_pr_by_number(git_info, pr_number).await?;
