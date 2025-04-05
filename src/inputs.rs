@@ -1,5 +1,5 @@
 use crate::{config::Config, errors::InputError, release_type::ReleaseType};
-use inquire::{Editor, Select, Text};
+use inquire::{Confirm, Editor, Select, Text};
 use octocrab::{models::repos::Branch, Page};
 
 pub fn get_change_type(config: &Config, start: usize) -> Result<String, InputError> {
@@ -101,4 +101,12 @@ pub fn get_target_branch(branches_page: Page<Branch>) -> Result<String, InputErr
     )
     .with_starting_cursor(start_idx)
     .prompt()?)
+}
+
+pub fn get_use_ai() -> Result<bool, InputError> {
+    Ok(
+        Confirm::new(
+            "Do you want to use AI to suggest changelog contents? Requires API keys to be set in environment. (y/n)\n")
+        .prompt()?
+    )
 }

@@ -30,13 +30,16 @@ pub async fn run() -> Result<(), CreateError> {
 
     let target = inputs::get_target_branch(branches)?;
 
-    // TODO: get input to check if user wants to use ai to suggest contents.
-    // TODO: implement getting diff to target branch
-    let diff = github::get_diff(git_info.branch.as_str(), target.as_str())?;
-    _ = diff;
+    let use_ai = inputs::get_use_ai()?;
+    if use_ai {
+        let diff = github::get_diff(git_info.branch.as_str(), target.as_str())?;
+        println!("{}", diff);
 
-    // TODO: implement sending diff to LLM and get suggestions for change type, cat, desc and pr
-    // body.
+        // TODO: implement sending diff to LLM and get suggestions for change type, cat, desc and pr
+        // body.
+    }
+
+    panic!("check here");
 
     // TODO: get default chosen values from the recommendations above
     let change_type = inputs::get_change_type(&config, 0)?;
