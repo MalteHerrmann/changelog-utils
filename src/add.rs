@@ -4,7 +4,6 @@ use crate::{
     github::{commit, get_git_info, get_pr_info, PRInfo},
     inputs, release,
 };
-use std::borrow::BorrowMut;
 use std::collections::HashMap;
 
 /// Determines if user input is required based on the accept flag and whether PR info was retrieved.
@@ -91,7 +90,7 @@ pub async fn run(pr_number: Option<u16>, accept: bool) -> Result<(), AddError> {
     let mut changelog = changelog::load(config.clone())?;
     add_entry(
         &config,
-        changelog.borrow_mut(),
+        &mut changelog,
         &selected_change_type,
         &cat,
         &desc,
