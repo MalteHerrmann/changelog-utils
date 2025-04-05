@@ -56,7 +56,7 @@ pub async fn run() -> Result<(), CreateError> {
     add::add_entry(
         &config,
         &mut changelog,
-        &ct,
+        ct,
         &cat,
         &desc,
         created_pr.id.0 as u16,
