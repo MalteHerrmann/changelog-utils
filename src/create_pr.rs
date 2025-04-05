@@ -1,4 +1,4 @@
-use crate::{add, changelog, config, errors::CreateError, github, inputs};
+use crate::{add, changelog, config, diff_prompt, errors::CreateError, github, inputs};
 
 /// Runs the main logic to open a new PR for the current branch.
 pub async fn run() -> Result<(), CreateError> {
@@ -33,10 +33,11 @@ pub async fn run() -> Result<(), CreateError> {
     let use_ai = inputs::get_use_ai()?;
     if use_ai {
         let diff = github::get_diff(git_info.branch.as_str(), target.as_str())?;
-        println!("{}", diff);
 
-        // TODO: implement sending diff to LLM and get suggestions for change type, cat, desc and pr
-        // body.
+        let response = diff_prompt::prompt(&config, diff.as_str()).await?;
+        // TODO: parse response to get suggested values
+        // TODO: use suggested values as defaults for inputs below
+        println!("{}", response);
     }
 
     panic!("check here");
