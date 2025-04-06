@@ -16,7 +16,7 @@ This changelog was created using the `clu` binary
 
 ### Features
 
-- (cli) [#61637](https://github.com/MalteHerrmann/changelog-utils/pull/61637) Add AI-assisted changelog generation to create PRs.
+- (cli) [#78](https://github.com/MalteHerrmann/changelog-utils/pull/78) Add AI-assisted changelog generation to create PRs.
 
 ## [v1.3.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.3.0) - 2025-03-30
 
