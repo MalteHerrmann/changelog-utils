@@ -31,22 +31,20 @@ pub async fn run() -> Result<(), CreateError> {
     let target = inputs::get_target_branch(branches)?;
 
     let use_ai = inputs::get_use_ai()?;
+    let mut suggestions = diff_prompt::Suggestions::default();
     if use_ai {
         let diff = github::get_diff(git_info.branch.as_str(), target.as_str())?;
 
         let response = diff_prompt::prompt(&config, diff.as_str()).await?;
-        // TODO: parse response to get suggested values
-        // TODO: use suggested values as defaults for inputs below
-        println!("{}", response);
+        // TODO: ideally handle error on parsing if the LLM returns a wrong formatted response
+        suggestions = serde_json::from_str(response.as_str())?;
+        println!("{:?}", suggestions);
     }
 
-    panic!("check here");
-
-    // TODO: get default chosen values from the recommendations above
-    let change_type = inputs::get_change_type(&config, 0)?;
-    let cat = inputs::get_category(&config, 0)?;
-    let desc = inputs::get_description("")?;
-    let pr_body = inputs::get_pr_description()?;
+    let change_type = inputs::get_change_type(&config, suggestions.change_type.as_str())?;
+    let cat = inputs::get_category(&config, suggestions.category.as_str())?;
+    let desc = inputs::get_description(suggestions.title.as_str())?;
+    let pr_body = inputs::get_pr_description(suggestions.pr_description.as_str())?;
 
     let ct = config.change_types.get(&change_type).unwrap();
     let title = format!("{ct}({cat}): {desc}");

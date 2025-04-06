@@ -37,6 +37,8 @@ pub enum CreateError {
     ExistingPR(u64),
     #[error("failed to create PR: {0}")]
     FailedToCreatePR(#[from] octocrab::Error),
+    #[error("failed to parse llm suggestions: {0}")]
+    FailedToParse(#[from] serde_json::Error),
     #[error("error interacting with GitHub: {0}")]
     GitHub(#[from] GitHubError),
     #[error("error getting user input: {0}")]

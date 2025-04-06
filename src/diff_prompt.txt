@@ -7,12 +7,13 @@ but provide enough context to understand everything
 and highlight the files with the most important changes.
 
 Attached to this message, you will find the configuration of the tool,
-that contains the enforced selection of categories like (cli), (tests) and change types like feat, imp, etc..
+that contains the enforced selection of categories like (cli), (tests) and change types like Features, Improvements, ...
 
 It is required to format the returned response in the form of the following JSON:
+
 {
     "category": "...",
-    "change_type": "...",
+    "change_type": "The (full) change type, so either Features, or ...",
     "title": "A one-line short summary of the made changes",
-    "pr-description": "A concise but thorough description of the made changes to be filled as the PR description."
+    "pr_description": "A concise but thorough description of the made changes to be filled as the PR description.\nThis should be returned with line return characters instead of actual new lines to make JSON parsing easier."
 }
