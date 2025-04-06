@@ -1,5 +1,6 @@
 use inquire::InquireError;
 use regex::Error;
+use rig::completion::PromptError;
 use serde_json;
 use std::{env::VarError, io, num::ParseIntError, string::FromUtf8Error};
 use thiserror::Error;
@@ -36,10 +37,14 @@ pub enum CreateError {
     ExistingPR(u64),
     #[error("failed to create PR: {0}")]
     FailedToCreatePR(#[from] octocrab::Error),
+    #[error("failed to parse llm suggestions: {0}")]
+    FailedToParse(#[from] serde_json::Error),
     #[error("error interacting with GitHub: {0}")]
     GitHub(#[from] GitHubError),
     #[error("error getting user input: {0}")]
     Input(#[from] InputError),
+    #[error("failed to prompt llm: {0}")]
+    Prompt(#[from] PromptError),
 }
 
 #[derive(Error, Debug)]
@@ -120,6 +125,8 @@ pub enum EntryError {
 pub enum GitHubError {
     #[error("failed to get current branch")]
     CurrentBranch,
+    #[error("failed to get diff")]
+    Diff,
     #[error("failed to commit changes")]
     FailedToCommit,
     #[error("failed to push to origin")]

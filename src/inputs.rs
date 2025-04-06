@@ -1,15 +1,20 @@
 use crate::{config::Config, errors::InputError, release_type::ReleaseType};
-use inquire::{Editor, Select, Text};
+use inquire::{Confirm, Editor, Select, Text};
 use octocrab::{models::repos::Branch, Page};
 
-pub fn get_change_type(config: &Config, start: usize) -> Result<String, InputError> {
+pub fn get_change_type(config: &Config, suggestion: &str) -> Result<String, InputError> {
     let mut selectable_change_types: Vec<String> =
         config.change_types.clone().into_keys().collect();
     selectable_change_types.sort();
 
+    let ct_idx = selectable_change_types
+        .iter()
+        .position(|ct| ct.eq(suggestion))
+        .unwrap_or_default();
+
     Ok(
         Select::new("Select change type to add into:", selectable_change_types)
-            .with_starting_cursor(start)
+            .with_starting_cursor(ct_idx)
             .prompt()?,
     )
 }
@@ -21,18 +26,24 @@ pub fn get_pr_number(default_value: u16) -> Result<u16, InputError> {
         .parse::<u16>()?)
 }
 
-pub fn get_category(config: &Config, default_idx: usize) -> Result<String, InputError> {
+pub fn get_category(config: &Config, suggestion: &str) -> Result<String, InputError> {
+    let idx = config
+        .categories
+        .iter()
+        .position(|cat| cat.eq(suggestion))
+        .unwrap_or_default();
+
     Ok(Select::new(
         "Select the category of the made changes:",
         config.categories.clone(),
     )
-    .with_starting_cursor(default_idx)
+    .with_starting_cursor(idx)
     .prompt()?)
 }
 
 pub fn get_commit_message(config: &Config) -> Result<String, InputError> {
     Ok(Text::new("Please provide the commit message:\n")
-        .with_initial_value(config.commit_message.as_str())
+        .with_initial_value(&config.commit_message)
         .prompt()?)
 }
 
@@ -61,10 +72,11 @@ pub fn get_permission_to_push(branch: &str) -> Result<bool, InputError> {
     }
 }
 
-pub fn get_pr_description() -> Result<String, InputError> {
+pub fn get_pr_description(suggestion: &str) -> Result<String, InputError> {
     Ok(Editor::new(
         "Please provide the Pull Request body with a description of the made changes.\n",
     )
+    .with_predefined_text(suggestion)
     .prompt()?)
 }
 
@@ -101,4 +113,12 @@ pub fn get_target_branch(branches_page: Page<Branch>) -> Result<String, InputErr
     )
     .with_starting_cursor(start_idx)
     .prompt()?)
+}
+
+pub fn get_use_ai() -> Result<bool, InputError> {
+    Ok(
+        Confirm::new(
+            "Do you want to use AI to suggest changelog contents? Requires API keys to be set in environment. (y/n)\n")
+        .prompt()?
+    )
 }

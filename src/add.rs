@@ -35,12 +35,7 @@ fn get_entry_inputs(
     }
 
     if get_inputs["change_type"] {
-        let ct_idx = selectable_change_types
-            .iter()
-            .position(|ct| ct.eq(&pr_info.change_type))
-            .unwrap_or_default();
-
-        selected_change_type = inputs::get_change_type(config, ct_idx)?;
+        selected_change_type = inputs::get_change_type(config, &pr_info.change_type)?;
     }
 
     let mut pr_number = pr_info.number;
@@ -54,13 +49,7 @@ fn get_entry_inputs(
     }
 
     if get_inputs["category"] {
-        let cat_idx = config
-            .categories
-            .iter()
-            .position(|c| c.eq(&pr_info.category))
-            .unwrap_or_default();
-
-        cat = inputs::get_category(config, cat_idx)?;
+        cat = inputs::get_category(config, &pr_info.category)?;
     }
 
     let mut desc = pr_info.description.clone();

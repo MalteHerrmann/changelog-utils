@@ -25,7 +25,7 @@ impl Entry {
         pr_number: u16,
     ) -> Entry {
         let link = format!("{}/pull/{}", config.target_repo, pr_number);
-        let fixed = build_fixed(category, link.as_str(), description, pr_number);
+        let fixed = build_fixed(category, &link, description, pr_number);
 
         Entry {
             category: category.to_string(),
@@ -81,12 +81,7 @@ pub fn parse(config: &config::Config, line: &str) -> Result<Entry, EntryError> {
     let (fixed_desc, desc_problems) = check_description(config, description);
     desc_problems.into_iter().for_each(|p| problems.push(p));
 
-    let fixed = build_fixed(
-        fixed_category.as_str(),
-        fixed_link.as_str(),
-        fixed_desc.as_str(),
-        pr_number,
-    );
+    let fixed = build_fixed(&fixed_category, &fixed_link, &fixed_desc, pr_number);
 
     Ok(Entry {
         category: fixed_category.to_string(),
@@ -123,7 +118,7 @@ fn check_link(config: &config::Config, link: &str, pr_number: u16) -> (String, V
 
     let fixed = format!("{}/pull/{}", config.target_repo, pr_number);
 
-    if !link.starts_with(config.target_repo.as_str()) {
+    if !link.starts_with(&config.target_repo) {
         problems.push(format!("PR link points to wrong repository: {}", link))
     }
 
@@ -166,7 +161,7 @@ pub fn check_description(config: &config::Config, desc: &str) -> (String, Vec<St
         problems.push(format!("PR description should end with a dot: '{}'", desc))
     }
 
-    let (fixed, spelling_problems) = check_spelling(config, fixed.as_str());
+    let (fixed, spelling_problems) = check_spelling(config, &fixed);
     spelling_problems.into_iter().for_each(|p| problems.push(p));
 
     (fixed, problems)
@@ -191,7 +186,7 @@ fn check_spelling(config: &config::Config, text: &str) -> (String, Vec<String>) 
                             pattern
                         )
                     })
-                    .replace(fixed.as_str(), correct_spelling)
+                    .replace(&fixed, correct_spelling)
                     .to_string();
 
                 problems.push(format!(

@@ -5,6 +5,7 @@ pub mod cli;
 pub mod cli_config;
 pub mod config;
 pub mod create_pr;
+pub mod diff_prompt;
 mod entry;
 pub mod errors;
 mod escapes;

@@ -1,4 +1,4 @@
-use crate::{add, changelog, config, errors::CreateError, github, inputs};
+use crate::{add, changelog, config, diff_prompt, errors::CreateError, github, inputs};
 
 /// Runs the main logic to open a new PR for the current branch.
 pub async fn run() -> Result<(), CreateError> {
@@ -22,11 +22,6 @@ pub async fn run() -> Result<(), CreateError> {
         }
     };
 
-    let change_type = inputs::get_change_type(&config, 0)?;
-    let cat = inputs::get_category(&config, 0)?;
-    let desc = inputs::get_description("")?;
-    let pr_body = inputs::get_pr_description()?;
-
     let branches = client
         .repos(&git_info.owner, &git_info.repo)
         .list_branches()
@@ -34,6 +29,20 @@ pub async fn run() -> Result<(), CreateError> {
         .await?;
 
     let target = inputs::get_target_branch(branches)?;
+
+    let use_ai = inputs::get_use_ai()?;
+    let mut suggestions = diff_prompt::Suggestions::default();
+    if use_ai {
+        match diff_prompt::get_suggestions(&config, &git_info.branch, &target).await {
+            Ok(s) => suggestions = s,
+            Err(_) => println!("failed to decode llm response"),
+        };
+    }
+
+    let change_type = inputs::get_change_type(&config, &suggestions.change_type)?;
+    let cat = inputs::get_category(&config, &suggestions.category)?;
+    let desc = inputs::get_description(&suggestions.title)?;
+    let pr_body = inputs::get_pr_description(&suggestions.pr_description)?;
 
     let ct = config.change_types.get(&change_type).unwrap();
     let title = format!("{ct}({cat}): {desc}");
@@ -56,7 +65,7 @@ pub async fn run() -> Result<(), CreateError> {
     add::add_entry(
         &config,
         &mut changelog,
-        &ct,
+        &change_type,
         &cat,
         &desc,
         created_pr.id.0 as u16,
