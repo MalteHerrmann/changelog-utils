@@ -36,9 +36,10 @@ pub async fn run() -> Result<(), CreateError> {
         let diff = github::get_diff(git_info.branch.as_str(), target.as_str())?;
 
         let response = diff_prompt::prompt(&config, diff.as_str()).await?;
-        // TODO: ideally handle error on parsing if the LLM returns a wrong formatted response
-        suggestions = serde_json::from_str(response.as_str())?;
-        println!("{:?}", suggestions);
+        match serde_json::from_str(response.as_str()) {
+            Ok(s) => suggestions = s,
+            Err(_) => println!("failed to decode llm response"),
+        };
     }
 
     let change_type = inputs::get_change_type(&config, suggestions.change_type.as_str())?;
@@ -67,7 +68,7 @@ pub async fn run() -> Result<(), CreateError> {
     add::add_entry(
         &config,
         &mut changelog,
-        ct,
+        &change_type,
         &cat,
         &desc,
         created_pr.id.0 as u16,

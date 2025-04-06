@@ -14,7 +14,7 @@ This changelog was created using the `clu` binary
 
 - (cli) [#76](https://github.com/MalteHerrmann/changelog-utils/pull/76) Improve error handling when creating a PR and only the local changelog commit fails.
 
-### feat
+### Features
 
 - (cli) [#61637](https://github.com/MalteHerrmann/changelog-utils/pull/61637) Add AI-assisted changelog generation to create PRs.
 
