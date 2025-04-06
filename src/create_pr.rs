@@ -33,19 +33,16 @@ pub async fn run() -> Result<(), CreateError> {
     let use_ai = inputs::get_use_ai()?;
     let mut suggestions = diff_prompt::Suggestions::default();
     if use_ai {
-        let diff = github::get_diff(git_info.branch.as_str(), target.as_str())?;
-
-        let response = diff_prompt::prompt(&config, diff.as_str()).await?;
-        match serde_json::from_str(response.as_str()) {
+        match diff_prompt::get_suggestions(&config, &git_info.branch, &target).await {
             Ok(s) => suggestions = s,
             Err(_) => println!("failed to decode llm response"),
         };
     }
 
-    let change_type = inputs::get_change_type(&config, suggestions.change_type.as_str())?;
-    let cat = inputs::get_category(&config, suggestions.category.as_str())?;
-    let desc = inputs::get_description(suggestions.title.as_str())?;
-    let pr_body = inputs::get_pr_description(suggestions.pr_description.as_str())?;
+    let change_type = inputs::get_change_type(&config, &suggestions.change_type)?;
+    let cat = inputs::get_category(&config, &suggestions.category)?;
+    let desc = inputs::get_description(&suggestions.title)?;
+    let pr_body = inputs::get_pr_description(&suggestions.pr_description)?;
 
     let ct = config.change_types.get(&change_type).unwrap();
     let title = format!("{ct}({cat}): {desc}");
