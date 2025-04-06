@@ -33,16 +33,16 @@ impl Changelog {
 
         self.releases.iter().for_each(|release| {
             exported_string.push('\n');
-            exported_string.push_str(release.fixed.as_str());
+            exported_string.push_str(&release.fixed);
             exported_string.push('\n');
 
             release.change_types.iter().for_each(|change_type| {
                 exported_string.push('\n');
-                exported_string.push_str(change_type.fixed.as_str());
+                exported_string.push_str(&change_type.fixed);
                 exported_string.push_str("\n\n");
 
                 change_type.entries.iter().for_each(|entry| {
-                    exported_string.push_str(entry.fixed.as_str());
+                    exported_string.push_str(&entry.fixed);
                     exported_string.push('\n');
                 });
             });
@@ -370,7 +370,7 @@ pub fn get_settings_from_existing_changelog(config: &mut Config, contents: &str)
     seen_change_types.into_iter().for_each(|ct| {
         let pattern = regex::Regex::new(r"\s+")
             .unwrap()
-            .replace_all(ct.as_str(), "\\s*")
+            .replace_all(&ct, "\\s*")
             .to_ascii_lowercase();
         change_types.insert(ct, pattern);
     });

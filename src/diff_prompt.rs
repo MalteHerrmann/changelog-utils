@@ -10,7 +10,7 @@ pub async fn prompt(config: &Config, diff: &str) -> Result<String, CreateError> 
     let anthropic_client = anthropic::Client::from_env();
     let sonnet = anthropic_client
         .agent(CLAUDE_3_7_SONNET)
-        .preamble(prompt.as_str())
+        .preamble(&prompt)
         .max_tokens(1e3 as u64)
         .build();
 

@@ -43,7 +43,7 @@ pub fn get_category(config: &Config, suggestion: &str) -> Result<String, InputEr
 
 pub fn get_commit_message(config: &Config) -> Result<String, InputError> {
     Ok(Text::new("Please provide the commit message:\n")
-        .with_initial_value(config.commit_message.as_str())
+        .with_initial_value(&config.commit_message)
         .prompt()?)
 }
 
