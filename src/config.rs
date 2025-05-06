@@ -47,14 +47,14 @@ impl Config {
         self.change_types
             .iter()
             .find(|&ct| ct.long.eq(long))
-            .map(|ct| ct.clone())
+            .cloned()
     }
 
     pub fn get_short_change_type(&self, short: &str) -> Option<ChangeTypeConfig> {
         self.change_types
             .iter()
             .find(|&ct| ct.short.eq(short))
-            .map(|ct| ct.clone())
+            .cloned()
     }
 }
 
@@ -140,10 +140,11 @@ pub fn add_change_type(
         return Err(ConfigAdjustError::DuplicateChangeType(long.into()));
     };
 
-    Ok(config.change_types.push(ChangeTypeConfig {
+    config.change_types.push(ChangeTypeConfig {
         short: short.into(),
         long: long.into(),
-    }))
+    });
+    Ok(())
 }
 
 pub fn remove_change_type(config: &mut Config, short: &str) -> Result<(), ConfigAdjustError> {
