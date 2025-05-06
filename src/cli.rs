@@ -41,7 +41,7 @@ pub enum ConfigSubcommands {
     #[command(
         about = "Adjust the allowed change types within releases (like 'Bug Fixes', 'Features', etc.)"
     )]
-    ChangeType(KeyValueArgs),
+    ChangeType(ChangeTypeArgs),
     #[command(about = "Set or unset the optional legacy version")]
     LegacyVersion(ConditionalArgs),
     #[command(about = "Shows the current configuration")]
@@ -74,6 +74,20 @@ pub enum CategoryOperation {
     Add { value: String },
     #[command(about = "Removes a category if it is set in the configuration")]
     Remove { value: String },
+}
+
+#[derive(Args, Debug)]
+pub struct ChangeTypeArgs {
+    #[command(subcommand)]
+    pub command: ChangeTypeConfigOperation,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ChangeTypeConfigOperation {
+    #[command(about = "Add a new change type configuration entry")]
+    Add { long: String, short: String },
+    #[command(about = "Remove a change type configuration entry")]
+    Remove { short: String },
 }
 
 #[derive(Args, Debug)]

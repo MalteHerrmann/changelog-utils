@@ -23,19 +23,15 @@ fn extract_pr_info(config: &Config, pr: &PullRequest) -> Result<PRInfo, GitHubEr
     let mut category = String::new();
     let mut description = String::new();
 
-    let pr_title = pr.title.clone().unwrap_or("".to_string());
+    let pr_title = pr.title.clone().unwrap_or_default();
 
     if let Some(i) = RegexBuilder::new(r"^(?P<ct>\w+)?\s*(\((?P<cat>\w+)\))?[:\s]*(?P<desc>.+)$")
         .build()?
         .captures(pr_title.as_str())
     {
         if let Some(ct) = i.name("ct") {
-            if let Some((name, _)) = config
-                .change_types
-                .iter()
-                .find(|&(_, abbrev)| abbrev.eq(ct.into()))
-            {
-                change_type.clone_from(name);
+            if let Some(found_ct) = config.get_short_change_type(ct.as_str()) {
+                change_type.clone_from(&found_ct.short);
             }
         };
 

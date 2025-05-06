@@ -18,9 +18,11 @@ fn get_entry_inputs(
     accept: bool,
     retrieved: bool,
 ) -> Result<(String, u16, String, String), AddError> {
-    let mut selectable_change_types: Vec<String> =
-        config.change_types.clone().into_keys().collect();
-    selectable_change_types.sort();
+    let selectable_change_types: Vec<String> = config
+        .change_types
+        .iter()
+        .map(|ct| ct.long.to_owned())
+        .collect();
 
     // populate the map with false if user input is not required, otherwise true
     let mut get_inputs: HashMap<&str, bool> =

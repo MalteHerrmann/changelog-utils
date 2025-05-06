@@ -3,9 +3,11 @@ use inquire::{Confirm, Editor, Select, Text};
 use octocrab::{models::repos::Branch, Page};
 
 pub fn get_change_type(config: &Config, suggestion: &str) -> Result<String, InputError> {
-    let mut selectable_change_types: Vec<String> =
-        config.change_types.clone().into_keys().collect();
-    selectable_change_types.sort();
+    let selectable_change_types: Vec<String> = config
+        .change_types
+        .iter()
+        .map(|ct| ct.long.clone())
+        .collect();
 
     let ct_idx = selectable_change_types
         .iter()
