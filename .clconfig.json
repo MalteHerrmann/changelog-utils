@@ -10,13 +10,22 @@
     "release",
     "test"
   ],
-  "change_types": {
-    "Bug Fixes": "fix",
-    "Features": "feat",
-    "Improvements": "imp"
-  },
-  "changelog_path": "CHANGELOG.md",
+  "change_types": [
+    {
+      "short": "feat",
+      "long": "Features"
+    },
+    {
+      "short": "imp",
+      "long": "Improvements"
+    },
+    {
+      "short": "fix",
+      "long": "Bug Fixes"
+    }
+  ],
   "commit_message": "add changelog entry",
+  "changelog_path": "CHANGELOG.md",
   "expected_spellings": {
     "CLI": "cli"
   },
