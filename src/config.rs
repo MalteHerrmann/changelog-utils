@@ -314,6 +314,57 @@ mod config_adjustment_tests {
     }
 
     #[test]
+    fn test_add_change_type() {
+        let mut config = load_example_config();
+        assert_eq!(config.change_types.len(), 3);
+        assert!(add_change_type(&mut config, "LONG CHANGE TYPE", "SHORT").is_ok());
+        assert_eq!(config.change_types.len(), 4);
+        assert_eq!(
+            config.change_types[3],
+            ChangeTypeConfig {
+                short: "SHORT".into(),
+                long: "LONG CHANGE TYPE".into()
+            }
+        );
+    }
+
+    #[test]
+    fn test_add_change_type_duplicate() {
+        let mut config = load_example_config();
+        assert_eq!(config.change_types.len(), 3);
+        assert!(add_change_type(&mut config, "Bug Fixes", "fix").is_err());
+        assert_eq!(config.change_types.len(), 3);
+    }
+
+    #[test]
+    fn test_get_short_change_type() {
+        let config = load_example_config();
+        assert!(config.get_short_change_type("fix").is_some());
+        assert!(config.get_short_change_type("abcde").is_none());
+    }
+
+    #[test]
+    fn test_get_long_change_type() {
+        let config = load_example_config();
+        assert!(config.get_long_change_type("Bug Fixes").is_some());
+        assert!(config.get_long_change_type("non-existente").is_none());
+    }
+
+    #[test]
+    fn test_remove_change_type() {
+        let mut config = load_example_config();
+        assert_eq!(config.change_types.len(), 3);
+        assert!(config.get_long_change_type("Bug Fixes").is_some());
+
+        assert!(remove_change_type(&mut config, "fix").is_ok());
+        assert_eq!(config.change_types.len(), 2);
+        assert!(config.get_long_change_type("Bug Fixes").is_none());
+
+        assert!(remove_change_type(&mut config, "abcde").is_err());
+        assert_eq!(config.change_types.len(), 2);
+    }
+
+    #[test]
     fn test_add_into_collection() {
         let mut config = load_example_config();
         assert_eq!(config.expected_spellings.keys().len(), 3);
