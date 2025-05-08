@@ -35,14 +35,14 @@ pub fn parse(config: config::Config, line: &str) -> Result<ChangeType, ChangeTyp
     let mut problems: Vec<String> = Vec::new();
 
     // Check the correctness of the current change type.
-    if !config.change_types.iter().any(|(change_type, _)| {
+    if !config.change_types.iter().any(|ct| {
         // derive the generalized pattern with case insensitivity and whitespace
         // matching from the given change type
         let pattern = RegexBuilder::new(r"\s+")
             .case_insensitive(true)
             .build()
             .unwrap()
-            .replace_all(change_type, r"\s*")
+            .replace_all(&ct.long, r"\s*")
             .into_owned();
 
         if !RegexBuilder::new(pattern.as_str())
@@ -54,11 +54,12 @@ pub fn parse(config: config::Config, line: &str) -> Result<ChangeType, ChangeTyp
             return false;
         }
 
-        if name != change_type {
+        if name != ct.long {
             problems.push(format!(
-                "'{change_type}' should be used instead of '{name}'"
+                "'{}' should be used instead of '{}'",
+                ct.long, name
             ));
-            change_type.clone_into(&mut fixed_name);
+            fixed_name.clone_from(&ct.long);
         }
 
         true

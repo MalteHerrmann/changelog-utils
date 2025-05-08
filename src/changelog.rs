@@ -1,7 +1,12 @@
-use crate::{change_type, config::Config, entry, errors::ChangelogError, escapes, release};
+use crate::{
+    change_type,
+    config::{ChangeTypeConfig, Config},
+    entry,
+    errors::ChangelogError,
+    escapes, release,
+};
 use regex::Regex;
 use std::{
-    collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
 };
@@ -366,16 +371,17 @@ pub fn get_settings_from_existing_changelog(config: &mut Config, contents: &str)
         }
     }
 
-    let mut change_types: BTreeMap<String, String> = BTreeMap::new();
+    let mut change_type_configs: Vec<ChangeTypeConfig> = Vec::new();
     seen_change_types.into_iter().for_each(|ct| {
-        let pattern = regex::Regex::new(r"\s+")
-            .unwrap()
-            .replace_all(&ct, "\\s*")
-            .to_ascii_lowercase();
-        change_types.insert(ct, pattern);
+        let pattern = ct[0..4].trim().to_ascii_lowercase();
+
+        change_type_configs.push(ChangeTypeConfig {
+            short: pattern,
+            long: ct,
+        });
     });
 
     seen_categories.sort();
     config.categories = seen_categories;
-    config.change_types = change_types;
+    config.change_types = change_type_configs;
 }

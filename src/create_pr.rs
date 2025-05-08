@@ -44,7 +44,7 @@ pub async fn run() -> Result<(), CreateError> {
     let desc = inputs::get_description(&suggestions.title)?;
     let pr_body = inputs::get_pr_description(&suggestions.pr_description)?;
 
-    let ct = config.change_types.get(&change_type).unwrap();
+    let ct = config.get_long_change_type(&change_type).unwrap().short;
     let title = format!("{ct}({cat}): {desc}");
 
     let created_pr = client

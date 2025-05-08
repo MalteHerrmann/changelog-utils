@@ -1,7 +1,9 @@
 use crate::{
     cli::{
-        CategoryOperation, ConfigSubcommands,
-        ConfigSubcommands::{Category, ChangeType, LegacyVersion, Show, Spelling, TargetRepo},
+        CategoryOperation, ChangeTypeConfigOperation,
+        ConfigSubcommands::{
+            self, Category, ChangeType, LegacyVersion, Show, Spelling, TargetRepo,
+        },
         KeyValueOperation, OptionalOperation,
     },
     config, errors,
@@ -20,11 +22,11 @@ pub fn adjust_config(config_subcommand: ConfigSubcommands) -> Result<(), errors:
             }
         },
         ChangeType(args) => match args.command {
-            KeyValueOperation::Add { key, value } => {
-                config::add_into_collection(&mut configuration.change_types, key, value)?
+            ChangeTypeConfigOperation::Add { long, short } => {
+                config::add_change_type(&mut configuration, &long, &short)?
             }
-            KeyValueOperation::Remove { key } => {
-                config::remove_from_collection(&mut configuration.change_types, key)?
+            ChangeTypeConfigOperation::Remove { short } => {
+                config::remove_change_type(&mut configuration, &short)?
             }
         },
         Show => println!("{}", configuration),

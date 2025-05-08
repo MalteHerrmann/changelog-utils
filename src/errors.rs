@@ -175,6 +175,8 @@ pub enum ConfigAdjustError {
     CategoryAlreadyFound,
     #[error("key is already present in hash map")]
     KeyAlreadyFound,
+    #[error("duplicate change type: {0}")]
+    DuplicateChangeType(String),
     #[error("Invalid URL")]
     InvalidURL(#[from] url::ParseError),
     #[error("expected value not found")]

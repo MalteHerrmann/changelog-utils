@@ -14,13 +14,13 @@
     "app",
     "all"
   ],
-  "change_types": {
-    "Bug Fixes": "fix",
-    "Improvements": "imp",
-    "Features": "feat",
-    "State Machine Breaking": "imp",
-    "API Breaking": "imp"
-  },
+  "change_types": [
+    { "long": "Features", "short": "feat" },
+    { "long": "State Machine Breaking", "short": "imp" },
+    { "long": "API Breaking", "short": "imp" },
+    { "long": "Improvements", "short": "imp" },
+    { "long": "Bug Fixes", "short": "fix" }
+  ],
   "changelog_path": "CHANGELOG.md",
   "commit_message": "add changelog entry",
   "expected_spellings": {

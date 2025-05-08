@@ -1,7 +1,11 @@
 use assert_fs::{prelude::*, TempDir};
-use clu::{config, errors::InitError, init};
+use clu::{
+    config::{self, ChangeTypeConfig},
+    errors::InitError,
+    init,
+};
 use predicates::prelude::*;
-use std::{collections::BTreeMap, fs};
+use std::fs;
 
 #[test]
 fn test_init_empty_folder() {
@@ -69,16 +73,28 @@ fn test_init_changelog_exists() {
         ]
     );
 
-    let expected_change_types: BTreeMap<String, String> = BTreeMap::from([
-        ("Improvements".into(), "improvements".into()),
-        ("Bug Fixes".into(), "bug\\s*fixes".into()),
-        ("API Breaking".into(), "api\\s*breaking".into()),
-        (
-            "State Machine Breaking".into(),
-            "state\\s*machine\\s*breaking".into(),
-        ),
-        ("Invalid Category".into(), "invalid\\s*category".into()),
-    ]);
+    let expected_change_types = vec![
+        ChangeTypeConfig {
+            long: "State Machine Breaking".into(),
+            short: "stat".into(),
+        },
+        ChangeTypeConfig {
+            long: "API Breaking".into(),
+            short: "api".into(),
+        },
+        ChangeTypeConfig {
+            long: "Improvements".into(),
+            short: "impr".into(),
+        },
+        ChangeTypeConfig {
+            long: "Bug Fixes".into(),
+            short: "bug".into(),
+        },
+        ChangeTypeConfig {
+            long: "Invalid Category".into(),
+            short: "inva".into(),
+        },
+    ];
 
     assert_eq!(config.change_types, expected_change_types);
 }

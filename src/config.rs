@@ -10,12 +10,8 @@ pub struct Config {
     /// The list of categories for a given entry,
     /// that can be used.
     pub categories: Vec<String>,
-    /// The map of allowed change types.
-    ///
-    /// Note: The key is the full spelling and the value is
-    /// an abbreviation that is to be used as a short form
-    /// in pull request titles.
-    pub change_types: BTreeMap<String, String>,
+    /// The list of allowed change types.
+    pub change_types: Vec<ChangeTypeConfig>,
     /// The default commit message to be used when committing
     /// the new changelog entry.
     pub commit_message: String,
@@ -46,6 +42,20 @@ impl Config {
     pub fn has_legacy_version(&self) -> bool {
         self.legacy_version.is_some()
     }
+
+    pub fn get_long_change_type(&self, long: &str) -> Option<ChangeTypeConfig> {
+        self.change_types
+            .iter()
+            .find(|&ct| ct.long.eq(long))
+            .cloned()
+    }
+
+    pub fn get_short_change_type(&self, short: &str) -> Option<ChangeTypeConfig> {
+        self.change_types
+            .iter()
+            .find(|&ct| ct.short.eq(short))
+            .cloned()
+    }
 }
 
 impl fmt::Display for Config {
@@ -56,10 +66,20 @@ impl fmt::Display for Config {
 
 impl Default for Config {
     fn default() -> Config {
-        let mut default_change_types: BTreeMap<String, String> = BTreeMap::new();
-        default_change_types.insert("Bug Fixes".into(), "fix".into());
-        default_change_types.insert("Features".into(), "feat".into());
-        default_change_types.insert("Improvements".into(), "imp".into());
+        let default_change_types = vec![
+            ChangeTypeConfig {
+                short: "feat".into(),
+                long: "Features".into(),
+            },
+            ChangeTypeConfig {
+                short: "imp".into(),
+                long: "Improvements".into(),
+            },
+            ChangeTypeConfig {
+                short: "fix".into(),
+                long: "Bug Fixes".into(),
+            },
+        ];
 
         let commit_message = "add changelog entry".to_string();
         let changelog_path = "CHANGELOG.md".to_string();
@@ -109,6 +129,42 @@ pub fn remove_category(config: &mut Config, value: String) -> Result<(), ConfigA
     config.categories.remove(index);
 
     Ok(())
+}
+
+pub fn add_change_type(
+    config: &mut Config,
+    long: &str,
+    short: &str,
+) -> Result<(), ConfigAdjustError> {
+    if config.get_long_change_type(long).is_some() {
+        return Err(ConfigAdjustError::DuplicateChangeType(long.into()));
+    };
+
+    config.change_types.push(ChangeTypeConfig {
+        short: short.into(),
+        long: long.into(),
+    });
+    Ok(())
+}
+
+pub fn remove_change_type(config: &mut Config, short: &str) -> Result<(), ConfigAdjustError> {
+    let i = match config.change_types.iter().position(|ct| ct.short.eq(short)) {
+        Some(i) => i,
+        None => return Err(ConfigAdjustError::NotFound),
+    };
+
+    config.change_types.remove(i);
+    Ok(())
+}
+
+// This type defines the information about a change type.
+// This consists of a short version of the long-form change type.
+//
+// Examples: short: imp; long: Improvements
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ChangeTypeConfig {
+    pub short: String,
+    pub long: String,
 }
 
 // Adds a new key-value pair into the given collection in case the key is not
@@ -172,7 +228,13 @@ mod config_tests {
             config.change_types.len() > 0,
             "expected non-zero length of change types in example config"
         );
-        assert_eq!(config.change_types.get("Bug Fixes").unwrap(), "fix");
+        assert_eq!(
+            config.get_long_change_type("Bug Fixes").unwrap(),
+            ChangeTypeConfig {
+                short: "fix".into(),
+                long: "Bug Fixes".into()
+            }
+        );
 
         assert!(
             config.categories.len() > 0,
@@ -252,56 +314,108 @@ mod config_adjustment_tests {
     }
 
     #[test]
+    fn test_add_change_type() {
+        let mut config = load_example_config();
+        assert_eq!(config.change_types.len(), 3);
+        assert!(add_change_type(&mut config, "LONG CHANGE TYPE", "SHORT").is_ok());
+        assert_eq!(config.change_types.len(), 4);
+        assert_eq!(
+            config.change_types[3],
+            ChangeTypeConfig {
+                short: "SHORT".into(),
+                long: "LONG CHANGE TYPE".into()
+            }
+        );
+    }
+
+    #[test]
+    fn test_add_change_type_duplicate() {
+        let mut config = load_example_config();
+        assert_eq!(config.change_types.len(), 3);
+        assert!(add_change_type(&mut config, "Bug Fixes", "fix").is_err());
+        assert_eq!(config.change_types.len(), 3);
+    }
+
+    #[test]
+    fn test_get_short_change_type() {
+        let config = load_example_config();
+        assert!(config.get_short_change_type("fix").is_some());
+        assert!(config.get_short_change_type("abcde").is_none());
+    }
+
+    #[test]
+    fn test_get_long_change_type() {
+        let config = load_example_config();
+        assert!(config.get_long_change_type("Bug Fixes").is_some());
+        assert!(config.get_long_change_type("non-existente").is_none());
+    }
+
+    #[test]
+    fn test_remove_change_type() {
+        let mut config = load_example_config();
+        assert_eq!(config.change_types.len(), 3);
+        assert!(config.get_long_change_type("Bug Fixes").is_some());
+
+        assert!(remove_change_type(&mut config, "fix").is_ok());
+        assert_eq!(config.change_types.len(), 2);
+        assert!(config.get_long_change_type("Bug Fixes").is_none());
+
+        assert!(remove_change_type(&mut config, "abcde").is_err());
+        assert_eq!(config.change_types.len(), 2);
+    }
+
+    #[test]
     fn test_add_into_collection() {
         let mut config = load_example_config();
-        assert_eq!(config.change_types.keys().len(), 3);
-        assert!(!config.change_types.contains_key("newkey"));
+        assert_eq!(config.expected_spellings.keys().len(), 3);
+        assert!(!config.expected_spellings.contains_key("newkey"));
         assert!(add_into_collection(
-            &mut config.change_types,
+            &mut config.expected_spellings,
             "newkey".to_string(),
             "newvalue".to_string()
         )
         .is_ok());
-        assert_eq!(config.change_types.keys().len(), 4);
-        assert!(config.change_types.contains_key("newkey"));
+        assert_eq!(config.expected_spellings.keys().len(), 4);
+        assert!(config.expected_spellings.contains_key("newkey"));
     }
 
     #[test]
     fn test_add_into_collection_already_present() {
         let mut config = load_example_config();
-        assert_eq!(config.change_types.keys().len(), 3);
-        assert!(config.change_types.contains_key("Bug Fixes"));
+        assert_eq!(config.expected_spellings.keys().len(), 3);
+        assert!(config.expected_spellings.contains_key("API"));
         assert_eq!(
             add_into_collection(
-                &mut config.change_types,
-                "Bug Fixes".to_string(),
+                &mut config.expected_spellings,
+                "API".to_string(),
                 "newvalue".to_string()
             )
             .unwrap_err(),
             ConfigAdjustError::KeyAlreadyFound
         );
-        assert_eq!(config.change_types.keys().len(), 3);
+        assert_eq!(config.expected_spellings.keys().len(), 3);
     }
 
     #[test]
     fn test_remove_from_collection() {
         let mut config = load_example_config();
-        assert_eq!(config.change_types.keys().len(), 3);
-        assert!(config.change_types.contains_key("Bug Fixes"));
-        assert!(remove_from_collection(&mut config.change_types, "Bug Fixes".to_string()).is_ok());
-        assert_eq!(config.change_types.keys().len(), 2);
-        assert!(!config.change_types.contains_key("Bug Fixes"));
+        assert_eq!(config.expected_spellings.keys().len(), 3);
+        assert!(config.expected_spellings.contains_key("API"));
+        assert!(remove_from_collection(&mut config.expected_spellings, "API".to_string()).is_ok());
+        assert_eq!(config.expected_spellings.keys().len(), 2);
+        assert!(!config.expected_spellings.contains_key("API"));
     }
 
     #[test]
     fn test_remove_from_collection_not_found() {
         let mut config = load_example_config();
-        assert_eq!(config.change_types.keys().len(), 3);
+        assert_eq!(config.expected_spellings.keys().len(), 3);
         assert_eq!(
-            remove_from_collection(&mut config.change_types, "not found".to_string()).unwrap_err(),
+            remove_from_collection(&mut config.expected_spellings, "not found".to_string())
+                .unwrap_err(),
             ConfigAdjustError::NotFound
         );
-        assert_eq!(config.change_types.keys().len(), 3);
+        assert_eq!(config.expected_spellings.keys().len(), 3);
     }
 
     #[test]

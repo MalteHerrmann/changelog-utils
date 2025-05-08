@@ -1,10 +1,19 @@
 {
   "categories": ["cli", "test"],
-  "change_types": {
-    "Bug Fixes": "fix",
-    "Improvements": "imp",
-    "Features": "feat"
-  },
+  "change_types": [
+    {
+      "long": "Features",
+      "short": "feat"
+    },
+    {
+      "long": "Improvements",
+      "short": "imp"
+    },
+    {
+      "long": "Bug Fixes",
+      "short": "fix"
+    }
+  ],
   "changelog_path": "CHANGELOG.md",
   "commit_message": "add changelog entry",
   "expected_spellings": {
