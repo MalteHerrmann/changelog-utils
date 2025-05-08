@@ -12,6 +12,7 @@ This changelog was created using the `clu` binary
 
 ### Improvements
 
+- (config) [#81](https://github.com/MalteHerrmann/changelog-utils/pull/81) Refactors to have config adjustment methods.
 - (config) [#80](https://github.com/MalteHerrmann/changelog-utils/pull/80) Convert to have deterministic order of change types in config.
 - (cli) [#76](https://github.com/MalteHerrmann/changelog-utils/pull/76) Improve error handling when creating a PR and only the local changelog commit fails.
 
