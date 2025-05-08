@@ -56,6 +56,74 @@ impl Config {
             .find(|&ct| ct.short.eq(short))
             .cloned()
     }
+
+    pub fn add_category(&mut self, value: String) -> Result<(), ConfigAdjustError> {
+        if self.categories.contains(&value) {
+            return Err(ConfigAdjustError::CategoryAlreadyFound);
+        }
+
+        self.categories.push(value);
+        self.categories.sort_unstable();
+
+        Ok(())
+    }
+
+    pub fn remove_category(&mut self, value: String) -> Result<(), ConfigAdjustError> {
+        let i = match self.categories.iter().position(|cat| cat.eq(&value)) {
+            Some(i) => i,
+            None => return Err(ConfigAdjustError::NotFound),
+        };
+
+        self.categories.remove(i);
+        Ok(())
+    }
+
+    pub fn add_change_type(
+        &mut self,
+        long: String,
+        short: String,
+    ) -> Result<(), ConfigAdjustError> {
+        if self.get_long_change_type(&long).is_some() {
+            return Err(ConfigAdjustError::DuplicateChangeType(long));
+        }
+
+        if self.get_short_change_type(&short).is_some() {
+            return Err(ConfigAdjustError::DuplicateChangeType(short));
+        }
+
+        self.change_types.push(ChangeTypeConfig { short, long });
+        Ok(())
+    }
+
+    pub fn remove_change_type(&mut self, short: String) -> Result<(), ConfigAdjustError> {
+        let i = match self.change_types.iter().position(|ct| ct.short.eq(&short)) {
+            Some(i) => i,
+            None => return Err(ConfigAdjustError::NotFound),
+        };
+
+        self.change_types.remove(i);
+        Ok(())
+    }
+
+    pub fn add_expected_spelling(
+        &mut self,
+        key: String,
+        value: String,
+    ) -> Result<(), ConfigAdjustError> {
+        if self.expected_spellings.contains_key(&key) {
+            return Err(ConfigAdjustError::KeyAlreadyFound);
+        };
+
+        self.expected_spellings.insert(key, value);
+        Ok(())
+    }
+
+    pub fn remove_expected_spelling(&mut self, key: String) -> Result<(), ConfigAdjustError> {
+        match self.expected_spellings.remove(&key) {
+            Some(_) => Ok(()),
+            None => Err(ConfigAdjustError::NotFound),
+        }
+    }
 }
 
 impl fmt::Display for Config {
@@ -108,55 +176,6 @@ pub fn load() -> Result<Config, ConfigError> {
     unpack_config(fs::read_to_string(".clconfig.json")?.as_str())
 }
 
-// Adds a category to the list of allowed categories.
-pub fn add_category(config: &mut Config, value: String) -> Result<(), ConfigAdjustError> {
-    if config.categories.contains(&value) {
-        return Err(ConfigAdjustError::CategoryAlreadyFound);
-    }
-
-    config.categories.push(value);
-    config.categories.sort_unstable();
-
-    Ok(())
-}
-
-// Removes a category from the list of allowed categories.
-pub fn remove_category(config: &mut Config, value: String) -> Result<(), ConfigAdjustError> {
-    let index = match config.categories.iter().position(|x| x == &value) {
-        Some(i) => i,
-        None => return Err(ConfigAdjustError::NotFound),
-    };
-    config.categories.remove(index);
-
-    Ok(())
-}
-
-pub fn add_change_type(
-    config: &mut Config,
-    long: &str,
-    short: &str,
-) -> Result<(), ConfigAdjustError> {
-    if config.get_long_change_type(long).is_some() {
-        return Err(ConfigAdjustError::DuplicateChangeType(long.into()));
-    };
-
-    config.change_types.push(ChangeTypeConfig {
-        short: short.into(),
-        long: long.into(),
-    });
-    Ok(())
-}
-
-pub fn remove_change_type(config: &mut Config, short: &str) -> Result<(), ConfigAdjustError> {
-    let i = match config.change_types.iter().position(|ct| ct.short.eq(short)) {
-        Some(i) => i,
-        None => return Err(ConfigAdjustError::NotFound),
-    };
-
-    config.change_types.remove(i);
-    Ok(())
-}
-
 // This type defines the information about a change type.
 // This consists of a short version of the long-form change type.
 //
@@ -165,31 +184,6 @@ pub fn remove_change_type(config: &mut Config, short: &str) -> Result<(), Config
 pub struct ChangeTypeConfig {
     pub short: String,
     pub long: String,
-}
-
-// Adds a new key-value pair into the given collection in case the key is not
-// already present.
-pub fn add_into_collection(
-    hm: &mut BTreeMap<String, String>,
-    key: String,
-    value: String,
-) -> Result<(), ConfigAdjustError> {
-    if hm.insert(key, value).is_some() {
-        return Err(ConfigAdjustError::KeyAlreadyFound);
-    };
-
-    Ok(())
-}
-
-// Removes a key from the given collection in case it is found.
-pub fn remove_from_collection(
-    hm: &mut BTreeMap<String, String>,
-    key: String,
-) -> Result<(), ConfigAdjustError> {
-    match hm.remove(&key) {
-        Some(_) => Ok(()),
-        None => Err(ConfigAdjustError::NotFound),
-    }
 }
 
 // Checks if the given value is a valid GitHub URL and sets the target
@@ -278,7 +272,7 @@ mod config_adjustment_tests {
         let mut config = load_example_config();
         assert_eq!(config.categories.len(), 2);
         assert!(!config.categories.contains(&"new".to_string()));
-        assert!(add_category(&mut config, "new".into()).is_ok());
+        assert!(config.add_category("new".into()).is_ok());
         assert_eq!(config.categories.len(), 3);
         assert!(config.categories.contains(&"new".to_string()));
     }
@@ -288,7 +282,7 @@ mod config_adjustment_tests {
         let mut config = load_example_config();
         assert_eq!(config.categories.len(), 2);
         assert_eq!(
-            add_category(&mut config, "test".to_string()).unwrap_err(),
+            config.add_category("test".to_string()).unwrap_err(),
             ConfigAdjustError::CategoryAlreadyFound
         );
         assert_eq!(config.categories.len(), 2);
@@ -298,7 +292,7 @@ mod config_adjustment_tests {
     fn test_remove_category() {
         let mut config = load_example_config();
         assert_eq!(config.categories.len(), 2);
-        assert!(remove_category(&mut config, "test".to_string()).is_ok());
+        assert!(config.remove_category("test".to_string()).is_ok());
         assert_eq!(config.categories.len(), 1);
     }
 
@@ -307,7 +301,7 @@ mod config_adjustment_tests {
         let mut config = load_example_config();
         assert_eq!(config.categories.len(), 2);
         assert_eq!(
-            remove_category(&mut config, "not-found".to_string()).unwrap_err(),
+            config.remove_category("not-found".to_string()).unwrap_err(),
             ConfigAdjustError::NotFound
         );
         assert_eq!(config.categories.len(), 2);
@@ -317,7 +311,9 @@ mod config_adjustment_tests {
     fn test_add_change_type() {
         let mut config = load_example_config();
         assert_eq!(config.change_types.len(), 3);
-        assert!(add_change_type(&mut config, "LONG CHANGE TYPE", "SHORT").is_ok());
+        assert!(config
+            .add_change_type("LONG CHANGE TYPE".into(), "SHORT".into())
+            .is_ok());
         assert_eq!(config.change_types.len(), 4);
         assert_eq!(
             config.change_types[3],
@@ -332,7 +328,9 @@ mod config_adjustment_tests {
     fn test_add_change_type_duplicate() {
         let mut config = load_example_config();
         assert_eq!(config.change_types.len(), 3);
-        assert!(add_change_type(&mut config, "Bug Fixes", "fix").is_err());
+        assert!(config
+            .add_change_type("Bug Fixes".into(), "fix".into())
+            .is_err());
         assert_eq!(config.change_types.len(), 3);
     }
 
@@ -356,11 +354,11 @@ mod config_adjustment_tests {
         assert_eq!(config.change_types.len(), 3);
         assert!(config.get_long_change_type("Bug Fixes").is_some());
 
-        assert!(remove_change_type(&mut config, "fix").is_ok());
+        assert!(config.remove_change_type("fix".into()).is_ok());
         assert_eq!(config.change_types.len(), 2);
         assert!(config.get_long_change_type("Bug Fixes").is_none());
 
-        assert!(remove_change_type(&mut config, "abcde").is_err());
+        assert!(config.remove_change_type("abcde".into()).is_err());
         assert_eq!(config.change_types.len(), 2);
     }
 
@@ -369,12 +367,9 @@ mod config_adjustment_tests {
         let mut config = load_example_config();
         assert_eq!(config.expected_spellings.keys().len(), 3);
         assert!(!config.expected_spellings.contains_key("newkey"));
-        assert!(add_into_collection(
-            &mut config.expected_spellings,
-            "newkey".to_string(),
-            "newvalue".to_string()
-        )
-        .is_ok());
+        assert!(config
+            .add_expected_spelling("newkey".to_string(), "newvalue".to_string())
+            .is_ok());
         assert_eq!(config.expected_spellings.keys().len(), 4);
         assert!(config.expected_spellings.contains_key("newkey"));
     }
@@ -385,12 +380,9 @@ mod config_adjustment_tests {
         assert_eq!(config.expected_spellings.keys().len(), 3);
         assert!(config.expected_spellings.contains_key("API"));
         assert_eq!(
-            add_into_collection(
-                &mut config.expected_spellings,
-                "API".to_string(),
-                "newvalue".to_string()
-            )
-            .unwrap_err(),
+            config
+                .add_expected_spelling("API".to_string(), "newvalue".to_string())
+                .unwrap_err(),
             ConfigAdjustError::KeyAlreadyFound
         );
         assert_eq!(config.expected_spellings.keys().len(), 3);
@@ -401,7 +393,7 @@ mod config_adjustment_tests {
         let mut config = load_example_config();
         assert_eq!(config.expected_spellings.keys().len(), 3);
         assert!(config.expected_spellings.contains_key("API"));
-        assert!(remove_from_collection(&mut config.expected_spellings, "API".to_string()).is_ok());
+        assert!(config.remove_expected_spelling("API".to_string()).is_ok());
         assert_eq!(config.expected_spellings.keys().len(), 2);
         assert!(!config.expected_spellings.contains_key("API"));
     }
@@ -411,7 +403,8 @@ mod config_adjustment_tests {
         let mut config = load_example_config();
         assert_eq!(config.expected_spellings.keys().len(), 3);
         assert_eq!(
-            remove_from_collection(&mut config.expected_spellings, "not found".to_string())
+            config
+                .remove_expected_spelling("not found".to_string())
                 .unwrap_err(),
             ConfigAdjustError::NotFound
         );

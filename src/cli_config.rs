@@ -16,27 +16,23 @@ pub fn adjust_config(config_subcommand: ConfigSubcommands) -> Result<(), errors:
 
     match config_subcommand {
         Category(args) => match args.command {
-            CategoryOperation::Add { value } => config::add_category(&mut configuration, value)?,
-            CategoryOperation::Remove { value } => {
-                config::remove_category(&mut configuration, value)?
-            }
+            CategoryOperation::Add { value } => configuration.add_category(value)?,
+            CategoryOperation::Remove { value } => configuration.remove_category(value)?,
         },
         ChangeType(args) => match args.command {
             ChangeTypeConfigOperation::Add { long, short } => {
-                config::add_change_type(&mut configuration, &long, &short)?
+                configuration.add_change_type(long, short)?
             }
             ChangeTypeConfigOperation::Remove { short } => {
-                config::remove_change_type(&mut configuration, &short)?
+                configuration.remove_change_type(short)?
             }
         },
         Show => println!("{}", configuration),
         Spelling(args) => match args.command {
             KeyValueOperation::Add { key, value } => {
-                config::add_into_collection(&mut configuration.expected_spellings, key, value)?
+                configuration.add_expected_spelling(key, value)?
             }
-            KeyValueOperation::Remove { key } => {
-                config::remove_from_collection(&mut configuration.expected_spellings, key)?
-            }
+            KeyValueOperation::Remove { key } => configuration.remove_expected_spelling(key)?,
         },
         LegacyVersion(args) => match args.command {
             OptionalOperation::Set { value } => configuration.legacy_version = Some(value),
