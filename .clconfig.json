@@ -10,11 +10,20 @@
     "release",
     "test"
   ],
-  "change_types": {
-    "Bug Fixes": "fix",
-    "Features": "feat",
-    "Improvements": "imp"
-  },
+  "change_types": [
+    {
+      "short": "fix",
+      "long": "Bug Fixes"
+    },
+    {
+      "short": "feat",
+      "long": "Features"
+    },
+    {
+      "short": "imp",
+      "long": "Improvements"
+    }
+  ],
   "changelog_path": "CHANGELOG.md",
   "commit_message": "add changelog entry",
   "expected_spellings": {
