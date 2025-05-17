@@ -4,6 +4,12 @@ This changelog was created using the `clu` binary
 -->
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- (cli) [#83](https://github.com/MalteHerrmann/changelog-utils/pull/83) Improve JSON parsing from LLM responses with regex extraction.
+
 ## [v1.4.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.4.0) - 2025-05-15
 
 ### Bug Fixes
