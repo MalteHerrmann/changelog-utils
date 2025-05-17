@@ -97,4 +97,11 @@ Authenticated GitHub requests are made if an environment variable
 This is required to check for available open pull requests
 of the current branch in private repositories.
 
-**NOTE**: The GitHub authentication is only used for read access of open PRs.
+**NOTE**: The GitHub authentication is used for read information from open pull requests
+and creating new ones.
+
+## GitHub Action
+
+There is a corresponding GitHub action available at [MalteHerrmann/changelog-lint-action](https://github.com/MalteHerrmann/changelog-lint-action),
+which can be used to lint your project's changelog as part of the CI workflow.
+
