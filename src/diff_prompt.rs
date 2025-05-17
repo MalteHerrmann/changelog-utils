@@ -13,8 +13,8 @@ pub async fn get_suggestions(
 ) -> Result<Suggestions, CreateError> {
     let diff = github::get_diff(work_branch, pr_target)?;
     let response = prompt(config, diff.as_str()).await?;
-
-    Ok(parse_suggestions(&response)?)
+    
+    parse_suggestions(&response)
 }
 
 fn parse_suggestions(llm_response: &str) -> Result<Suggestions, CreateError> {
