@@ -17,3 +17,6 @@ It is required to format the returned response in the form of the following JSON
     "title": "A one-line short summary of the made changes",
     "pr_description": "A concise but thorough description of the made changes to be filled as the PR description.\nThis should be returned with line return characters instead of actual new lines to make JSON parsing easier."
 }
+
+Please make sure to absolutely avoid returning any extra text except for the given JSON format!
+The output is going to be parsed by a JSON parser so it is absolutely mandatory to avoid anything extra.

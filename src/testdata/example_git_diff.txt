@@ -1,0 +1,20 @@
+diff --git a/src/diff_prompt.rs b/src/diff_prompt.rs
+index d53c45a..8c6da7d 100644
+--- a/src/diff_prompt.rs
++++ b/src/diff_prompt.rs
+@@ -35,3 +35,15 @@ pub struct Suggestions {
+     pub title: String,
+     pub pr_description: String,
+ }
++
++#[cfg(tests)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn test_prompt() {
++        let diff = include_str!("../tests/fixtures/diff.txt");
++        let response = prompt(&Config::default(), diff).unwrap();
++        assert!(response.contains("Add a new feature"));
++    }
++}
