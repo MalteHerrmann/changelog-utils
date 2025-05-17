@@ -1,9 +1,9 @@
 use crate::{config::Config, errors::CreateError, github};
+use regex::Regex;
 use rig::{
     completion::Prompt,
     providers::anthropic::{self, CLAUDE_3_7_SONNET},
 };
-use regex::Regex;
 use serde::Deserialize;
 
 pub async fn get_suggestions(
@@ -13,25 +13,19 @@ pub async fn get_suggestions(
 ) -> Result<Suggestions, CreateError> {
     let diff = github::get_diff(work_branch, pr_target)?;
     let response = prompt(config, diff.as_str()).await?;
-    
+
     parse_suggestions(&response)
 }
 
 fn parse_suggestions(llm_response: &str) -> Result<Suggestions, CreateError> {
-    let stripped = llm_response
-        .lines()
-        .collect::<Vec<&str>>()
-        .join("");
+    let stripped = llm_response.lines().collect::<Vec<&str>>().join("");
 
-    let json = match Regex::new(r##"\{.+}"##)
-        .unwrap()
-        .find(&stripped) {
+    let json = match Regex::new(r##"\{.+}"##).unwrap().find(&stripped) {
         Some(s) => s.as_str(),
-        None => return Err(CreateError::FailedToMatch(stripped))
+        None => return Err(CreateError::FailedToMatch(stripped)),
     };
 
-    serde_json::from_str(json)
-        .map_err(CreateError::FailedToParse)
+    serde_json::from_str(json).map_err(CreateError::FailedToParse)
 }
 
 async fn prompt(config: &Config, diff: &str) -> Result<String, CreateError> {
@@ -56,8 +50,8 @@ pub struct Suggestions {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::unpack_config;
     use super::*;
+    use crate::config::unpack_config;
 
     fn load_example_config() -> Config {
         unpack_config(include_str!("testdata/example_config.json"))
