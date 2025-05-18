@@ -61,9 +61,6 @@ pub async fn run() -> Result<(), CreateError> {
             .expect("received no error creating the PR but html_url was None")
     );
     
-    println!("got PR number: {}", created_pr.number as u16);
-    println!("got PR ID: {}", created_pr.id.0 as u16);
-    
     let pr_number: u16 = created_pr.number.try_into().map_err(CreateError::OutOfRange)?;
 
     let mut changelog = changelog::load(config.clone())?;
@@ -80,7 +77,8 @@ pub async fn run() -> Result<(), CreateError> {
 
     let cm = inputs::get_commit_message(&config)?;
     if let Err(e) = github::commit_and_push(&config, &cm) {
-        // NOTE: we don't want to fail here since the PR was created successfully, just the commit of the changelog failed
+        // NOTE: we don't want to fail here since the PR was created successfully,
+        // just the commit of the changelog failed
         println!("failed to commit and push changes: {}", e);
     }
 
