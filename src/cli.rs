@@ -1,6 +1,7 @@
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Parser, Debug)]
+#[command(version)]
 pub enum ChangelogCLI {
     #[command(about = "Adds a new entry to the unreleased section of the changelog")]
     Add(AddArgs),
