@@ -12,6 +12,20 @@ pub struct Release {
 }
 
 impl Release {
+    pub fn get_fixed_contents(&self) -> String {
+        let mut exported_string = String::new();
+
+        exported_string.push_str(&self.fixed);
+        exported_string.push('\n');
+
+        self.change_types.iter().for_each(|change_type| {
+            exported_string.push('\n');
+            exported_string.push_str(change_type.get_fixed_contents().as_str());
+        });
+
+        exported_string
+    }
+
     /// Returns a boolean value if the given release has the unreleased tag.
     pub fn is_unreleased(&self) -> bool {
         self.version == "Unreleased"
