@@ -4,6 +4,12 @@ This changelog was created using the `clu` binary
 -->
 # Changelog
 
+## Unreleased
+
+### Features
+
+- (cli) [#91](https://github.com/MalteHerrmann/changelog-utils/pull/91) Add CLI command to get specific version release notes.
+
 ## [v1.5.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.5.0) - 2025-05-19
 
 ### Improvements
