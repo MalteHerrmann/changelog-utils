@@ -9,6 +9,7 @@ This changelog was created using the `clu` binary
 ### Improvements
 
 - (cli) [#83](https://github.com/MalteHerrmann/changelog-utils/pull/83) Improve JSON parsing from LLM responses with regex extraction.
+- (all) [#90](https://github.com/MalteHerrmann/changelog-utils/pull/90) Refactor fixed contents export for better maintainability.
 
 ### Bug Fixes
 

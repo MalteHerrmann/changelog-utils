@@ -38,19 +38,7 @@ impl Changelog {
 
         self.releases.iter().for_each(|release| {
             exported_string.push('\n');
-            exported_string.push_str(&release.fixed);
-            exported_string.push('\n');
-
-            release.change_types.iter().for_each(|change_type| {
-                exported_string.push('\n');
-                exported_string.push_str(&change_type.fixed);
-                exported_string.push_str("\n\n");
-
-                change_type.entries.iter().for_each(|entry| {
-                    exported_string.push_str(&entry.fixed);
-                    exported_string.push('\n');
-                });
-            });
+            exported_string.push_str(release.get_fixed_contents().as_str());
         });
 
         self.legacy_contents

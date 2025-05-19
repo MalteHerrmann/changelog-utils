@@ -10,6 +10,21 @@ pub struct ChangeType {
     pub entries: Vec<Entry>,
 }
 
+impl ChangeType {
+    pub fn get_fixed_contents(&self) -> String {
+        let mut exported_string = String::new();
+
+        exported_string.push_str(&self.fixed);
+        exported_string.push_str("\n\n");
+
+        self.entries.iter().for_each(|entry| {
+            exported_string.push_str(format!("{}\n", entry.fixed).as_str());
+        });
+
+        exported_string
+    }
+}
+
 // Creates a new instance of a change type.
 pub fn new(name: String, entries: Option<Vec<Entry>>) -> ChangeType {
     ChangeType {
