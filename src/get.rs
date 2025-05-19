@@ -5,45 +5,23 @@ pub fn run(args: GetArgs) -> Result<(), GetError> {
     let config = config::load()?;
     let changelog = changelog::load(config)?;
 
-    match get(&changelog, &args) {
-        Ok(()) => Ok(()),
-        Err(e) => {
-            eprintln!("Version {} not found in changelog: {}", args.version, e);
-            Err(e)
-        }
+    if let Err(e) = get(&changelog, &args) {
+        eprintln!("Version {} not found in changelog: {}", args.version, e);
+        return Err(e);
     }
+
+    Ok(())
 }
 
 fn get(changelog: &changelog::Changelog, args: &GetArgs) -> Result<(), GetError> {
-    let release = changelog.releases.iter().find(|r| {
-        println!("checking {} against {}", r.version, args.version);
+    if let Some(release) = changelog.releases.iter().find(|r| {
         r.version == args.version
-    });
-    
-    match release {
-        Some(release) => {
-            // Print the release header
-            //
-            // TODO: add a method to the release struct to print the contents
-            println!("{}", release.fixed);
-            println!();
-
-            // Print each change type and its entries
-            for change_type in &release.change_types {
-                println!("{}", change_type.fixed);
-                println!();
-                
-                for entry in &change_type.entries {
-                    println!("{}", entry.fixed);
-                }
-                println!();
-            }
-            Ok(())
-        },
-        None => {
-            Err(GetError::VersionNotFound(args.version.clone()))
-        }
+    }) {
+        println!("{}", release.get_fixed_contents());
+        return Ok(());
     }
+
+    Err(GetError::VersionNotFound(args.version.clone()))
 }
 
 #[cfg(test)]
@@ -54,7 +32,7 @@ mod tests {
 
     /// Creates a test config from the example config file
     fn load_test_config() -> config::Config {
-        config::unpack_config(include_str!("testdata/example_config.json"))
+        config::unpack_config(include_str!("testdata/example_config_without_optionals.json"))
             .expect("failed to load example config")
     }
 
