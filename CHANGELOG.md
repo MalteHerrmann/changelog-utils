@@ -4,13 +4,12 @@ This changelog was created using the `clu` binary
 -->
 # Changelog
 
-## Unreleased
+## [v1.5.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.5.0) - 2025-05-19
 
 ### Features
 
+- (cli) [#87](https://github.com/MalteHerrmann/changelog-utils/pull/87) Add version flag to CLI application.
 - (cli) [#91](https://github.com/MalteHerrmann/changelog-utils/pull/91) Add CLI command to get specific version release notes.
-
-## [v1.5.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.5.0) - 2025-05-19
 
 ### Improvements
 
@@ -20,10 +19,6 @@ This changelog was created using the `clu` binary
 ### Bug Fixes
 
 - (cli) [#86](https://github.com/MalteHerrmann/changelog-utils/pull/86) Fix PR number insert when creating new PR.
-
-### Features
-
-- (cli) [#87](https://github.com/MalteHerrmann/changelog-utils/pull/87) Add version flag to CLI application.
 
 ## [v1.4.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.4.0) - 2025-05-15
 
