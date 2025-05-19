@@ -11,7 +11,9 @@ pub enum ChangelogCLI {
     CreatePR,
     #[command(about = "Applies all possible auto-fixes to the changelog")]
     Fix,
-    #[command(about = "Gets the contents of a specific version's release notes from the changelog")]
+    #[command(
+        about = "Gets the contents of a specific version's release notes from the changelog"
+    )]
     Get(GetArgs),
     #[command(about = "Checks if the changelog contents adhere to the defined rules")]
     Lint,

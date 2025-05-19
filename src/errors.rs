@@ -2,8 +2,8 @@ use inquire::InquireError;
 use regex::Error;
 use rig::completion::PromptError;
 use serde_json;
-use std::{env::VarError, io, num::ParseIntError, string::FromUtf8Error};
 use std::num::TryFromIntError;
+use std::{env::VarError, io, num::ParseIntError, string::FromUtf8Error};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
