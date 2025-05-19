@@ -4,6 +4,12 @@ This changelog was created using the `clu` binary
 -->
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- (all) [#90](https://github.com/MalteHerrmann/changelog-utils/pull/90) Refactor fixed contents export for better maintainability.
+
 ## [v1.5.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.5.0) - 2025-05-19
 
 ### Improvements
