@@ -9,6 +9,7 @@ pub mod diff_prompt;
 mod entry;
 pub mod errors;
 mod escapes;
+pub mod get;
 pub mod github;
 pub mod init;
 mod inputs;

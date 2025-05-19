@@ -2,8 +2,8 @@ use inquire::InquireError;
 use regex::Error;
 use rig::completion::PromptError;
 use serde_json;
-use std::{env::VarError, io, num::ParseIntError, string::FromUtf8Error};
 use std::num::TryFromIntError;
+use std::{env::VarError, io, num::ParseIntError, string::FromUtf8Error};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -12,6 +12,8 @@ pub enum CLIError {
     AddError(#[from] AddError),
     #[error("failed to create pr: {0}")]
     CreateError(#[from] CreateError),
+    #[error("failed to get release contents: {0}")]
+    GetError(#[from] GetError),
     #[error("failed to initialize the changelog settings: {0}")]
     InitError(#[from] InitError),
     #[error("failed to run linter: {0}")]
@@ -124,6 +126,16 @@ pub enum ChangelogError {
 pub enum EntryError {
     #[error("invalid entry: {0}")]
     InvalidEntry(String),
+}
+
+#[derive(Error, Debug)]
+pub enum GetError {
+    #[error("failed to get config: {0}")]
+    Config(#[from] ConfigError),
+    #[error("failed to get changelog: {0}")]
+    Changelog(#[from] ChangelogError),
+    #[error("version not found: {0}")]
+    VersionNotFound(String),
 }
 
 #[derive(Error, Debug)]

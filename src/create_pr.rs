@@ -60,8 +60,11 @@ pub async fn run() -> Result<(), CreateError> {
             .html_url
             .expect("received no error creating the PR but html_url was None")
     );
-    
-    let pr_number: u16 = created_pr.number.try_into().map_err(CreateError::OutOfRange)?;
+
+    let pr_number: u16 = created_pr
+        .number
+        .try_into()
+        .map_err(CreateError::OutOfRange)?;
 
     let mut changelog = changelog::load(config.clone())?;
     add::add_entry(
