@@ -12,6 +12,10 @@ pub async fn get_suggestions(
     pr_target: &str,
 ) -> Result<Suggestions, CreateError> {
     let diff = github::get_diff(work_branch, pr_target)?;
+    if diff.trim().is_empty() {
+        return Err(CreateError::EmptyDiff(work_branch.into(), pr_target.into()))
+    }
+    
     let response = prompt(config, diff.as_str()).await?;
 
     parse_suggestions(&response)

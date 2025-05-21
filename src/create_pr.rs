@@ -35,6 +35,9 @@ pub async fn run() -> Result<(), CreateError> {
     if use_ai {
         match diff_prompt::get_suggestions(&config, &git_info.branch, &target).await {
             Ok(s) => suggestions = s,
+            // NOTE: in case of an empty diff between branches we just return the error as there is no PR to be created
+            Err(CreateError::EmptyDiff(a, b)) => return Err(CreateError::EmptyDiff(a, b)),
+            // NOTE: in case of any other error we just print the decoding error here and continue with defaults
             Err(_) => println!("failed to decode llm response"),
         };
     }
