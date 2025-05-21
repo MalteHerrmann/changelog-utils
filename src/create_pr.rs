@@ -29,6 +29,11 @@ pub async fn run() -> Result<(), CreateError> {
         .await?;
 
     let target = inputs::get_target_branch(branches)?;
+    
+    let diff = github::get_diff(&git_info.branch, &target)?;
+    if diff.trim().is_empty() {
+        return Err(CreateError::EmptyDiff(git_info.branch.clone(), target.clone()));
+    }
 
     let use_ai = inputs::get_use_ai()?;
     let mut suggestions = diff_prompt::Suggestions::default();
