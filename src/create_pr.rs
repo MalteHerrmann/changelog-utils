@@ -38,11 +38,7 @@ pub async fn run() -> Result<(), CreateError> {
     let use_ai = inputs::get_use_ai()?;
     let mut suggestions = diff_prompt::Suggestions::default();
     if use_ai {
-        match diff_prompt::get_suggestions(&config, &diff).await {
-            Ok(s) => suggestions = s,
-            // NOTE: in case of any other error we just print the decoding error here and continue with defaults
-            Err(e) => println!("failed to decode llm response: {e}"),
-        };
+        suggestions = diff_prompt::get_suggestions(&config, &diff).await?;
     }
 
     let change_type = inputs::get_change_type(&config, &suggestions.change_type)?;
