@@ -29,21 +29,19 @@ pub async fn run() -> Result<(), CreateError> {
         .await?;
 
     let target = inputs::get_target_branch(branches)?;
-    
-    let diff = github::get_diff(&git_info.branch, &target)?;
-    if diff.trim().is_empty() {
-        return Err(CreateError::EmptyDiff(git_info.branch.clone(), target.clone()));
-    }
+
+    let diff = match github::get_diff(&git_info.branch, &target) {
+        Ok(diff) => diff,
+        Err(e) => return Err(e.into()),
+    };
 
     let use_ai = inputs::get_use_ai()?;
     let mut suggestions = diff_prompt::Suggestions::default();
     if use_ai {
-        match diff_prompt::get_suggestions(&config, &git_info.branch, &target).await {
+        match diff_prompt::get_suggestions(&config, &diff).await {
             Ok(s) => suggestions = s,
-            // NOTE: in case of an empty diff between branches we just return the error as there is no PR to be created
-            Err(CreateError::EmptyDiff(a, b)) => return Err(CreateError::EmptyDiff(a, b)),
             // NOTE: in case of any other error we just print the decoding error here and continue with defaults
-            Err(_) => println!("failed to decode llm response"),
+            Err(e) => println!("failed to decode llm response: {e}"),
         };
     }
 

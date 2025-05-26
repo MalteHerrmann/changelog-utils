@@ -1,4 +1,4 @@
-use crate::{config::Config, errors::CreateError, github};
+use crate::{config::Config, errors::CreateError};
 use regex::Regex;
 use rig::{
     completion::Prompt,
@@ -7,19 +7,8 @@ use rig::{
 use serde::Deserialize;
 
 // TODO: might make sense to refactor this to just take in the diff instead of getting the diff manually as well
-pub async fn get_suggestions(
-    config: &Config,
-    work_branch: &str,
-    pr_target: &str,
-) -> Result<Suggestions, CreateError> {
-    let diff = github::get_diff(work_branch, pr_target)?;
-    if diff.trim().is_empty() {
-        return Err(CreateError::EmptyDiff(work_branch.into(), pr_target.into()))
-    }
-    
-    let response = prompt(config, diff.as_str()).await?;
-
-    parse_suggestions(&response)
+pub async fn get_suggestions(config: &Config, diff: &str) -> Result<Suggestions, CreateError> {
+    parse_suggestions(prompt(config, diff).await?.as_str())
 }
 
 fn parse_suggestions(llm_response: &str) -> Result<Suggestions, CreateError> {
