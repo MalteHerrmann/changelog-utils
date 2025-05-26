@@ -8,6 +8,7 @@ This changelog was created using the `clu` binary
 
 ### Improvements
 
+- (cli) [#93](https://github.com/MalteHerrmann/changelog-utils/pull/93) Add check for empty diffs when creating PRs.
 - (ci) [#92](https://github.com/MalteHerrmann/changelog-utils/pull/92) Update changelog lint action to v0.3.0 and adjust config.
 
 ## [v1.5.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.5.0) - 2025-05-19

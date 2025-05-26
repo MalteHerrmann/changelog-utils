@@ -150,9 +150,15 @@ pub fn get_diff(branch: &str, target: &str) -> Result<String, GitHubError> {
         .args(vec!["diff", diff_str.as_str()])
         .output()?;
 
-    match out.status.success() {
-        true => Ok(String::from_utf8(out.stdout)?),
-        false => Err(GitHubError::Diff),
+    if !out.status.success() {
+        return Err(GitHubError::Diff);
+    }
+
+    let diff = String::from_utf8(out.stdout)?;
+    let diff_trimmed = diff.trim();
+    match diff_trimmed.is_empty() {
+        true => Err(GitHubError::EmptyDiff(branch.into(), target.into())),
+        false => Ok(diff_trimmed.into()),
     }
 }
 

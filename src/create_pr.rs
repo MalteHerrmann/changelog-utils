@@ -30,12 +30,18 @@ pub async fn run() -> Result<(), CreateError> {
 
     let target = inputs::get_target_branch(branches)?;
 
+    let diff = match github::get_diff(&git_info.branch, &target) {
+        Ok(diff) => diff,
+        Err(e) => return Err(e.into()),
+    };
+
     let use_ai = inputs::get_use_ai()?;
     let mut suggestions = diff_prompt::Suggestions::default();
     if use_ai {
-        match diff_prompt::get_suggestions(&config, &git_info.branch, &target).await {
+        match diff_prompt::get_suggestions(&config, &diff).await {
             Ok(s) => suggestions = s,
-            Err(_) => println!("failed to decode llm response"),
+            // NOTE: in case of any other error we just print the decoding error here and continue with defaults
+            Err(e) => println!("failed to decode llm response: {e}"),
         };
     }
 

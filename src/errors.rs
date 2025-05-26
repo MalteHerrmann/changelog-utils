@@ -144,6 +144,8 @@ pub enum GitHubError {
     CurrentBranch,
     #[error("failed to get diff")]
     Diff,
+    #[error("empty diff found between '{0}' and '{1}'")]
+    EmptyDiff(String, String),
     #[error("failed to commit changes")]
     FailedToCommit,
     #[error("failed to push to origin")]
