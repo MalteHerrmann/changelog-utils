@@ -6,7 +6,6 @@ use rig::{
 };
 use serde::Deserialize;
 
-// TODO: might make sense to refactor this to just take in the diff instead of getting the diff manually as well
 pub async fn get_suggestions(config: &Config, diff: &str) -> Result<Suggestions, CreateError> {
     parse_suggestions(prompt(config, diff).await?.as_str())
 }
