@@ -8,12 +8,18 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum CheckDiffError {
+    #[error("failed to get changelog: {0}")]
+    Changelog(#[from] ChangelogError),
     #[error("failed to get config: {0}")]
     Config(#[from] ConfigError),
     #[error("failed to get git info: {0}")]
     // TODO: adjust to own error instead of general GitHubError in case there's a problem with Git
     // itself?
     GitInfo(#[from] GitHubError),
+    #[error("no unreleased entry found for pr")]
+    NoEntry,
+    #[error("no unreleased section in changelog")]
+    NoUnreleased,
 }
 
 #[derive(Error, Debug)]
