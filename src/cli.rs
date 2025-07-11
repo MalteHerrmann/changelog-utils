@@ -6,6 +6,10 @@ pub enum ChangelogCLI {
     #[command(about = "Adds a new entry to the unreleased section of the changelog")]
     Add(AddArgs),
     #[command(
+        about = "Checks if a changelog entry was created for a pull request related to the current branch"
+    )]
+    CheckDiff,
+    #[command(
         about = "Creates a PR in the configured target repository and adds the corresponding changelog entry"
     )]
     CreatePR,
