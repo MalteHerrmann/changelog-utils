@@ -1,6 +1,7 @@
 pub mod add;
 mod change_type;
 pub mod changelog;
+pub mod check_diff;
 pub mod cli;
 pub mod cli_config;
 pub mod config;
