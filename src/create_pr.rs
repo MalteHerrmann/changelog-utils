@@ -1,9 +1,9 @@
-use crate::{add, changelog, config, diff_prompt, errors::CreateError, github, inputs};
+use crate::{add, changelog, config, diff_prompt, errors::CreateError, git, github, inputs};
 
 /// Runs the main logic to open a new PR for the current branch.
 pub async fn run() -> Result<(), CreateError> {
     let config = config::load()?;
-    let git_info = github::get_git_info(&config)?;
+    let git_info = git::get_git_info(&config)?;
     let client = github::get_authenticated_github_client()?;
 
     if let Ok(pr_info) = github::get_open_pr(git_info.clone()).await {
@@ -15,7 +15,7 @@ pub async fn run() -> Result<(), CreateError> {
             return Err(CreateError::BranchNotOnRemote(git_info.branch.clone()));
         };
 
-        github::push_to_origin(git_info.branch.as_str())?;
+        git::push_to_origin(git_info.branch.as_str())?;
 
         if !github::branch_exists_on_remote(&client, &git_info).await {
             return Err(CreateError::BranchNotOnRemote(git_info.branch.clone()));
@@ -30,7 +30,7 @@ pub async fn run() -> Result<(), CreateError> {
 
     let target = inputs::get_target_branch(branches)?;
 
-    let diff = match github::get_diff(&git_info.branch, &target) {
+    let diff = match git::get_diff(&git_info.branch, &target) {
         Ok(diff) => diff,
         Err(e) => return Err(e.into()),
     };
@@ -81,7 +81,7 @@ pub async fn run() -> Result<(), CreateError> {
     changelog.write(&changelog.path)?;
 
     let cm = inputs::get_commit_message(&config)?;
-    if let Err(e) = github::commit_and_push(&config, &cm) {
+    if let Err(e) = git::commit_and_push(&config, &cm) {
         // NOTE: we don't want to fail here since the PR was created successfully,
         // just the commit of the changelog failed
         println!("failed to commit and push changes: {}", e);
