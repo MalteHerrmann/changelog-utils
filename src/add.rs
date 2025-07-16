@@ -1,7 +1,8 @@
 use crate::{
     change_type, changelog, config, entry,
     errors::AddError,
-    github::{commit, get_git_info, get_pr_info, PRInfo},
+    git::{commit, get_git_info},
+    github::{get_pr_info, PRInfo},
     inputs, release,
 };
 use std::collections::HashMap;

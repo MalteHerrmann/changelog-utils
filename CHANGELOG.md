@@ -8,6 +8,7 @@ This changelog was created using the `clu` binary
 
 ### Improvements
 
+- (cli) [#97](https://github.com/MalteHerrmann/changelog-utils/pull/97) Refactor Git operations into dedicated module.
 - (cli) [#94](https://github.com/MalteHerrmann/changelog-utils/pull/94) Fail PR creation when having problems parsing the LLM response.
 - (cli) [#93](https://github.com/MalteHerrmann/changelog-utils/pull/93) Add check for empty diffs when creating PRs.
 - (ci) [#92](https://github.com/MalteHerrmann/changelog-utils/pull/92) Update changelog lint action to v0.3.0 and adjust config.

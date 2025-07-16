@@ -11,6 +11,7 @@ mod entry;
 pub mod errors;
 mod escapes;
 pub mod get;
+pub mod git;
 pub mod github;
 pub mod init;
 mod inputs;

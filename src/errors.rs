@@ -62,6 +62,8 @@ pub enum CreateError {
     FailedToMatch(String),
     #[error("failed to parse llm suggestions: {0}")]
     FailedToParse(#[from] serde_json::Error),
+    #[error("error interacting with Git: {0}")]
+    Git(#[from] GitError),
     #[error("error interacting with GitHub: {0}")]
     GitHub(#[from] GitHubError),
     #[error("error getting user input: {0}")]
@@ -90,6 +92,8 @@ pub enum AddError {
     Input(#[from] InputError),
     #[error("first release is not unreleased section: {0}")]
     FirstReleaseNotUnreleased(String),
+    #[error("failed to get git information: {0}")]
+    Git(#[from] GitError),
     #[error("failed to get pull request information: {0}")]
     PRInfo(#[from] GitHubError),
     #[error("failed to parse changelog: {0}")]
@@ -107,7 +111,7 @@ pub enum InitError {
     #[error("error exporting config: {0}")]
     ConfigError(#[from] ConfigError),
     #[error("failed to get origin")]
-    OriginError(#[from] GitHubError),
+    OriginError(#[from] GitError),
 }
 
 #[derive(Error, Debug)]
@@ -157,7 +161,7 @@ pub enum GetError {
 }
 
 #[derive(Error, Debug)]
-pub enum GitHubError {
+pub enum GitError {
     #[error("failed to get current branch")]
     CurrentBranch,
     #[error("failed to get diff")]
@@ -168,14 +172,8 @@ pub enum GitHubError {
     FailedToCommit,
     #[error("failed to push to origin")]
     FailedToPush,
-    #[error("failed to call GitHub API: {0}")]
-    GitHub(#[from] octocrab::Error),
     #[error("failed to build regex: {0}")]
     InvalidRegex(#[from] Error),
-    #[error("target repository in configuration is no GitHub repository")]
-    NoGitHubRepo,
-    #[error("no pull request open for branch")]
-    NoOpenPR,
     #[error("failed to get origin")]
     Origin,
     #[error("failed to decode output: {0}")]
@@ -184,6 +182,20 @@ pub enum GitHubError {
     RegexMatch(String),
     #[error("failed to execute command: {0}")]
     StdCommand(#[from] io::Error),
+}
+
+#[derive(Error, Debug)]
+pub enum GitHubError {
+    #[error("failed to call GitHub API: {0}")]
+    GitHub(#[from] octocrab::Error),
+    #[error("failed to build regex: {0}")]
+    InvalidRegex(#[from] Error),
+    #[error("target repository in configuration is no GitHub repository")]
+    NoGitHubRepo,
+    #[error("no pull request open for branch")]
+    NoOpenPR,
+    #[error("failed to decode output: {0}")]
+    OutputDecoding(#[from] FromUtf8Error),
     #[error("GITHUB_TOKEN environment variable not found")]
     Token(#[from] VarError),
 }
