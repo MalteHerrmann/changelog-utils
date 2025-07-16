@@ -124,3 +124,21 @@ pub fn get_use_ai() -> Result<bool, InputError> {
         .prompt()?
     )
 }
+
+pub fn get_entry_confirmation(entry_text: &str, problems: &[String]) -> Result<bool, InputError> {
+    println!("Generated changelog entry:");
+    println!("{}", entry_text);
+    
+    if !problems.is_empty() {
+        println!("\nLinting warnings found:");
+        for problem in problems {
+            println!("  - {}", problem);
+        }
+    }
+    
+    Ok(
+        Confirm::new("Do you want to proceed with this entry? (y/n)")
+            .with_default(true)
+            .prompt()?
+    )
+}

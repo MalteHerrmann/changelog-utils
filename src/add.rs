@@ -11,12 +11,27 @@ fn should_get_user_input(accept: bool, retrieved: bool) -> bool {
     !accept || !retrieved
 }
 
+/// Checks if the given PR number already exists in the changelog.
+fn check_pr_duplicate(changelog: &changelog::Changelog, pr_number: u16) -> bool {
+    for release in &changelog.releases {
+        for change_type in &release.change_types {
+            for entry in &change_type.entries {
+                if entry.pr_number == pr_number {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
 /// Handles all user input for the changelog entry, either using existing PR info or prompting for input.
 fn get_entry_inputs(
     config: &config::Config,
     pr_info: &mut PRInfo,
     accept: bool,
     retrieved: bool,
+    changelog: &changelog::Changelog,
 ) -> Result<(String, u16, String, String), AddError> {
     let selectable_change_types: Vec<String> = config
         .change_types
@@ -59,6 +74,44 @@ fn get_entry_inputs(
         desc = inputs::get_description(pr_info.description.as_str())?;
     }
 
+    // Validate the entry and get user confirmation
+    loop {
+        // Check for duplicate PR number
+        if check_pr_duplicate(changelog, pr_number) {
+            println!("Warning: PR #{} already exists in the changelog!", pr_number);
+            pr_number = inputs::get_pr_number(pr_number)?;
+            continue;
+        }
+
+        // Create and lint the entry
+        let temp_entry = entry::Entry::new(config, &cat, &desc, pr_number);
+        let parsed_entry = entry::parse(config, &temp_entry.fixed)?;
+        
+        // Collect all problems
+        let mut all_problems = Vec::new();
+        
+        // Add any linting problems from the parsed entry
+        all_problems.extend(parsed_entry.problems.clone());
+        
+        // Show the entry and problems to user for confirmation
+        let confirmed = inputs::get_entry_confirmation(&parsed_entry.fixed, &all_problems)?;
+        
+        if confirmed {
+            // If there were auto-fixable problems, mention they were applied
+            if !all_problems.is_empty() {
+                println!("Auto-fixing applied to entry.");
+            }
+            break;
+        } else {
+            // User rejected the entry, let them modify it
+            println!("Let's modify the entry:");
+            selected_change_type = inputs::get_change_type(config, &selected_change_type)?;
+            pr_number = inputs::get_pr_number(pr_number)?;
+            cat = inputs::get_category(config, &cat)?;
+            desc = inputs::get_description(&desc)?;
+        }
+    }
+
     Ok((selected_change_type, pr_number, cat, desc))
 }
 
@@ -75,10 +128,9 @@ pub async fn run(pr_number: Option<u16>, accept: bool) -> Result<(), AddError> {
     let mut pr_info = get_pr_info(&config, &git_info, pr_number).await?;
     let retrieved = pr_info.number != 0;
 
-    let (selected_change_type, pr_number, cat, desc) =
-        get_entry_inputs(&config, &mut pr_info, accept, retrieved)?;
-
     let mut changelog = changelog::load(config.clone())?;
+    let (selected_change_type, pr_number, cat, desc) =
+        get_entry_inputs(&config, &mut pr_info, accept, retrieved, &changelog)?;
     add_entry(
         &config,
         &mut changelog,
