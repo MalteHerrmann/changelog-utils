@@ -54,6 +54,10 @@ pub enum CreateError {
     OutOfRange(#[from] TryFromIntError),
     #[error("failed to prompt llm: {0}")]
     Prompt(#[from] PromptError),
+    #[error("missing API key")]
+    MissingApiKey,
+    #[error("API error: {0}")]
+    ApiError(String),
 }
 
 #[derive(Error, Debug)]
