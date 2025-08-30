@@ -81,7 +81,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
     let mut seen_releases: Vec<String> = Vec::new();
     let mut current_change_type: change_type::ChangeType;
     let mut seen_change_types: Vec<String> = Vec::new();
-    let mut seen_prs: Vec<u16> = Vec::new();
+    let mut seen_prs: Vec<u64> = Vec::new();
 
     let mut escapes: Vec<escapes::LinterEscape> = Vec::new();
     let mut is_comment = false;

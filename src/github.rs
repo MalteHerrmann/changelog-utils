@@ -13,7 +13,7 @@ pub struct PRInfo {
     pub change_type: String,
     pub category: String,
     pub description: String,
-    pub number: u16,
+    pub number: u64,
 }
 
 /// Extracts the pull request information from the given
@@ -45,10 +45,7 @@ fn extract_pr_info(config: &Config, pr: &PullRequest) -> Result<PRInfo, GitHubEr
     };
 
     Ok(PRInfo {
-        number: pr
-            .number
-            .try_into()
-            .expect("failed to convert PR number to u16"),
+        number: pr.number,
         change_type,
         category,
         description,
@@ -77,11 +74,11 @@ pub async fn branch_exists_on_remote(client: &Octocrab, git_info: &GitInfo) -> b
 
 /// Returns an option for an open PR from the current local branch in the configured target
 /// repository if it exists.
-pub async fn get_open_pr(git_info: GitInfo) -> Result<PullRequest, GitHubError> {
+pub async fn get_open_pr(git_info: &GitInfo) -> Result<PullRequest, GitHubError> {
     let octocrab = get_authenticated_github_client().unwrap_or_default();
 
     let pulls = octocrab
-        .pulls(git_info.owner, git_info.repo)
+        .pulls(git_info.owner.to_owned(), git_info.repo.to_owned())
         .list()
         .send()
         .await?
@@ -102,11 +99,11 @@ pub async fn get_open_pr(git_info: GitInfo) -> Result<PullRequest, GitHubError> 
 }
 
 /// Returns a PR from the repository by its number.
-async fn get_pr_by_number(git_info: &GitInfo, pr_number: u16) -> Result<PullRequest, GitHubError> {
+async fn get_pr_by_number(git_info: &GitInfo, pr_number: u64) -> Result<PullRequest, GitHubError> {
     let client = get_authenticated_github_client()?;
     client
         .pulls(&git_info.owner, &git_info.repo)
-        .get(pr_number as u64)
+        .get(pr_number)
         .await
         .map_err(|_| GitHubError::NoOpenPR)
 }
@@ -116,7 +113,7 @@ async fn get_pr_by_number(git_info: &GitInfo, pr_number: u16) -> Result<PullRequ
 pub async fn get_pr_info(
     config: &Config,
     git_info: &GitInfo,
-    pr_number: Option<u16>,
+    pr_number: Option<u64>,
 ) -> Result<PRInfo, GitHubError> {
     if let Some(pr_number) = pr_number {
         // Try to fetch PR information using the provided PR number
@@ -125,7 +122,7 @@ pub async fn get_pr_info(
     }
 
     // If no PR number was provided, try to get open PR for current branch
-    if let Ok(pr) = get_open_pr(git_info.clone()).await {
+    if let Ok(pr) = get_open_pr(git_info).await {
         return extract_pr_info(config, &pr);
     }
 

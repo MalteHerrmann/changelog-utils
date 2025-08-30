@@ -12,7 +12,7 @@ pub struct Entry {
     /// The fixed line adhering to all standards.
     pub fixed: String,
     /// The PR number for the given change.
-    pub pr_number: u16,
+    pub pr_number: u64,
     /// The list of problems with the given line.
     pub problems: Vec<String>,
 }
@@ -22,7 +22,7 @@ impl Entry {
         config: &config::Config,
         category: &str,
         description: &str,
-        pr_number: u16,
+        pr_number: u64,
     ) -> Entry {
         let link = format!("{}/pull/{}", config.target_repo, pr_number);
         let fixed = build_fixed(category, &link, description, pr_number);
@@ -53,7 +53,7 @@ pub fn parse(config: &config::Config, line: &str) -> Result<Entry, EntryError> {
     let category = matches.name("category").unwrap().as_str();
     let description = matches.name("desc").unwrap().as_str();
     let link = matches.name("link").unwrap().as_str();
-    let pr_number = matches.name("pr").unwrap().as_str().parse::<u16>().unwrap();
+    let pr_number = matches.name("pr").unwrap().as_str().parse::<u64>().unwrap();
     let spaces = [
         matches.name("ws0").unwrap().as_str(),
         matches.name("ws1").unwrap().as_str(),
@@ -92,7 +92,7 @@ pub fn parse(config: &config::Config, line: &str) -> Result<Entry, EntryError> {
 }
 
 /// Returns the fixed entry string based on the given building parts.
-fn build_fixed(cat: &str, link: &str, desc: &str, pr: u16) -> String {
+fn build_fixed(cat: &str, link: &str, desc: &str, pr: u64) -> String {
     format!("- ({}) [#{}]({}) {}", cat, pr, link, desc,)
 }
 
@@ -113,7 +113,7 @@ pub fn check_category(config: &config::Config, category: &str) -> (String, Vec<S
 }
 
 /// Check if the link is valid
-fn check_link(config: &config::Config, link: &str, pr_number: u16) -> (String, Vec<String>) {
+fn check_link(config: &config::Config, link: &str, pr_number: u64) -> (String, Vec<String>) {
     let mut problems: Vec<String> = Vec::new();
 
     let fixed = format!("{}/pull/{}", config.target_repo, pr_number);
@@ -126,8 +126,8 @@ fn check_link(config: &config::Config, link: &str, pr_number: u16) -> (String, V
     let contained_pr_number = split_link
         .last()
         .expect("this should never be empty")
-        .parse::<u16>()
-        .expect("this should always be a u16");
+        .parse::<u64>()
+        .expect("this should always be a u64");
 
     if contained_pr_number != pr_number {
         problems.push(format!(

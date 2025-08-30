@@ -18,7 +18,7 @@ fn get_entry_inputs(
     pr_info: &mut PRInfo,
     accept: bool,
     retrieved: bool,
-) -> Result<(String, u16, String, String), AddError> {
+) -> Result<(String, u64, String, String), AddError> {
     let selectable_change_types: Vec<String> = config
         .change_types
         .iter()
@@ -69,7 +69,7 @@ fn get_entry_inputs(
 // to commit the changes.
 //
 // NOTE: the changes are NOT pushed to the origin when running the `add` command.
-pub async fn run(pr_number: Option<u16>, accept: bool) -> Result<(), AddError> {
+pub async fn run(pr_number: Option<u64>, accept: bool) -> Result<(), AddError> {
     let config = config::load()?;
     let git_info = get_git_info(&config)?;
 
@@ -103,7 +103,7 @@ pub fn add_entry(
     change_type: &str,
     cat: &str,
     desc: &str,
-    pr: u16,
+    pr: u64,
 ) {
     let unreleased = match changelog.releases.iter_mut().find(|r| r.is_unreleased()) {
         Some(r) => r,
@@ -116,7 +116,6 @@ pub fn add_entry(
         }
     };
 
-    // TODO: improve this to avoid using the lookup via the for loop, but rather use map
     let mut idx = 0;
     let mut change_type_is_found = false;
     for (i, ct) in unreleased.clone().change_types.into_iter().enumerate() {

@@ -2,7 +2,6 @@ use inquire::InquireError;
 use regex::Error;
 use rig::completion::PromptError;
 use serde_json;
-use std::num::TryFromIntError;
 use std::{env::VarError, io, num::ParseIntError, string::FromUtf8Error};
 use thiserror::Error;
 
@@ -68,8 +67,6 @@ pub enum CreateError {
     GitHub(#[from] GitHubError),
     #[error("error getting user input: {0}")]
     Input(#[from] InputError),
-    #[error("failed to convert PR number into u16: {0}")]
-    OutOfRange(#[from] TryFromIntError),
     #[error("failed to prompt llm: {0}")]
     Prompt(#[from] PromptError),
 }

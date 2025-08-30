@@ -6,16 +6,14 @@ pub async fn run() -> Result<(), CheckDiffError> {
     let config = config::load()?;
     let git_info = github::get_git_info(&config)?;
 
-    // TODO: refactor to use borrow here instead of cloning?
-    let pr_info = github::get_open_pr(git_info.clone()).await?;
+    let pr_info = github::get_open_pr(&git_info).await?;
     let target_branch = pr_info.base.ref_field;
 
     let diff = github::get_diff(&git_info.branch, &target_branch)?;
 
     let changelog = changelog::load(config)?;
 
-    // TODO: check conversion from u64 to u16
-    check_diff(&changelog, &diff, pr_info.number as u16)?;
+    check_diff(&changelog, &diff, pr_info.number)?;
 
     println!("changelog contains expected entry");
     Ok(())
@@ -26,7 +24,7 @@ pub async fn run() -> Result<(), CheckDiffError> {
 fn check_diff(
     changelog: &changelog::Changelog,
     diff: &str,
-    pr_number: u16,
+    pr_number: u64,
 ) -> Result<(), CheckDiffError> {
     let unreleased = match changelog.releases.iter().find(|&r| r.is_unreleased()) {
         Some(r) => r,
@@ -36,7 +34,6 @@ fn check_diff(
     if !unreleased
         .change_types
         .iter()
-        // TODO: remove clone here or is it necessary?
         .flat_map(|ct| ct.entries.clone())
         .any(|e| e.pr_number == pr_number)
     {
@@ -65,9 +62,7 @@ fn get_additions(diff: &str) -> Vec<String> {
     let addition_prefix = "+";
 
     diff.lines()
-        // TODO: replace with filter_map
-        .map(|l| l.strip_prefix(addition_prefix))
-        .filter(|o| o.is_some())
-        .map(|l| l.unwrap().to_string())
+        .filter_map(|l| l.strip_prefix(addition_prefix))
+        .map(|l| l.to_string())
         .collect()
 }
