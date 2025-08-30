@@ -1,15 +1,15 @@
-use crate::{changelog, config, errors::CheckDiffError, github};
+use crate::{changelog, config, errors::CheckDiffError, git, github};
 
 /// Runs the logic to check for a corresponding diff in the changelog,
 /// that details the changes of the given pull request, if one is found.
 pub async fn run() -> Result<(), CheckDiffError> {
     let config = config::load()?;
-    let git_info = github::get_git_info(&config)?;
+    let git_info = git::get_git_info(&config)?;
 
     let pr_info = github::get_open_pr(&git_info).await?;
     let target_branch = pr_info.base.ref_field;
 
-    let diff = github::get_diff(&git_info.branch, &target_branch)?;
+    let diff = git::get_diff(&git_info.branch, &target_branch)?;
 
     let changelog = changelog::load(config)?;
 
@@ -43,7 +43,7 @@ fn check_diff(
 
     // Check if the diff actually contains the entry.
     // If not, it was added before already on a different commit / PR.
-    if !get_additions(diff)
+    if !git::get_additions(diff)
         .iter()
         // TODO: avoid hardcoding this here? Maybe use parse for entry here and then check PR
         // number?
@@ -54,16 +54,4 @@ fn check_diff(
     };
 
     Ok(())
-}
-
-/// Extracts the added lines from the git diff.
-///
-// TODO: This should probably go into a separate git module
-fn get_additions(diff: &str) -> Vec<String> {
-    let addition_prefix = "+";
-
-    diff.lines()
-        .filter_map(|l| l.strip_prefix(addition_prefix))
-        .map(|l| l.to_string())
-        .collect()
 }

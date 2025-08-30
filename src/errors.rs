@@ -12,9 +12,9 @@ pub enum CheckDiffError {
     #[error("failed to get config: {0}")]
     Config(#[from] ConfigError),
     #[error("failed to get git info: {0}")]
-    // TODO: adjust to own error instead of general GitHubError in case there's a problem with Git
-    // itself?
-    GitInfo(#[from] GitHubError),
+    Git(#[from] GitError),
+    #[error("failed to interact with github: {0}")]
+    GitHub(#[from] GitHubError),
     #[error("no unreleased entry found for pr")]
     NoEntry,
     #[error("no unreleased section in changelog")]
