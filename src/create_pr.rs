@@ -37,8 +37,12 @@ pub async fn run() -> Result<(), CreateError> {
 
     let use_ai = inputs::get_use_ai()?;
     let mut suggestions = diff_prompt::Suggestions::default();
+    let mut token_usage: Option<diff_prompt::TokenUsage> = None;
+    
     if use_ai {
-        suggestions = diff_prompt::get_suggestions(&config, &diff).await?;
+        let response = diff_prompt::get_suggestions_with_usage(&config, &diff).await?;
+        suggestions = response.suggestions;
+        token_usage = Some(response.usage);
     }
 
     let change_type = inputs::get_change_type(&config, &suggestions.change_type)?;
@@ -85,6 +89,17 @@ pub async fn run() -> Result<(), CreateError> {
         // NOTE: we don't want to fail here since the PR was created successfully,
         // just the commit of the changelog failed
         println!("failed to commit and push changes: {}", e);
+    }
+
+    // Display token usage if AI was used
+    if let Some(usage) = token_usage {
+        println!("\nAI Usage Summary:");
+        println!("  Input tokens: {}", usage.input_tokens);
+        println!("  Output tokens: {}", usage.output_tokens);
+        println!("  Total tokens: {}", usage.total_tokens);
+        if let Some(cost) = usage.estimated_cost {
+            println!("  Estimated cost: ${:.4}", cost);
+        }
     }
 
     Ok(())

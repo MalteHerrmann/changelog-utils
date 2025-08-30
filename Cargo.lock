@@ -299,6 +299,7 @@ dependencies = [
  "octocrab",
  "predicates",
  "regex",
+ "reqwest",
  "rig-core",
  "serde",
  "serde_json",

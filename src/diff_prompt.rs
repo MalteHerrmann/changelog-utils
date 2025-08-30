@@ -1,13 +1,31 @@
 use crate::{config::Config, errors::CreateError};
 use regex::Regex;
-use rig::{
-    completion::Prompt,
-    providers::anthropic::{self, CLAUDE_3_7_SONNET},
-};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use std::env;
 
 pub async fn get_suggestions(config: &Config, diff: &str) -> Result<Suggestions, CreateError> {
-    parse_suggestions(prompt(config, diff).await?.as_str())
+    let response = get_suggestions_with_usage(config, diff).await?;
+    Ok(response.suggestions)
+}
+
+pub async fn get_suggestions_with_usage(
+    config: &Config,
+    diff: &str,
+) -> Result<SuggestionsWithUsage, CreateError> {
+    let response = prompt_with_usage(config, diff).await?;
+    let suggestions = parse_suggestions(&response.content)?;
+
+    // Calculate estimated cost based on Claude 3.7 Sonnet pricing
+    let estimated_cost = calculate_cost(response.usage.input_tokens, response.usage.output_tokens);
+
+    let usage = TokenUsage {
+        input_tokens: response.usage.input_tokens,
+        output_tokens: response.usage.output_tokens,
+        total_tokens: response.usage.input_tokens + response.usage.output_tokens,
+        estimated_cost: Some(estimated_cost),
+    };
+
+    Ok(SuggestionsWithUsage { suggestions, usage })
 }
 
 fn parse_suggestions(llm_response: &str) -> Result<Suggestions, CreateError> {
@@ -21,16 +39,68 @@ fn parse_suggestions(llm_response: &str) -> Result<Suggestions, CreateError> {
     serde_json::from_str(json).map_err(CreateError::FailedToParse)
 }
 
-async fn prompt(config: &Config, diff: &str) -> Result<String, CreateError> {
+async fn prompt_with_usage(config: &Config, diff: &str) -> Result<AnthropicResponse, CreateError> {
+    let api_key = env::var("ANTHROPIC_API_KEY")
+        .map_err(|_| CreateError::MissingApiKey)?;
+    
     let prompt = format!("{}\n{}", include_str!("diff_prompt.txt"), config);
-    let anthropic_client = anthropic::Client::from_env();
-    let sonnet = anthropic_client
-        .agent(CLAUDE_3_7_SONNET)
-        .preamble(&prompt)
-        .max_tokens(1e3 as u64)
-        .build();
+    
+    let request_body = AnthropicRequest {
+        model: "claude-3-7-sonnet-20240924".to_string(),
+        max_tokens: 1000,
+        messages: vec![
+            AnthropicMessage {
+                role: "user".to_string(),
+                content: format!("{}\n{}", prompt, diff),
+            }
+        ],
+    };
 
-    Ok(sonnet.prompt(diff).await?)
+    let client = reqwest::Client::new();
+    let response = client
+        .post("https://api.anthropic.com/v1/messages")
+        .header("Content-Type", "application/json")
+        .header("x-api-key", &api_key)
+        .header("anthropic-version", "2023-06-01")
+        .json(&request_body)
+        .send()
+        .await
+        .map_err(|e| CreateError::ApiError(e.to_string()))?;
+
+    if !response.status().is_success() {
+        let error_text = response.text().await.unwrap_or_default();
+        return Err(CreateError::ApiError(format!("API request failed: {}", error_text)));
+    }
+
+    let api_response: AnthropicApiResponse = response
+        .json()
+        .await
+        .map_err(|e| CreateError::ApiError(e.to_string()))?;
+
+    // Extract text content from the response
+    let content = api_response.content
+        .iter()
+        .filter_map(|c| {
+            if c.content_type == "text" {
+                Some(c.text.clone())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<String>>()
+        .join("");
+
+    Ok(AnthropicResponse {
+        content,
+        usage: api_response.usage,
+    })
+}
+
+fn calculate_cost(input_tokens: u64, output_tokens: u64) -> f64 {
+    // Claude 3.7 Sonnet pricing: $3 per million input tokens, $15 per million output tokens
+    let input_cost = (input_tokens as f64 / 1_000_000.0) * 3.0;
+    let output_cost = (output_tokens as f64 / 1_000_000.0) * 15.0;
+    input_cost + output_cost
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -39,6 +109,58 @@ pub struct Suggestions {
     pub change_type: String,
     pub title: String,
     pub pr_description: String,
+}
+
+#[derive(Debug, Default)]
+pub struct TokenUsage {
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub total_tokens: u64,
+    pub estimated_cost: Option<f64>,
+}
+
+#[derive(Debug)]
+pub struct SuggestionsWithUsage {
+    pub suggestions: Suggestions,
+    pub usage: TokenUsage,
+}
+
+#[derive(Debug, Serialize)]
+struct AnthropicRequest {
+    model: String,
+    max_tokens: u64,
+    messages: Vec<AnthropicMessage>,
+}
+
+#[derive(Debug, Serialize)]
+struct AnthropicMessage {
+    role: String,
+    content: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct AnthropicApiResponse {
+    content: Vec<AnthropicContent>,
+    usage: AnthropicUsage,
+}
+
+#[derive(Debug, Deserialize)]
+struct AnthropicContent {
+    #[serde(rename = "type")]
+    content_type: String,
+    text: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct AnthropicUsage {
+    input_tokens: u64,
+    output_tokens: u64,
+}
+
+#[derive(Debug)]
+struct AnthropicResponse {
+    content: String,
+    usage: AnthropicUsage,
 }
 
 #[cfg(test)]
