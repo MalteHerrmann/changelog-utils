@@ -37,7 +37,7 @@ fn check_diff(
         .flat_map(|ct| ct.entries.clone())
         .any(|e| e.pr_number == pr_number)
     {
-        // TODO: add logging here?
+        println!("no changelog entry found for PR {}", pr_number);
         return Err(CheckDiffError::NoEntry);
     };
 
@@ -49,6 +49,7 @@ fn check_diff(
         // number?
         .any(|l| l.contains(format!("[#{}]", pr_number).as_str()))
     {
+        println!("changelog entry for PR {} was already present", pr_number);
         return Err(CheckDiffError::NoEntry);
     };
 
