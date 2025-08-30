@@ -1,4 +1,10 @@
-use crate::{add, changelog, config, diff_prompt, errors::CreateError, git, github, inputs};
+use super::{add, inputs};
+use crate::{
+    ai::diff_prompt,
+    errors::CreateError,
+    single_file::changelog,
+    utils::{config, git, github},
+};
 
 /// Runs the main logic to open a new PR for the current branch.
 pub async fn run() -> Result<(), CreateError> {

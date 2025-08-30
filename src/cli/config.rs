@@ -1,13 +1,9 @@
-use crate::{
-    cli::{
-        CategoryOperation, ChangeTypeConfigOperation,
-        ConfigSubcommands::{
-            self, Category, ChangeType, LegacyVersion, Show, Spelling, TargetRepo,
-        },
-        KeyValueOperation, OptionalOperation,
-    },
-    config, errors,
+use super::commands::{
+    CategoryOperation, ChangeTypeConfigOperation,
+    ConfigSubcommands::{self, Category, ChangeType, LegacyVersion, Show, Spelling, TargetRepo},
+    KeyValueOperation, OptionalOperation,
 };
+use crate::{errors, utils::config};
 use std::path::Path;
 
 // Handles the CLI subcommands to adjust the configuration file.

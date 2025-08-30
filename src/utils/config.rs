@@ -208,7 +208,7 @@ mod config_tests {
 
     #[test]
     fn test_load_config() {
-        let config = unpack_config(include_str!("testdata/example_config.json"))
+        let config = unpack_config(include_str!("../testdata/example_config.json"))
             .expect("failed to parse config");
         println!("{:?}", config);
 
@@ -248,7 +248,7 @@ mod config_tests {
     #[test]
     fn test_load_config_no_optionals() {
         let config = unpack_config(include_str!(
-            "testdata/example_config_without_optionals.json"
+            "../testdata/example_config_without_optionals.json"
         ))
         .expect("failed to load config without optionals");
         assert!(
@@ -263,7 +263,7 @@ mod config_adjustment_tests {
     use super::*;
 
     fn load_example_config() -> Config {
-        unpack_config(include_str!("testdata/example_config.json"))
+        unpack_config(include_str!("../testdata/example_config.json"))
             .expect("failed to load example config")
     }
 

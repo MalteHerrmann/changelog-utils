@@ -1,9 +1,12 @@
+use super::inputs;
 use crate::{
-    change_type, changelog, config, entry,
     errors::AddError,
-    git::{commit, get_git_info},
-    github::{get_pr_info, PRInfo},
-    inputs, release,
+    single_file::{change_type, changelog, entry, release},
+    utils::{
+        config,
+        git::{commit, get_git_info},
+        github::{get_pr_info, PRInfo},
+    },
 };
 use std::collections::HashMap;
 

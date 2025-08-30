@@ -1,9 +1,8 @@
+use super::{change_type, entry, release};
 use crate::{
-    change_type,
-    config::{ChangeTypeConfig, Config},
-    entry,
     errors::ChangelogError,
-    escapes, release,
+    escapes,
+    utils::config::{ChangeTypeConfig, Config},
 };
 use regex::Regex;
 use std::{
@@ -267,12 +266,12 @@ fn add_to_problems(problems: &mut Vec<String>, fp: &Path, line: usize, problem: 
 mod changelog_tests {
     use std::str::FromStr;
 
-    use crate::config;
+    use crate::utils::config;
 
     use super::*;
 
     fn load_test_config() -> Config {
-        config::unpack_config(include_str!("testdata/example_config.json"))
+        config::unpack_config(include_str!("../testdata/example_config.json"))
             .expect("failed to load example configuration")
     }
 
