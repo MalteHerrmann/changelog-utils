@@ -2,14 +2,31 @@ use inquire::InquireError;
 use regex::Error;
 use rig::completion::PromptError;
 use serde_json;
-use std::num::TryFromIntError;
 use std::{env::VarError, io, num::ParseIntError, string::FromUtf8Error};
 use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum CheckDiffError {
+    #[error("failed to get changelog: {0}")]
+    Changelog(#[from] ChangelogError),
+    #[error("failed to get config: {0}")]
+    Config(#[from] ConfigError),
+    #[error("failed to get git info: {0}")]
+    Git(#[from] GitError),
+    #[error("failed to interact with github: {0}")]
+    GitHub(#[from] GitHubError),
+    #[error("no unreleased entry found for pr")]
+    NoEntry,
+    #[error("no unreleased section in changelog")]
+    NoUnreleased,
+}
 
 #[derive(Error, Debug)]
 pub enum CLIError {
     #[error("failed to add changelog entry: {0}")]
     AddError(#[from] AddError),
+    #[error("failed to check diff: {0}")]
+    CheckDiff(#[from] CheckDiffError),
     #[error("failed to create pr: {0}")]
     CreateError(#[from] CreateError),
     #[error("failed to get release contents: {0}")]
@@ -50,8 +67,6 @@ pub enum CreateError {
     GitHub(#[from] GitHubError),
     #[error("error getting user input: {0}")]
     Input(#[from] InputError),
-    #[error("failed to convert PR number into u16: {0}")]
-    OutOfRange(#[from] TryFromIntError),
     #[error("failed to prompt llm: {0}")]
     Prompt(#[from] PromptError),
 }

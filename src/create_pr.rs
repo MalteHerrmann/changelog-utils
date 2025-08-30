@@ -6,7 +6,7 @@ pub async fn run() -> Result<(), CreateError> {
     let git_info = git::get_git_info(&config)?;
     let client = github::get_authenticated_github_client()?;
 
-    if let Ok(pr_info) = github::get_open_pr(git_info.clone()).await {
+    if let Ok(pr_info) = github::get_open_pr(&git_info).await {
         return Err(CreateError::ExistingPR(pr_info.number));
     }
 
@@ -63,11 +63,6 @@ pub async fn run() -> Result<(), CreateError> {
             .expect("received no error creating the PR but html_url was None")
     );
 
-    let pr_number: u16 = created_pr
-        .number
-        .try_into()
-        .map_err(CreateError::OutOfRange)?;
-
     let mut changelog = changelog::load(config.clone())?;
     add::add_entry(
         &config,
@@ -75,7 +70,7 @@ pub async fn run() -> Result<(), CreateError> {
         &change_type,
         &cat,
         &desc,
-        pr_number,
+        created_pr.number,
     );
 
     changelog.write(&changelog.path)?;

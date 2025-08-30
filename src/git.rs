@@ -45,6 +45,16 @@ pub fn commit(config: &Config, message: &str) -> Result<(), GitError> {
     Ok(())
 }
 
+/// Extracts the added lines from the git diff.
+pub fn get_additions(diff: &str) -> Vec<String> {
+    let addition_prefix = "+";
+
+    diff.lines()
+        .filter_map(|l| l.strip_prefix(addition_prefix))
+        .map(|l| l.to_string())
+        .collect()
+}
+
 /// Gets the diff between the two defined branches.
 pub fn get_diff(branch: &str, target: &str) -> Result<String, GitError> {
     let diff_str = format!("{}...{}", target, branch);

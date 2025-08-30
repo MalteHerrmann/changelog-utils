@@ -21,11 +21,11 @@ pub fn get_change_type(config: &Config, suggestion: &str) -> Result<String, Inpu
     )
 }
 
-pub fn get_pr_number(default_value: u16) -> Result<u16, InputError> {
+pub fn get_pr_number(default_value: u64) -> Result<u64, InputError> {
     Ok(Text::new("Please provide the PR number:")
         .with_initial_value(format!("{}", &default_value).as_str())
         .prompt()?
-        .parse::<u16>()?)
+        .parse::<u64>()?)
 }
 
 pub fn get_category(config: &Config, suggestion: &str) -> Result<String, InputError> {

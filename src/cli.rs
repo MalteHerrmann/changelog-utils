@@ -6,6 +6,10 @@ pub enum ChangelogCLI {
     #[command(about = "Adds a new entry to the unreleased section of the changelog")]
     Add(AddArgs),
     #[command(
+        about = "Checks if a changelog entry was created for a pull request related to the current branch"
+    )]
+    CheckDiff,
+    #[command(
         about = "Creates a PR in the configured target repository and adds the corresponding changelog entry"
     )]
     CreatePR,
@@ -34,7 +38,7 @@ It creates an empty changelog skeleton if no existing changelog is found as well
 
 #[derive(Args, Debug)]
 pub struct AddArgs {
-    pub number: Option<u16>,
+    pub number: Option<u64>,
     #[arg(short, long)]
     pub yes: bool,
 }
