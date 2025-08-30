@@ -1,4 +1,8 @@
-use crate::{change_type::ChangeType, config, errors::ReleaseError, version};
+use super::change_type::ChangeType;
+use crate::{
+    errors::ReleaseError,
+    utils::{config, version},
+};
 use regex::RegexBuilder;
 
 /// Holds the information about a release section in the changelog.
@@ -240,7 +244,7 @@ fn check_link(config: &config::Config, link: &str, version: &str) -> (String, Ve
 
 #[cfg(test)]
 fn load_test_config() -> config::Config {
-    config::unpack_config(include_str!("testdata/example_config.json"))
+    config::unpack_config(include_str!("../testdata/example_config.json"))
         .expect("failed to load example config")
 }
 

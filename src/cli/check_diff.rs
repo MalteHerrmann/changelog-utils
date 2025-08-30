@@ -1,4 +1,8 @@
-use crate::{changelog, config, errors::CheckDiffError, git, github};
+use crate::{
+    errors::CheckDiffError,
+    single_file::changelog,
+    utils::{config, git, github},
+};
 
 /// Runs the logic to check for a corresponding diff in the changelog,
 /// that details the changes of the given pull request, if one is found.
@@ -22,6 +26,7 @@ pub async fn run() -> Result<(), CheckDiffError> {
 /// Checks the contents of the given diff for the existence
 /// of an entry in the unreleased section of the changelog.
 fn check_diff(
+    // TODO: this should use a common util instead of the single file thing
     changelog: &changelog::Changelog,
     diff: &str,
     pr_number: u64,

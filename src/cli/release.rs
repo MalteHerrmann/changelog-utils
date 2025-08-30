@@ -1,10 +1,11 @@
+use super::inputs::get_release_type;
 use crate::{
-    changelog::{self, Changelog},
-    config,
     errors::ReleaseCLIError,
-    inputs::get_release_type,
-    release::Release,
-    version,
+    single_file::{
+        changelog::{self, Changelog},
+        release::Release,
+    },
+    utils::{config, version},
 };
 use chrono::offset::Local;
 

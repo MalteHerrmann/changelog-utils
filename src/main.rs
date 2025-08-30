@@ -3,8 +3,8 @@ Main file to run the changelog utils application.
 */
 use clap::Parser;
 use clu::{
-    add, check_diff, cli::ChangelogCLI, cli_config, create_pr, errors::CLIError, get, init, lint,
-    release_cli,
+    cli::{add, check_diff, commands::ChangelogCLI, config, create_pr, get, init, lint, release},
+    errors::CLIError,
 };
 
 #[tokio::main]
@@ -17,9 +17,7 @@ async fn main() -> Result<(), CLIError> {
         ChangelogCLI::Get(get_args) => Ok(get::run(get_args)?),
         ChangelogCLI::Lint => Ok(lint::run(false)?),
         ChangelogCLI::Init => Ok(init::run()?),
-        ChangelogCLI::Config(config_subcommand) => {
-            Ok(cli_config::adjust_config(config_subcommand)?)
-        }
-        ChangelogCLI::Release(args) => Ok(release_cli::run(args.version)?),
+        ChangelogCLI::Config(config_subcommand) => Ok(config::adjust_config(config_subcommand)?),
+        ChangelogCLI::Release(args) => Ok(release::run(args.version)?),
     }
 }

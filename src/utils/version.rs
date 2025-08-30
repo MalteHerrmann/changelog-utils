@@ -1,4 +1,5 @@
-use crate::{errors::VersionError, release_type::ReleaseType};
+use super::release_type::ReleaseType;
+use crate::errors::VersionError;
 use regex::Regex;
 use std::fmt;
 

@@ -1,5 +1,5 @@
-use crate::entry::Entry;
-use crate::{config, errors::ChangeTypeError};
+use super::entry::Entry;
+use crate::{errors::ChangeTypeError, utils::config};
 use regex::{Regex, RegexBuilder};
 
 #[derive(Clone, Debug)]
@@ -103,7 +103,7 @@ mod change_type_tests {
     use super::*;
 
     fn load_test_config() -> config::Config {
-        config::unpack_config(include_str!("testdata/example_config.json"))
+        config::unpack_config(include_str!("../testdata/example_config.json"))
             .expect("failed to load config")
     }
 

@@ -1,4 +1,4 @@
-use crate::{config::Config, errors::CreateError};
+use crate::{errors::CreateError, utils::config::Config};
 use regex::Regex;
 use rig::{
     completion::Prompt,
@@ -44,10 +44,10 @@ pub struct Suggestions {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::unpack_config;
+    use crate::utils::config::unpack_config;
 
     fn load_example_config() -> Config {
-        unpack_config(include_str!("testdata/example_config.json"))
+        unpack_config(include_str!("../testdata/example_config.json"))
             .expect("failed to load example config")
     }
 
@@ -55,7 +55,7 @@ mod tests {
     #[tokio::test]
     async fn test_parse_prompt() {
         let example_config = load_example_config();
-        let diff = include_str!("./testdata/example_git_diff.txt");
+        let diff = include_str!("../testdata/example_git_diff.txt");
         let result = prompt(&example_config, diff).await;
         assert!(result.is_ok());
 

@@ -1,6 +1,6 @@
 use crate::{
-    config,
     errors::{EntryError, MatchError},
+    utils::config,
 };
 use regex::{Error, Regex, RegexBuilder};
 
@@ -261,7 +261,7 @@ fn check_whitespace(spaces: [&str; 5]) -> Vec<String> {
 
 #[cfg(test)]
 fn load_test_config() -> config::Config {
-    config::unpack_config(include_str!("testdata/example_config.json"))
+    config::unpack_config(include_str!("../testdata/example_config.json"))
         .expect("failed to load example config")
 }
 
@@ -380,7 +380,7 @@ mod link_tests {
     use super::*;
 
     fn load_test_config() -> config::Config {
-        config::unpack_config(include_str!("testdata/example_config.json"))
+        config::unpack_config(include_str!("../testdata/example_config.json"))
             .expect("failed to load example config")
     }
 

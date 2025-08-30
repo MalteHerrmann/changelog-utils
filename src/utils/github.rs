@@ -1,7 +1,7 @@
-use crate::entry::check_category;
+use super::{config::Config, git::GitInfo};
 use crate::errors::GitHubError;
-use crate::git::GitInfo;
-use crate::{config::Config, entry::check_description};
+use crate::single_file::entry::check_category;
+use crate::single_file::entry::check_description;
 use octocrab::models::pulls::PullRequest;
 use octocrab::params::repos::Reference::Branch;
 use octocrab::{self, Octocrab};
@@ -18,6 +18,8 @@ pub struct PRInfo {
 
 /// Extracts the pull request information from the given
 /// instance.
+///
+/// TODO: instead of relying on the single file checker here, it should use some common utils?
 fn extract_pr_info(config: &Config, pr: &PullRequest) -> Result<PRInfo, GitHubError> {
     let mut change_type = String::new();
     let mut category = String::new();

@@ -1,4 +1,5 @@
-use crate::{changelog, cli::GetArgs, config, errors::GetError};
+use super::commands::GetArgs;
+use crate::{errors::GetError, single_file::changelog, utils::config};
 
 /// Executes the get command to display a specific version's release notes.
 pub fn run(args: GetArgs) -> Result<(), GetError> {
@@ -35,7 +36,7 @@ mod tests {
     /// Creates a test config from the example config file
     fn load_test_config() -> config::Config {
         config::unpack_config(include_str!(
-            "testdata/example_config_without_optionals.json"
+            "../testdata/example_config_without_optionals.json"
         ))
         .expect("failed to load example config")
     }

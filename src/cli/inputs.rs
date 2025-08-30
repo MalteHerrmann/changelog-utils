@@ -1,4 +1,7 @@
-use crate::{config::Config, errors::InputError, release_type::ReleaseType};
+use crate::{
+    errors::InputError,
+    utils::{config::Config, release_type::ReleaseType},
+};
 use inquire::{Confirm, Editor, Select, Text};
 use octocrab::{models::repos::Branch, Page};
 
