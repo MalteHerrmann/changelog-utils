@@ -4,7 +4,7 @@ use std::{borrow::BorrowMut, path::Path};
 
 #[cfg(test)]
 fn load_example_config() -> config::Config {
-    config::unpack_config(include_str!("testdata/evmos_config.json"))
+    config::unpack_config(include_str!("testdata/single_file/evmos_config.json"))
         .expect("failed to load example configuration")
 }
 
@@ -13,7 +13,7 @@ fn test_pass_add_into_new_change_type() {
     let config = load_example_config();
     let mut changelog = changelog::parse_changelog(
         config.clone(),
-        Path::new("tests/testdata/changelog_new_category_after_add.md"),
+        Path::new("tests/testdata/single_file/changelog_new_category_after_add.md"),
     )
     .expect("failed to parse example changelog");
     assert_eq!(changelog.releases.len(), 2);
@@ -46,7 +46,7 @@ fn test_pass_add_with_no_unreleased_section() {
     let config = load_example_config();
     let mut changelog = changelog::parse_changelog(
         config.clone(),
-        Path::new("tests/testdata/changelog_no_unreleased.md"),
+        Path::new("tests/testdata/single_file/changelog_no_unreleased.md"),
     )
     .expect("failed to parse example changelog");
     assert_eq!(changelog.releases.len(), 2);
@@ -80,7 +80,7 @@ fn test_pass_add_new_with_auto_fix() {
     let config = load_example_config();
     let mut changelog = changelog::parse_changelog(
         config.clone(),
-        Path::new("tests/testdata/changelog_new_category_after_add.md"),
+        Path::new("tests/testdata/single_file/changelog_new_category_after_add.md"),
     )
     .expect("failed to parse example changelog");
     assert_eq!(changelog.releases.len(), 2);
