@@ -1,5 +1,4 @@
-use super::config::Config;
-use crate::errors::GitError;
+use crate::{config::Config, errors::GitError};
 use regex::Regex;
 use std::process::Command;
 

@@ -1,5 +1,5 @@
 use super::commands::GetArgs;
-use crate::{errors::GetError, single_file::changelog, utils::config};
+use crate::{config, errors::GetError, single_file::changelog};
 
 /// Executes the get command to display a specific version's release notes.
 pub fn run(args: GetArgs) -> Result<(), GetError> {

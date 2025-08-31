@@ -1,8 +1,8 @@
 use assert_fs::{prelude::*, TempDir};
 use clu::{
     cli::init,
+    config::{self, ChangeTypeConfig},
     errors::InitError,
-    utils::config::{self, ChangeTypeConfig},
 };
 use predicates::prelude::*;
 use std::fs;

@@ -1,8 +1,8 @@
 use super::{change_type, entry, release};
 use crate::{
+    config::{ChangeTypeConfig, Config},
     errors::ChangelogError,
     escapes,
-    utils::config::{ChangeTypeConfig, Config},
 };
 use regex::Regex;
 use std::{
@@ -266,7 +266,7 @@ fn add_to_problems(problems: &mut Vec<String>, fp: &Path, line: usize, problem: 
 mod changelog_tests {
     use std::str::FromStr;
 
-    use crate::utils::config;
+    use crate::config;
 
     use super::*;
 

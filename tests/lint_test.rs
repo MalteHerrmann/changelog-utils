@@ -1,4 +1,4 @@
-use clu::{single_file::changelog, utils::config};
+use clu::{config, single_file::changelog};
 use std::{fs, path::Path};
 
 #[cfg(test)]

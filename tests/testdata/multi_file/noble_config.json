@@ -1,0 +1,20 @@
+{
+  "categories": [],
+  "change_types": [
+    { "long": "Features", "short": "feat" },
+    { "long": "Improvements", "short": "imp" },
+    { "long": "Bug Fixes", "short": "fix" },
+    { "long": "Dependencies", "short": "deps" }
+  ],
+  "changelog_path": "CHANGELOG.md",
+  "changelog_dir": ".changelog",
+  "commit_message": "add changelog entry",
+  "expected_spellings": {
+    "IBC": "ibc",
+    "CometBFT": "comet[-\\s]*bft"
+  },
+  "legacy_version": null,
+  "mode": "multi",
+  "target_repo": "https://github.com/noble-assets/noble",
+  "use_categories": false
+}

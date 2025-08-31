@@ -1,7 +1,8 @@
 use crate::{
+    config,
     errors::CheckDiffError,
     single_file::changelog,
-    utils::{config, git, github},
+    utils::{git, github},
 };
 
 /// Runs the logic to check for a corresponding diff in the changelog,

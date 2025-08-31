@@ -1,9 +1,9 @@
 use super::inputs;
 use crate::{
+    config,
     errors::AddError,
     single_file::{change_type, changelog, entry, release},
     utils::{
-        config,
         git::{commit, get_git_info},
         github::{get_pr_info, PRInfo},
     },

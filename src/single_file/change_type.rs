@@ -1,5 +1,5 @@
 use super::entry::Entry;
-use crate::{errors::ChangeTypeError, utils::config};
+use crate::{config, errors::ChangeTypeError};
 use regex::{Regex, RegexBuilder};
 
 #[derive(Clone, Debug)]

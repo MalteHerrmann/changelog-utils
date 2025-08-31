@@ -1,7 +1,9 @@
-use super::{config::Config, git::GitInfo};
-use crate::errors::GitHubError;
-use crate::single_file::entry::check_category;
-use crate::single_file::entry::check_description;
+use super::git::GitInfo;
+use crate::{
+    config::Config,
+    errors::GitHubError,
+    single_file::entry::{check_category, check_description},
+};
 use octocrab::models::pulls::PullRequest;
 use octocrab::params::repos::Reference::Branch;
 use octocrab::{self, Octocrab};

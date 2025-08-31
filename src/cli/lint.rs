@@ -1,7 +1,7 @@
 use crate::{
+    config,
     errors::LintError,
     single_file::changelog::{self, parse_changelog, Changelog},
-    utils::config,
 };
 use std::path::Path;
 

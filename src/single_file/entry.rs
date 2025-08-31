@@ -1,6 +1,6 @@
 use crate::{
+    config,
     errors::{EntryError, MatchError},
-    utils::config,
 };
 use regex::{Error, Regex, RegexBuilder};
 
