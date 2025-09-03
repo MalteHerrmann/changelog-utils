@@ -1,11 +1,12 @@
 use super::inputs::get_release_type;
 use crate::{
+    config,
     errors::ReleaseCLIError,
     single_file::{
-        changelog::{self, Changelog},
+        changelog::{self, SingleFileChangelog},
         release::Release,
     },
-    utils::{config, version},
+    utils::version,
 };
 use chrono::offset::Local;
 
@@ -50,7 +51,7 @@ pub fn run(version_option: Option<String>) -> Result<(), ReleaseCLIError> {
 ///
 /// Example: If a user selects a patch release with the latest version being `1.2.3`,
 /// the released version would be `1.2.4`.
-fn get_next_release_version(changelog: &Changelog) -> Result<version::Version, ReleaseCLIError> {
+fn get_next_release_version(changelog: &SingleFileChangelog) -> Result<version::Version, ReleaseCLIError> {
     let mut prior_releases: Vec<&Release> = changelog
         .releases
         .iter()

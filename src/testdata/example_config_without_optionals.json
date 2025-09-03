@@ -21,5 +21,7 @@
     "CLI": "cli",
     "Web-SDK": "web[-\\s]*sdk"
   },
-  "target_repo": "https://github.com/MalteHerrmann/changelog-utils"
+  "mode": "single",
+  "target_repo": "https://github.com/MalteHerrmann/changelog-utils",
+  "use_categories": true
 }

@@ -1,8 +1,5 @@
 use super::change_type::ChangeType;
-use crate::{
-    errors::ReleaseError,
-    utils::{config, version},
-};
+use crate::{config, errors::ReleaseError, utils::version};
 use regex::RegexBuilder;
 
 /// Holds the information about a release section in the changelog.

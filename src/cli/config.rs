@@ -3,7 +3,7 @@ use super::commands::{
     ConfigSubcommands::{self, Category, ChangeType, LegacyVersion, Show, Spelling, TargetRepo},
     KeyValueOperation, OptionalOperation,
 };
-use crate::{errors, utils::config};
+use crate::{config, errors};
 use std::path::Path;
 
 // Handles the CLI subcommands to adjust the configuration file.

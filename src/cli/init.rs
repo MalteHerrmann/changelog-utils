@@ -1,7 +1,6 @@
 use crate::{
-    errors::InitError,
-    single_file::changelog::get_settings_from_existing_changelog,
-    utils::{config::Config, git::get_origin},
+    config::Config, errors::InitError,
+    single_file::changelog::get_settings_from_existing_changelog, utils::git::get_origin,
 };
 use std::{fs, path::PathBuf};
 
