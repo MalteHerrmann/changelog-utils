@@ -1,8 +1,8 @@
 use super::git::GitInfo;
 use crate::{
+    common::entry::{check_category, check_description},
     config::Config,
     errors::GitHubError,
-    single_file::entry::{check_category, check_description},
 };
 use octocrab::models::pulls::PullRequest;
 use octocrab::params::repos::Reference::Branch;

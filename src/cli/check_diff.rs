@@ -28,7 +28,7 @@ pub async fn run() -> Result<(), CheckDiffError> {
 /// of an entry in the unreleased section of the changelog.
 fn check_diff(
     // TODO: this should use a common util instead of the single file thing
-    changelog: &changelog::Changelog,
+    changelog: &changelog::SingleFileChangelog,
     diff: &str,
     pr_number: u64,
 ) -> Result<(), CheckDiffError> {

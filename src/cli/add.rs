@@ -102,7 +102,8 @@ pub async fn run(pr_number: Option<u64>, accept: bool) -> Result<(), AddError> {
 /// of the changelog.
 pub fn add_entry(
     config: &config::Config,
-    changelog: &mut changelog::Changelog,
+    // TODO: implement support for multi file changelog
+    changelog: &mut changelog::SingleFileChangelog,
     change_type: &str,
     cat: &str,
     desc: &str,

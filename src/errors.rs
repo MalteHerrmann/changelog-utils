@@ -145,6 +145,8 @@ pub enum ChangelogError {
 pub enum EntryError {
     #[error("invalid entry: {0}")]
     InvalidEntry(String),
+    #[error("failed to read file contents: {0}")]
+    FailedToRead(#[from] io::Error),
 }
 
 #[derive(Error, Debug)]

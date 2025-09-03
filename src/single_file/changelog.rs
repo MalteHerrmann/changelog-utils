@@ -12,7 +12,7 @@ use std::{
 
 /// Represents the changelog contents.
 #[derive(Debug)]
-pub struct Changelog {
+pub struct SingleFileChangelog {
     pub path: PathBuf,
     comments: Vec<String>,
     legacy_contents: Vec<String>,
@@ -20,7 +20,7 @@ pub struct Changelog {
     pub problems: Vec<String>,
 }
 
-impl Changelog {
+impl SingleFileChangelog {
     /// Exports the changelog contents to the given filepath.
     pub fn write(&self, export_path: &Path) -> Result<(), ChangelogError> {
         Ok(fs::write(export_path, self.get_fixed_contents())?)
@@ -49,7 +49,8 @@ impl Changelog {
 }
 
 /// Loads the changelog from the default changelog path.
-pub fn load(config: Config) -> Result<Changelog, ChangelogError> {
+///
+pub fn load(config: Config) -> Result<SingleFileChangelog, ChangelogError> {
     let changelog_file = match fs::read_dir(Path::new("./"))?.find(|e| {
         e.as_ref()
             .is_ok_and(|e| e.file_name().eq_ignore_ascii_case("changelog.md"))
@@ -65,7 +66,10 @@ pub fn load(config: Config) -> Result<Changelog, ChangelogError> {
 }
 
 /// Parses the given changelog contents.
-pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, ChangelogError> {
+pub fn parse_changelog(
+    config: Config,
+    file_path: &Path,
+) -> Result<SingleFileChangelog, ChangelogError> {
     let contents = fs::read_to_string(file_path)?;
 
     let mut n_releases = 0;
@@ -241,7 +245,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
         escapes.clear();
     }
 
-    Ok(Changelog {
+    Ok(SingleFileChangelog {
         path: file_path.to_path_buf(),
         releases,
         comments,
@@ -283,7 +287,7 @@ mod changelog_tests {
             "Add initial Python implementation."
         );
 
-        let mut cl = Changelog {
+        let mut cl = SingleFileChangelog {
             path: PathBuf::from_str("test").unwrap(),
             releases: Vec::new(),
             comments: Vec::new(),
