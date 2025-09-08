@@ -1,9 +1,10 @@
 use crate::{
     config,
     errors::LintError,
+    multi_file,
     single_file::{
         self,
-        changelog::{self, parse_changelog, SingleFileChangelog},
+        changelog::{parse_changelog, SingleFileChangelog},
     },
 };
 use std::path::Path;
@@ -13,32 +14,50 @@ use std::path::Path;
 pub fn run(fix: bool) -> Result<(), LintError> {
     let used_config = config::load()?;
 
-    let changelog = match used_config.mode {
-        config::Mode::Single => single_file::load(used_config)?,
-        config::Mode::Multi => {
-            panic!("not implemented")
+    // // TODO: this should be unified once both types fulfill the same trait / are under one enum
+    // let changelog = match used_config.mode {
+    //     config::Mode::Single => single_file::load(used_config)?,
+    //     config::Mode::Multi => multi_file::load(&used_config)?,
+    // };
+
+    match used_config.mode {
+        config::Mode::Single => {
+            let changelog = single_file::load(used_config)?;
+
+            if changelog.problems.is_empty() {
+                println!("changelog has no problems");
+                return Ok(());
+            }
+
+            if fix {
+                changelog.write(changelog.path.as_path())?;
+                println!(
+                    "automated fixes were applied to {}",
+                    changelog.path.to_string_lossy()
+                );
+
+                return Ok(());
+            }
+
+            println!("found problems in changelog:");
+            changelog.problems.iter().for_each(|p| println!("{}", p));
+
+            Err(LintError::ProblemsInChangelog)
         }
-    };
+        config::Mode::Multi => {
+            let changelog = multi_file::load(&used_config)?;
 
-    if changelog.problems.is_empty() {
-        println!("changelog has no problems");
-        return Ok(());
+            if changelog.problems.is_empty() {
+                println!("changelog has no problems");
+                return Ok(());
+            }
+
+            println!("found problems in changelog:");
+            changelog.problems.iter().for_each(|p| println!("{}", p));
+
+            Err(LintError::ProblemsInChangelog)
+        }
     }
-
-    if fix {
-        changelog.write(changelog.path.as_path())?;
-        println!(
-            "automated fixes were applied to {}",
-            changelog.path.to_string_lossy()
-        );
-
-        return Ok(());
-    }
-
-    println!("found problems in changelog:");
-    changelog.problems.iter().for_each(|p| println!("{}", p));
-
-    Err(LintError::ProblemsInChangelog)
 }
 
 /// Executes the linter logic.
