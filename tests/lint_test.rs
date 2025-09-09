@@ -1,10 +1,25 @@
-use clu::{config, single_file::changelog};
+use clu::{config, multi_file, single_file::changelog};
 use std::{fs, path::Path};
 
 #[cfg(test)]
 fn load_test_config() -> config::Config {
     config::unpack_config(include_str!("testdata/single_file/evmos_config.json"))
         .expect("failed to load example config")
+}
+
+#[cfg(test)]
+fn load_multi_test_config() -> config::Config {
+    config::unpack_config(include_str!("testdata/multi_file/noble_config.json"))
+        .expect("failed to load example config")
+}
+
+#[test]
+fn it_should_pass_for_correct_multi_file_changelogs() {
+    let correct_changelog = Path::new("tests/testdata/multi_file/ok/.changelog");
+    let changelog = multi_file::parse_changelog(&load_multi_test_config(), correct_changelog)
+        .expect("failed to parse correct changelog");
+    assert_eq!(changelog.releases.len(), 2);
+    assert!(changelog.problems.is_empty());
 }
 
 #[test]

@@ -1,8 +1,8 @@
-use std::path::Path;
+use std::{fs, path::Path};
 
 use crate::{config::config, errors::ChangeTypeError};
 
-use super::entry::MultiFileEntry;
+use super::entry::{self, MultiFileEntry};
 
 #[derive(Clone, Debug)]
 pub struct ChangeType {
@@ -28,7 +28,7 @@ impl ChangeType {
     }
 }
 
-pub fn parse(config: config::Config, dir: &Path) -> Result<ChangeType, ChangeTypeError> {
+pub fn parse(config: &config::Config, dir: &Path) -> Result<ChangeType, ChangeTypeError> {
     // TODO: use match for correct error handling here?
     let base_name = dir
         .file_name()
@@ -47,12 +47,21 @@ pub fn parse(config: config::Config, dir: &Path) -> Result<ChangeType, ChangeTyp
         problems.push(format!("invalid change type: {}", base_name));
     }
 
+    let entries = fs::read_dir(dir)
+        .expect("failed to read dir contents")
+        .into_iter()
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| p.is_dir())
+        .filter_map(|p| entry::parse(config, p.as_path()).ok())
+        .collect();
+
     Ok(ChangeType {
         name: base_name.into(),
-        // TODO: I guess this doesn't need to be capitalized, but rather only when generating the
+        // TODO: I guess this should rather be lowercase, but rather only when generating the
         // full changelog based on the individual entries.
         fixed: base_name.into(), // TODO: capitalize
         problems,
-        entries: Vec::new(), // TODO: parse the entries from the folder contents (only markdown files)
+        entries,
     })
 }

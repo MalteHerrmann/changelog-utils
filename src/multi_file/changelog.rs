@@ -1,4 +1,4 @@
-use crate::{config::Config, errors::ChangelogError};
+use crate::{config::Config, errors::ChangelogError, multi_file::release};
 
 use super::release::Release;
 use std::{
@@ -37,10 +37,17 @@ pub fn parse_changelog(
 ) -> Result<MultiFileChangelog, ChangelogError> {
     let dir_contents = fs::read_dir(dir_path)?;
 
-    for (i, entry) in dir_contents.into_iter().enumerate() {
-        // TODO: test this and then proceed parsing the entries
-        println!("got entry {:?}: {:?}", i, entry.unwrap())
-    }
+    let releases: Vec<Release> = dir_contents
+        .into_iter()
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| p.is_dir())
+        .filter_map(|p| release::parse(config, &p).ok())
+        .collect();
+
+    println!("found {} subdirs", releases.len());
+
+    releases.iter().for_each(|r| println!("release: {:?}", r));
 
     Ok(MultiFileChangelog {
         comments: Vec::new(),

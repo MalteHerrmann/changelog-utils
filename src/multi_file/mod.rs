@@ -3,4 +3,4 @@ pub mod changelog;
 mod entry;
 mod release;
 
-pub use changelog::{load, MultiFileChangelog};
+pub use changelog::{load, parse_changelog, MultiFileChangelog};

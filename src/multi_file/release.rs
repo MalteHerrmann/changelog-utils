@@ -1,7 +1,7 @@
-use super::change_type::ChangeType;
+use super::change_type::{self, ChangeType};
 use crate::{config::Config, errors::ReleaseError, utils::version};
 use regex::RegexBuilder;
-use std::path::Path;
+use std::{fs, path::Path};
 
 /// Holds the information about a given release in the changelog.
 ///
@@ -96,8 +96,7 @@ pub fn parse(config: &Config, dir: &Path) -> Result<Release, ReleaseError> {
         return Ok(r);
     }
 
-    // TODO: check version and add to problems if invalid
-    let version = dir.to_str().unwrap().to_string();
+    let version = base_name.to_string();
 
     if !RegexBuilder::new(concat!(r#"v\d+\.\d+\.\d+(-rc\d+)?"#))
         .build()?
@@ -142,10 +141,22 @@ pub fn parse(config: &Config, dir: &Path) -> Result<Release, ReleaseError> {
     // let date = captures.name("date").unwrap().as_str();
     // let fixed = format!("## [{version}]({fixed_link}) - {date}");
 
+    let change_types = fs::read_dir(dir)
+        .expect("failed to read directory")
+        .into_iter()
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| p.is_dir())
+        .filter_map(|p| change_type::parse(config, p.as_path()).ok())
+        .collect();
+
+    // TODO: add problems here?
+
     Ok(Release {
         version,
         change_types,
         problems,
+        // TODO: add summary parsing?
         summary: None,
     })
 }
