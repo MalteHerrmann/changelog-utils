@@ -132,7 +132,7 @@ pub fn parse_changelog(
                 add_to_problems(
                     &mut problems,
                     file_path,
-                    i,
+                    Some(i),
                     format!("duplicate release: {}", &current_release.version),
                 );
             } else {
@@ -153,7 +153,7 @@ pub fn parse_changelog(
             current_release
                 .problems
                 .into_iter()
-                .for_each(|p| add_to_problems(&mut problems, file_path, i, p.to_string()));
+                .for_each(|p| add_to_problems(&mut problems, file_path, Some(i), p.to_string()));
 
             continue;
         }
@@ -166,7 +166,7 @@ pub fn parse_changelog(
                 add_to_problems(
                     &mut problems,
                     file_path,
-                    i,
+                    Some(i),
                     format!(
                         "duplicate change type in release {}: {}",
                         current_release.version.clone(),
@@ -180,7 +180,7 @@ pub fn parse_changelog(
             current_change_type
                 .problems
                 .iter()
-                .for_each(|p| add_to_problems(&mut problems, file_path, i, p.to_string()));
+                .for_each(|p| add_to_problems(&mut problems, file_path, Some(i), p.to_string()));
 
             let last_release = releases
                 .get_mut(n_releases - 1)
@@ -199,7 +199,7 @@ pub fn parse_changelog(
             Ok(e) => e,
             Err(err) => {
                 if !escapes.contains(&escapes::LinterEscape::FullLine) {
-                    add_to_problems(&mut problems, file_path, i, err.to_string());
+                    add_to_problems(&mut problems, file_path, Some(i), err.to_string());
                 }
 
                 // reset escapes after processing entry
@@ -216,7 +216,7 @@ pub fn parse_changelog(
             add_to_problems(
                 &mut problems,
                 file_path,
-                i,
+                Some(i),
                 format!("duplicate PR: #{}", &current_entry.pr_number,),
             );
             escapes.retain(|e| e.ne(&escapes::LinterEscape::DuplicatePR));
@@ -228,7 +228,7 @@ pub fn parse_changelog(
             current_entry
                 .problems
                 .iter()
-                .for_each(|p| add_to_problems(&mut problems, file_path, i, p.to_string()));
+                .for_each(|p| add_to_problems(&mut problems, file_path, Some(i), p.to_string()));
         }
 
         let last_release = releases

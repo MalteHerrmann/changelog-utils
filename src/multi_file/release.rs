@@ -1,7 +1,10 @@
 use super::change_type::{self, ChangeType};
 use crate::{config::Config, errors::ReleaseError, utils::version};
 use regex::RegexBuilder;
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 /// Holds the information about a given release in the changelog.
 ///
@@ -9,6 +12,7 @@ use std::{fs, path::Path};
 #[derive(Clone, Debug)]
 pub struct Release {
     pub change_types: Vec<ChangeType>,
+    pub path: PathBuf,
     pub problems: Vec<String>,
     pub summary: Option<String>,
     pub version: String,
@@ -41,7 +45,7 @@ impl Release {
 
     /// Returns a boolean value if the given release has the unreleased tag.
     pub fn is_unreleased(&self) -> bool {
-        self.version.to_ascii_lowercase() == "unreleased"
+        self.version.eq_ignore_ascii_case("unreleased")
     }
 
     /// Returns a boolean value whether the release version is lower than or equal to the
@@ -61,25 +65,6 @@ impl Release {
     }
 }
 
-/// Returns a new Release instance for the unreleased section without any contained blocks.
-pub fn new_unreleased() -> Release {
-    Release {
-        version: "Unreleased".to_string(),
-        change_types: Vec::new(),
-        problems: Vec::new(),
-        summary: None,
-    }
-}
-
-pub fn new_empty_release() -> Release {
-    Release {
-        version: "".to_string(),
-        change_types: Vec::new(),
-        problems: Vec::new(),
-        summary: None,
-    }
-}
-
 // TODO: remove the config passing here?
 pub fn parse(config: &Config, dir: &Path) -> Result<Release, ReleaseError> {
     let base_name = dir
@@ -88,38 +73,16 @@ pub fn parse(config: &Config, dir: &Path) -> Result<Release, ReleaseError> {
         .to_str()
         .expect("failed to get base name string");
 
-    let change_types: Vec<ChangeType> = Vec::new();
+    let version = base_name.to_string();
     let mut problems: Vec<String> = Vec::new();
 
-    // Check unreleased pattern
-    if let Some(r) = check_unreleased(base_name) {
-        return Ok(r);
-    }
-
-    let version = base_name.to_string();
-
-    if !RegexBuilder::new(concat!(r#"v\d+\.\d+\.\d+(-rc\d+)?"#))
-        .build()?
-        .is_match(&version)
+    if !is_unreleased(base_name)
+        && !RegexBuilder::new(r#"v\d+\.\d+\.\d+(-rc\d+)?"#)
+            .build()?
+            .is_match(&version)
     {
         problems.push(format!("invalid version string: {version}"));
     };
-
-    // // TODO: this needs to be adjusted for sure! remove the ##, that should only go into the
-    // // generated one
-    // let captures = match RegexBuilder::new(concat!(
-    //     r#"^\s*##\s*\[(?P<version>v\d+\.\d+\.\d+(-rc\d+)?)]"#,
-    //     r#"(?P<link>\(.*\))?\s*-\s*(?P<date>\d{4}-\d{2}-\d{2})$"#,
-    // ))
-    // .case_insensitive(true)
-    // .build()?
-    // .captures(base_name)
-    // {
-    //     Some(c) => c,
-    //     None => return Err(ReleaseError::NoMatchFound),
-    // };
-    //
-    // let version = captures.name("version").unwrap().as_str().to_string();
 
     // // TODO: I guess this whole thing rather applies to the Summary.md which should contain the link etc.
     //
@@ -143,18 +106,16 @@ pub fn parse(config: &Config, dir: &Path) -> Result<Release, ReleaseError> {
 
     let change_types = fs::read_dir(dir)
         .expect("failed to read directory")
-        .into_iter()
         .filter_map(Result::ok)
         .map(|e| e.path())
         .filter(|p| p.is_dir())
         .filter_map(|p| change_type::parse(config, p.as_path()).ok())
         .collect();
 
-    // TODO: add problems here?
-
     Ok(Release {
         version,
         change_types,
+        path: dir.into(),
         problems,
         // TODO: add summary parsing?
         summary: None,
@@ -162,32 +123,12 @@ pub fn parse(config: &Config, dir: &Path) -> Result<Release, ReleaseError> {
 }
 
 // TODO: abstract to common util? Currently similar to single file implementation
-fn check_unreleased(dir_name: &str) -> Option<Release> {
-    if RegexBuilder::new(r"unreleased\s*$")
+fn is_unreleased(dir_name: &str) -> bool {
+    RegexBuilder::new(r"unreleased\s*$")
         .case_insensitive(true)
         .build()
         .expect("failed to build regex")
         .is_match(dir_name)
-    {
-        let fixed = "unreleased".to_string();
-        let mut problems: Vec<String> = Vec::new();
-        let change_types: Vec<ChangeType> = Vec::new(); // TODO: parse contents
-
-        if fixed.ne(dir_name) {
-            problems.push(format!(
-                "Unreleased directory name is wrong; expected: '{fixed}'; got: '{dir_name}'"
-            ))
-        }
-
-        return Some(Release {
-            version: "Unreleased".to_string(),
-            change_types,
-            problems,
-            summary: None, // TODO: check for existing summary
-        });
-    }
-
-    None
 }
 
 // TODO: remove? or use in Summary?

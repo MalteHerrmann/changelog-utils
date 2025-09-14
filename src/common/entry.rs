@@ -307,6 +307,20 @@ mod spelling_tests {
         assert_eq!(fixed, example);
         assert!(problems.is_empty());
     }
+
+    fn load_multi_file_config() -> config::Config {
+        config::unpack_config(include_str!(
+            "../../tests/testdata/multi_file/fail/.clconfig.json"
+        ))
+        .expect("failed to load multi file config")
+    }
+
+    #[test]
+    fn test_fail_usdn() {
+        let example = "- Integrate our custom Dollar module, that enables the issuance of Noble's stablecoin $UsDN. ([#448](https://github.com/noble-assets/noble/pull/448))";
+        let (_, problems) = check_spelling(&load_multi_file_config(), example);
+        assert_eq!(problems, vec!["'$USDN' should be used instead of '$UsDN'"]);
+    }
 }
 
 #[cfg(test)]

@@ -6,13 +6,12 @@ use std::path::Path;
 pub fn add_to_problems(
     problems: &mut Vec<String>,
     fp: &Path,
-    line: usize,
+    line: Option<usize>,
     problem: impl Into<String>,
 ) {
-    problems.push(format!(
-        "{}:{}: {}",
-        fp.to_string_lossy(),
-        line + 1,
-        problem.into()
-    ))
+    let added_line = match line {
+        Some(l) => format!("{}:{}: {}", fp.to_string_lossy(), l + 1, problem.into()),
+        None => format!("{}: {}", fp.to_string_lossy(), problem.into()),
+    };
+    problems.push(added_line)
 }

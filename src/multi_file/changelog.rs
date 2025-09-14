@@ -1,4 +1,4 @@
-use crate::{config::Config, errors::ChangelogError, multi_file::release};
+use crate::{common::add_to_problems, config::Config, errors::ChangelogError, multi_file::release};
 
 use super::release::Release;
 use std::{
@@ -45,14 +45,29 @@ pub fn parse_changelog(
         .filter_map(|p| release::parse(config, &p).ok())
         .collect();
 
-    println!("found {} subdirs", releases.len());
-
-    releases.iter().for_each(|r| println!("release: {:?}", r));
+    // Gather all problems from the individual entries
+    let mut problems: Vec<String> = Vec::new();
+    releases.iter().for_each(|r| {
+        r.problems
+            .iter()
+            .for_each(|p| add_to_problems(&mut problems, &r.path, None, p));
+        r.change_types.iter().for_each(|ct| {
+            ct.problems
+                .iter()
+                .for_each(|p| add_to_problems(&mut problems, &ct.path, None, p));
+            ct.entries.iter().for_each(|e| {
+                e.problems
+                    .iter()
+                    .for_each(|p| add_to_problems(&mut problems, &e.path, Some(0), p))
+            });
+        })
+    });
 
     Ok(MultiFileChangelog {
+        // TODO: support comments?
         comments: Vec::new(),
-        releases: Vec::new(),
-        problems: Vec::new(),
+        releases,
+        problems,
         path: dir_path.to_path_buf(),
     })
 }

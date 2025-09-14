@@ -1,6 +1,12 @@
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
-use crate::{config::config, errors::ChangeTypeError};
+use crate::{
+    config::config,
+    errors::ChangeTypeError,
+};
 
 use super::entry::{self, MultiFileEntry};
 
@@ -8,6 +14,7 @@ use super::entry::{self, MultiFileEntry};
 pub struct ChangeType {
     pub name: String,
     pub fixed: String,
+    pub path: PathBuf,
     pub problems: Vec<String>,
     pub entries: Vec<MultiFileEntry>,
 }
@@ -42,26 +49,59 @@ pub fn parse(config: &config::Config, dir: &Path) -> Result<ChangeType, ChangeTy
     if !config
         .change_types
         .iter()
-        .any(|ct| ct.long.to_ascii_lowercase().eq(base_name))
+        .any(|ct| ct.long.to_ascii_lowercase().replace(" ", "-").eq(base_name))
     {
         problems.push(format!("invalid change type: {}", base_name));
     }
 
-    let entries = fs::read_dir(dir)
+    let entries: Vec<MultiFileEntry> = fs::read_dir(dir)
         .expect("failed to read dir contents")
-        .into_iter()
         .filter_map(Result::ok)
         .map(|e| e.path())
-        .filter(|p| p.is_dir())
-        .filter_map(|p| entry::parse(config, p.as_path()).ok())
+        .filter(|p| p.is_file())
+        .filter_map(|p| match entry::parse(config, p.as_path()) {
+            Ok(entry) => Some(entry),
+            Err(_) => {
+                problems.push(format!("invalid entry found in file: {}", p.display()));
+                None
+            }
+        })
         .collect();
 
     Ok(ChangeType {
         name: base_name.into(),
         // TODO: I guess this should rather be lowercase, but rather only when generating the
         // full changelog based on the individual entries.
-        fixed: base_name.into(), // TODO: capitalize
+        fixed: base_name.into(),
+        path: dir.into(),
         problems,
         entries,
     })
+}
+
+// TODO: add more tests
+#[cfg(test)]
+mod tests {
+    use crate::config::{unpack_config, Config};
+
+    use super::*;
+
+    fn load_example_config() -> Config {
+        unpack_config(include_str!(
+            "../../tests/testdata/multi_file/fail/.clconfig.json"
+        ))
+        .expect("failed to load multi file config")
+    }
+
+    #[test]
+    fn test_fail() {
+        let res = parse(
+            &load_example_config(),
+            Path::new("tests/testdata/multi_file/fail/.changelog/v9.0.0/features"),
+        );
+        assert!(res.is_ok());
+
+        let ct = res.unwrap();
+        assert_eq!(ct.entries.len(), 6);
+    }
 }
