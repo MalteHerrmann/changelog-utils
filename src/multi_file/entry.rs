@@ -128,12 +128,12 @@ fn check_whitespace(spaces: [&str; 5]) -> Vec<String> {
     problems
 }
 
-// TODO: tests should be added
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use crate::config::unpack_config;
+    use std::fs;
+    use tempfile::NamedTempFile;
 
     fn load_example_config() -> Config {
         unpack_config(include_str!(
@@ -142,8 +142,21 @@ mod tests {
         .expect("failed to load example config")
     }
 
+    fn create_test_config_with_categories() -> Config {
+        let mut config = load_example_config();
+        config.use_categories = true;
+        config.categories = vec!["feat".to_string(), "fix".to_string(), "imp".to_string()];
+        config
+    }
+
+    fn create_temp_file(content: &str, _filename: &str) -> NamedTempFile {
+        let file = NamedTempFile::new().unwrap();
+        fs::write(file.path(), content).unwrap();
+        file
+    }
+
     #[test]
-    fn test_pass() {
+    fn test_parse_valid_entry_without_categories() {
         let res = parse(
             &load_example_config(),
             Path::new(
@@ -155,11 +168,14 @@ mod tests {
         let entry = res.unwrap();
         let empty_problems: Vec<String> = Vec::new();
         assert_eq!(entry.pr_number, 448);
+        assert_eq!(entry.category, None);
         assert_eq!(entry.problems, empty_problems);
+        assert!(entry.fixed.contains("Integrate our custom Dollar module"));
+        assert!(entry.fixed.contains("[#448]"));
     }
 
     #[test]
-    fn test_fail() {
+    fn test_parse_entry_with_spelling_error() {
         let res = parse(
             &load_example_config(),
             Path::new(
@@ -171,5 +187,165 @@ mod tests {
         let entry = res.unwrap();
         let expected = vec!["'$USDN' should be used instead of '$UsDN'"];
         assert_eq!(entry.problems, expected);
+    }
+
+    #[test]
+    fn test_parse_valid_entry_with_categories() {
+        let content =
+            "- (feat) Add new feature. ([#123](https://github.com/noble-assets/noble/pull/123))";
+        let file = create_temp_file(content, "123-add-feature.md");
+
+        let result = parse(&create_test_config_with_categories(), file.path());
+        assert!(result.is_ok());
+
+        let entry = result.unwrap();
+        assert_eq!(entry.pr_number, 123);
+        assert_eq!(entry.category, Some("feat".to_string()));
+        // Still expect filename mismatch error since we can't control the temp filename
+        assert_eq!(entry.problems.len(), 1);
+        assert!(entry
+            .problems
+            .contains(&"The filename should be prefixed with the PR number".to_string()));
+    }
+
+    #[test]
+    fn test_parse_entry_no_problems() {
+        let content = "- Add feature with proper formatting. ([#123](https://github.com/noble-assets/noble/pull/123))";
+        let file = create_temp_file(content, "123-add-feature.md");
+
+        let result = parse(&load_example_config(), file.path());
+        assert!(result.is_ok());
+
+        let entry = result.unwrap();
+        assert_eq!(entry.pr_number, 123);
+        assert_eq!(entry.category, None);
+        assert_eq!(entry.problems.len(), 0);
+    }
+
+    #[test]
+    fn test_filename_mismatch_error() {
+        let content = "- Add feature ([#456](https://github.com/example/repo/pull/456))";
+        let file = create_temp_file(content, "123-wrong-number.md");
+
+        let result = parse(&load_example_config(), file.path());
+        assert!(result.is_ok());
+
+        let entry = result.unwrap();
+        assert_eq!(entry.pr_number, 456);
+        assert!(entry
+            .problems
+            .contains(&"The filename should be prefixed with the PR number".to_string()));
+    }
+
+    #[test]
+    fn test_invalid_entry_format() {
+        let content = "This is not a valid changelog entry format";
+        let file = create_temp_file(content, "123-invalid.md");
+
+        let result = parse(&load_example_config(), file.path());
+        assert!(result.is_err());
+
+        if let Err(EntryError::InvalidEntry(invalid_content)) = result {
+            assert_eq!(invalid_content, content);
+        } else {
+            panic!("Expected InvalidEntry error");
+        }
+    }
+
+    #[test]
+    fn test_whitespace_validation() {
+        let content = "  - Extra spaces here ([#123](https://github.com/example/repo/pull/123))";
+        let file = create_temp_file(content, "123-whitespace.md");
+
+        let result = parse(&load_example_config(), file.path());
+        assert!(result.is_ok());
+
+        let entry = result.unwrap();
+        assert!(entry
+            .problems
+            .contains(&"There should be no leading whitespace before the dash".to_string()));
+    }
+
+    #[test]
+    fn test_build_fixed_without_category() {
+        let fixed = build_fixed(
+            None,
+            "https://github.com/example/repo/pull/123",
+            "Add feature",
+            123,
+        );
+        assert_eq!(
+            fixed,
+            "- Add feature [#123](https://github.com/example/repo/pull/123)"
+        );
+    }
+
+    #[test]
+    fn test_build_fixed_with_category() {
+        let fixed = build_fixed(
+            Some("feat".to_string()),
+            "https://github.com/example/repo/pull/123",
+            "Add feature",
+            123,
+        );
+        assert_eq!(
+            fixed,
+            "- (feat) Add feature [#123](https://github.com/example/repo/pull/123)"
+        );
+    }
+
+    #[test]
+    fn test_check_whitespace_perfect() {
+        let spaces = ["", " ", " ", " ", ""];
+        let problems = check_whitespace(spaces);
+        assert_eq!(problems.len(), 0);
+    }
+
+    #[test]
+    fn test_check_whitespace_leading_space() {
+        let spaces = [" ", " ", " ", " ", ""];
+        let problems = check_whitespace(spaces);
+        assert!(
+            problems.contains(&"There should be no leading whitespace before the dash".to_string())
+        );
+    }
+
+    #[test]
+    fn test_check_whitespace_multiple_errors() {
+        let spaces = ["  ", "  ", "", " ", " "];
+        let problems = check_whitespace(spaces);
+        assert_eq!(problems.len(), 4);
+        assert!(
+            problems.contains(&"There should be no leading whitespace before the dash".to_string())
+        );
+        assert!(problems.contains(
+            &"There should be exactly one space between the leading dash and the category"
+                .to_string()
+        ));
+        assert!(problems.contains(
+            &"There should be exactly one space between the category and the description"
+                .to_string()
+        ));
+        assert!(problems
+            .contains(&"There should be no whitespace inside of the markdown link".to_string()));
+    }
+
+    #[test]
+    fn test_parse_entry_with_multiline_content() {
+        let content =
+            "- Add feature with\nmultiple lines ([#123](https://github.com/example/repo/pull/123))";
+        let file = create_temp_file(content, "123-multiline.md");
+
+        let result = parse(&load_example_config(), file.path());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_entry_missing_pr_number() {
+        let content = "- Add feature without PR number";
+        let file = create_temp_file(content, "123-no-pr.md");
+
+        let result = parse(&load_example_config(), file.path());
+        assert!(result.is_err());
     }
 }
