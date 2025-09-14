@@ -131,6 +131,18 @@ impl Config {
             None => Err(ConfigAdjustError::NotFound),
         }
     }
+
+    pub fn set_changelog_dir(&mut self, value: Option<String>) {
+        self.changelog_dir = value;
+    }
+
+    pub fn set_mode(&mut self, mode: Mode) {
+        self.mode = mode;
+    }
+
+    pub fn set_use_categories(&mut self, value: bool) {
+        self.use_categories = value;
+    }
 }
 
 impl fmt::Display for Config {

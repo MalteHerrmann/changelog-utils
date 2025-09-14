@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::fmt;
+use std::{fmt, str::FromStr};
 
 /*
  * The ChangelogType sets whether a single or multi file approach is
@@ -19,5 +19,17 @@ impl fmt::Display for Mode {
             Self::Multi => "multi",
         };
         write!(f, "{}", ct)
+    }
+}
+
+impl FromStr for Mode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "single" => Ok(Mode::Single),
+            "multi" => Ok(Mode::Multi),
+            _ => Err(format!("Invalid mode: {}. Expected 'single' or 'multi'", s)),
+        }
     }
 }

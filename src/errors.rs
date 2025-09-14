@@ -38,7 +38,7 @@ pub enum CLIError {
     #[error("failed to read configuration: {0}")]
     Config(#[from] ConfigError),
     #[error("failed to adjust configuration: {0}")]
-    ConfigAdjustment(#[from] ConfigAdjustError),
+    ConfigAdjustError(#[from] ConfigAdjustError),
     #[error("failed to read/write: {0}")]
     IOError(#[from] io::Error),
     #[error("failed to create new release in changelog: {0}")]
@@ -231,6 +231,10 @@ pub enum ConfigAdjustError {
     NotFound,
     #[error("target repository should be a GitHub link")]
     NoGitHubRepository,
+    #[error("invalid mode: {0}")]
+    InvalidMode(String),
+    #[error("invalid boolean value: {0}")]
+    InvalidBoolean(String),
 }
 
 #[derive(Error, Debug, PartialEq)]
