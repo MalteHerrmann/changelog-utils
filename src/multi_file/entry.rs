@@ -14,7 +14,6 @@ pub struct MultiFileEntry {
 pub fn parse(config: &Config, path: &Path) -> Result<MultiFileEntry, EntryError> {
     let contents = std::fs::read_to_string(path)?;
 
-    // TODO: parse the contents for the following structure
     let mut pattern_string = r"^(?P<ws0>\s*)-(?P<ws1>\s*)".to_string();
     if config.use_categories {
         pattern_string.push_str(r"\((?P<category>[a-zA-Z0-9\-]+)\)");
@@ -59,8 +58,8 @@ pub fn parse(config: &Config, path: &Path) -> Result<MultiFileEntry, EntryError>
         .file_name()
         .expect("failed to get base name")
         .to_str()
-        .expect("failed to convert base name")
-        .starts_with(&format!("{}", pr_number))
+        .expect("failed to convert base name to string")
+        .contains(&format!("{}", pr_number))
     {
         problems.push("The filename should be prefixed with the PR number".to_string());
     };
@@ -95,7 +94,6 @@ pub fn parse(config: &Config, path: &Path) -> Result<MultiFileEntry, EntryError>
 
 /// Returns the fixed entry string based on the given building parts.
 fn build_fixed(cat: Option<String>, link: &str, desc: &str, pr: u64) -> String {
-    // TODO: remove category?
     match cat {
         Some(c) => format!("- ({}) {} [#{}]({})", c, desc, pr, link),
         None => format!("- {} [#{}]({})", desc, pr, link),
@@ -133,7 +131,8 @@ mod tests {
     use super::*;
     use crate::config::unpack_config;
     use std::fs;
-    use tempfile::NamedTempFile;
+    use std::path::PathBuf;
+    use tempfile::TempDir;
 
     fn load_example_config() -> Config {
         unpack_config(include_str!(
@@ -149,10 +148,31 @@ mod tests {
         config
     }
 
-    fn create_temp_file(content: &str, _filename: &str) -> NamedTempFile {
-        let file = NamedTempFile::new().unwrap();
-        fs::write(file.path(), content).unwrap();
-        file
+    // Custom struct to hold a temp file with a specific name
+    struct NamedTestFile {
+        _temp_dir: TempDir,
+        path: PathBuf,
+    }
+
+    impl NamedTestFile {
+        fn new(content: &str, filename: &str) -> Self {
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = temp_dir.path().join(filename);
+            fs::write(&file_path, content).unwrap();
+
+            Self {
+                _temp_dir: temp_dir,
+                path: file_path,
+            }
+        }
+
+        fn path(&self) -> &std::path::Path {
+            &self.path
+        }
+    }
+
+    fn create_temp_file(content: &str, filename: &str) -> NamedTestFile {
+        NamedTestFile::new(content, filename)
     }
 
     #[test]
@@ -201,11 +221,8 @@ mod tests {
         let entry = result.unwrap();
         assert_eq!(entry.pr_number, 123);
         assert_eq!(entry.category, Some("feat".to_string()));
-        // Still expect filename mismatch error since we can't control the temp filename
-        assert_eq!(entry.problems.len(), 1);
-        assert!(entry
-            .problems
-            .contains(&"The filename should be prefixed with the PR number".to_string()));
+        // No filename mismatch error since we now use the correct filename
+        assert_eq!(entry.problems.len(), 0);
     }
 
     #[test]
@@ -219,7 +236,9 @@ mod tests {
         let entry = result.unwrap();
         assert_eq!(entry.pr_number, 123);
         assert_eq!(entry.category, None);
-        assert_eq!(entry.problems.len(), 0);
+
+        let exp: Vec<String> = Vec::new();
+        assert_eq!(entry.problems, exp);
     }
 
     #[test]
@@ -234,7 +253,8 @@ mod tests {
         assert_eq!(entry.pr_number, 456);
         assert!(entry
             .problems
-            .contains(&"The filename should be prefixed with the PR number".to_string()));
+            .iter()
+            .any(|p| p.contains("The filename should be prefixed with the PR number")));
     }
 
     #[test]

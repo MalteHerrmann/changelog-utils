@@ -3,10 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{
-    config::config,
-    errors::ChangeTypeError,
-};
+use crate::{config::config, errors::ChangeTypeError};
 
 use super::entry::{self, MultiFileEntry};
 
@@ -36,7 +33,6 @@ impl ChangeType {
 }
 
 pub fn parse(config: &config::Config, dir: &Path) -> Result<ChangeType, ChangeTypeError> {
-    // TODO: use match for correct error handling here?
     let base_name = dir
         .file_name()
         .expect("no base name of path found")
@@ -45,7 +41,6 @@ pub fn parse(config: &config::Config, dir: &Path) -> Result<ChangeType, ChangeTy
 
     let mut problems: Vec<String> = Vec::new();
 
-    // TODO: more advanced checking here?
     if !config
         .change_types
         .iter()
@@ -70,8 +65,7 @@ pub fn parse(config: &config::Config, dir: &Path) -> Result<ChangeType, ChangeTy
 
     Ok(ChangeType {
         name: base_name.into(),
-        // TODO: I guess this should rather be lowercase, but rather only when generating the
-        // full changelog based on the individual entries.
+        // TODO: when generating the full changelog this should be made uppercase then
         fixed: base_name.into(),
         path: dir.into(),
         problems,

@@ -39,6 +39,7 @@ impl Release {
     }
 
     // TODO: implement
+    // TODO: should also get a CLI action
     pub fn add_summary(&self, summary: &str) -> Result<(), ReleaseError> {
         Ok(())
     }
@@ -65,7 +66,6 @@ impl Release {
     }
 }
 
-// TODO: remove the config passing here?
 pub fn parse(config: &Config, dir: &Path) -> Result<Release, ReleaseError> {
     let base_name = dir
         .file_name()

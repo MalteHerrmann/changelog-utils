@@ -8,21 +8,24 @@ use std::{
 
 #[derive(Clone, Debug)]
 pub struct MultiFileChangelog {
-    // TODO: implement comments?
-    pub comments: Vec<String>,
     pub releases: Vec<Release>,
     pub problems: Vec<String>,
     pub path: PathBuf,
 }
 
 pub fn load(config: &Config) -> Result<MultiFileChangelog, ChangelogError> {
+    let expected_path = match &config.changelog_dir {
+        Some(f) => f,
+        None => panic!("invalid config; expected changelog_dir to be set"),
+    };
+
     let changelog_path = match fs::read_dir(Path::new("./"))?.find(|e| {
         e.as_ref()
-            .is_ok_and(|e| e.file_name().eq_ignore_ascii_case(".changelog"))
+            .is_ok_and(|e| e.file_name().eq_ignore_ascii_case(&expected_path))
     }) {
         Some(d) => d.unwrap(),
         None => {
-            println!("could not find a changelog subdirectory in the current directory");
+            println!("could not find the changelog subdirectory in the current directory");
             return Err(ChangelogError::NoChangelogFound);
         }
     };
@@ -64,8 +67,6 @@ pub fn parse_changelog(
     });
 
     Ok(MultiFileChangelog {
-        // TODO: support comments?
-        comments: Vec::new(),
         releases,
         problems,
         path: dir_path.to_path_buf(),
