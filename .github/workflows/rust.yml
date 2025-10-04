@@ -13,7 +13,18 @@ jobs:
     name: build & test changelog utils
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
+
+      # NOTE: instructions copied from: https://nexte.st/docs/installation/pre-built-binaries/#linux-x86_64
+      - run: curl -LsSf https://get.nexte.st/0.9.105/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
+
+      # Setup rust
       - run: rustup update stable && rustup default stable
+
+      # Build
       - run: cargo build --verbose --locked
-      - run: cargo test --verbose --features remote
+
+      # Run tests
+      - run: cargo nextest run --verbose --features remote --profile CI
+        env:
+          CARGO_TERM_COLOR: always
