@@ -1,4 +1,9 @@
-use crate::{common::add_to_problems, config::Config, errors::{ChangelogError, ConfigError}, multi_file::release};
+use crate::{
+    common::add_to_problems,
+    config::Config,
+    errors::{ChangelogError, ConfigError},
+    multi_file::release,
+};
 
 use super::release::Release;
 use std::{
@@ -14,7 +19,9 @@ pub struct MultiFileChangelog {
 }
 
 pub fn load(config: &Config) -> Result<MultiFileChangelog, ChangelogError> {
-    let expected_path = config.changelog_dir.as_ref()
+    let expected_path = config
+        .changelog_dir
+        .as_ref()
         .ok_or_else(|| ConfigError::InvalidConfig("changelog_dir must be set".to_string()))?;
 
     let changelog_path = match fs::read_dir(Path::new("./"))?.find(|e| {

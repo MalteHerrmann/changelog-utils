@@ -1,5 +1,9 @@
 use super::change_type::{self, ChangeType};
-use crate::{config::Config, errors::{CommonError, ReleaseError}, utils::version};
+use crate::{
+    config::Config,
+    errors::{CommonError, ReleaseError},
+    utils::version,
+};
 use regex::RegexBuilder;
 use std::{
     fs,

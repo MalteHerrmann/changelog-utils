@@ -3,7 +3,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{config::config, errors::{CommonError, ChangeTypeError}};
+use crate::{
+    config::config,
+    errors::{ChangeTypeError, CommonError},
+};
 
 use super::entry::{self, MultiFileEntry};
 

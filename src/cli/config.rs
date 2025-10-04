@@ -1,6 +1,9 @@
 use super::commands::{
     CategoryOperation, ChangeTypeConfigOperation,
-    ConfigSubcommands::{self, Category, ChangeType, ChangelogDir, LegacyVersion, Mode, Show, Spelling, TargetRepo, UseCategories},
+    ConfigSubcommands::{
+        self, Category, ChangeType, ChangelogDir, LegacyVersion, Mode, Show, Spelling, TargetRepo,
+        UseCategories,
+    },
     KeyValueOperation, OptionalOperation,
 };
 use crate::{config, errors};
@@ -40,16 +43,20 @@ pub fn adjust_config(config_subcommand: ConfigSubcommands) -> Result<(), errors:
             OptionalOperation::Unset => configuration.set_changelog_dir(None),
         },
         Mode(args) => {
-            let mode = args.value.parse::<config::Mode>()
-                .map_err(|e| errors::CLIError::ConfigAdjustError(errors::ConfigAdjustError::InvalidMode(e)))?;
+            let mode = args.value.parse::<config::Mode>().map_err(|e| {
+                errors::CLIError::ConfigAdjustError(errors::ConfigAdjustError::InvalidMode(e))
+            })?;
             configuration.set_mode(mode);
-        },
+        }
         UseCategories(args) => match args.command {
             OptionalOperation::Set { value } => {
-                let use_categories = value.parse::<bool>()
-                    .map_err(|_| errors::CLIError::ConfigAdjustError(errors::ConfigAdjustError::InvalidBoolean(value)))?;
+                let use_categories = value.parse::<bool>().map_err(|_| {
+                    errors::CLIError::ConfigAdjustError(errors::ConfigAdjustError::InvalidBoolean(
+                        value,
+                    ))
+                })?;
                 configuration.set_use_categories(use_categories);
-            },
+            }
             OptionalOperation::Unset => configuration.set_use_categories(false),
         },
     }

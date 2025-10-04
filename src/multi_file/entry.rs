@@ -338,14 +338,10 @@ mod tests {
         assert!(
             problems.contains(&"There should be no leading whitespace before the dash".to_string())
         );
-        assert!(problems.contains(
-            &"There should be exactly one space after the leading dash"
-                .to_string()
-        ));
-        assert!(problems.contains(
-            &"There should be exactly one space before the description"
-                .to_string()
-        ));
+        assert!(problems
+            .contains(&"There should be exactly one space after the leading dash".to_string()));
+        assert!(problems
+            .contains(&"There should be exactly one space before the description".to_string()));
         assert!(problems
             .contains(&"There should be no whitespace inside of the markdown link".to_string()));
     }
