@@ -263,36 +263,22 @@ mod description_tests {
 }
 
 #[cfg(test)]
-/// Creates an empty config to be filled in test setups.
-fn empty_config() -> config::Config {
-    use std::collections::BTreeMap;
-
-    config::Config {
-        categories: vec![],
-        change_types: vec![],
-        commit_message: "".into(),
-        changelog_path: "".into(),
-        changelog_dir: None,
-        expected_spellings: BTreeMap::new(),
-        legacy_version: None,
-        mode: config::Mode::Single,
-        target_repo: "".into(),
-        use_categories: false,
-    }
-}
-
-#[cfg(test)]
 mod spelling_tests {
     use std::collections::BTreeMap;
 
     use super::*;
 
+    fn spelling_test_config(spellings: BTreeMap<String, String>) -> config::Config {
+        let mut conf = config::Config::default();
+        conf.expected_spellings = spellings;
+
+        conf
+    }
+
     #[test]
     fn test_pass() {
-        let mut test_config = empty_config();
-
-        let exp_spellings = BTreeMap::from([("API".to_string(), "api".to_string())]);
-        test_config.expected_spellings = exp_spellings;
+        let test_config =
+            spelling_test_config(BTreeMap::from([("API".to_string(), "api".to_string())]));
 
         let example = "Fix API.";
         let (fixed, problems) = check_spelling(&test_config, example);
@@ -302,16 +288,26 @@ mod spelling_tests {
 
     #[test]
     fn test_wrong_spelling() {
+        let test_conf = spelling_test_config(BTreeMap::from([(
+            "Web-SDK".to_string(),
+            "web-*sdk".to_string(),
+        )]));
+
         let example = "Fix web--SdK.";
-        let (fixed, problems) = check_spelling(&load_test_config(), example);
+        let (fixed, problems) = check_spelling(&test_conf, example);
         assert_eq!(fixed, "Fix Web-SDK.");
         assert_eq!(problems, ["'Web-SDK' should be used instead of 'web--SdK'"])
     }
 
     #[test]
     fn test_multiple_problems() {
+        let test_config = spelling_test_config(BTreeMap::from([
+            ("API".to_string(), "api".to_string()),
+            ("CLI".to_string(), "cli".to_string()),
+        ]));
+
         let example = "Fix aPi and ClI.";
-        let (fixed, problems) = check_spelling(&load_test_config(), example);
+        let (fixed, problems) = check_spelling(&test_config, example);
         assert_eq!(fixed, "Fix API and CLI.");
         assert_eq!(problems.len(), 2);
         assert_eq!(problems[0], "'API' should be used instead of 'aPi'");
@@ -320,40 +316,32 @@ mod spelling_tests {
 
     #[test]
     fn test_pass_codeblocks() {
+        let test_config =
+            spelling_test_config(BTreeMap::from([("API".to_string(), "api".to_string())]));
+
         let example = "Fix `ApI in codeblocks`.";
-        let (fixed, problems) = check_spelling(&load_test_config(), example);
+        let (fixed, problems) = check_spelling(&test_config, example);
         assert_eq!(fixed, example);
         assert!(problems.is_empty());
     }
 
     #[test]
     fn test_pass_nested_word() {
+        let test_config =
+            spelling_test_config(BTreeMap::from([("API".to_string(), "api".to_string())]));
+
         let example = "FixApI in another word.";
-        let (fixed, problems) = check_spelling(&load_test_config(), example);
+        let (fixed, problems) = check_spelling(&test_config, example);
         assert_eq!(fixed, example);
         assert!(problems.is_empty());
     }
 
-    fn load_multi_file_config() -> config::Config {
-        config::unpack_config(include_str!(
-            "../../tests/testdata/multi_file/fail/.clconfig.json"
-        ))
-        .expect("failed to load multi file config")
-    }
-
     #[test]
     fn test_fail_usdn() {
-        let example = "- Integrate our custom Dollar module, that enables the issuance of Noble's stablecoin $UsDN. ([#448](https://github.com/noble-assets/noble/pull/448))";
-        let (_, problems) = check_spelling(&load_multi_file_config(), example);
-        assert_eq!(problems, vec!["'$USDN' should be used instead of '$UsDN'"]);
-    }
-
-    #[test]
-    fn test_fail_usdn2() {
-        let mut test_config = empty_config();
-
-        test_config.expected_spellings =
-            BTreeMap::from([("$USDN".to_string(), r#"\$*usdn"#.to_string())]);
+        let test_config = spelling_test_config(BTreeMap::from([(
+            "$USDN".to_string(),
+            r#"\$*usdn"#.to_string(),
+        )]));
 
         let example = "- Integrate our custom Dollar module, that enables the issuance of Noble's stablecoin $UsDN. ([#448](https://github.com/noble-assets/noble/pull/448))";
         let (_, problems) = check_spelling(&test_config, example);
