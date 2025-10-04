@@ -32,7 +32,7 @@ pub struct Config {
     ///
     /// TODO: use Version type directly instead
     pub legacy_version: Option<String>,
-    /// Controls whethere a single or multi file changelog is used.
+    /// Controls whether a single or multi file changelog is used.
     pub mode: Mode,
     /// The target repository, that represents the base url
     /// enforced to occur in PR links.

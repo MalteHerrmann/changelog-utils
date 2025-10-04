@@ -107,8 +107,8 @@ fn check_whitespace(spaces: [&str; 5]) -> Vec<String> {
     let expected_whitespace = ["", " ", " ", " ", ""];
     let errors = [
         "There should be no leading whitespace before the dash",
-        "There should be exactly one space between the leading dash and the category",
-        "There should be exactly one space between the category and the description",
+        "There should be exactly one space after the leading dash",
+        "There should be exactly one space before the description",
         "There should be exactly one space between the description and the PR link",
         "There should be no whitespace inside of the markdown link",
     ];
@@ -339,11 +339,11 @@ mod tests {
             problems.contains(&"There should be no leading whitespace before the dash".to_string())
         );
         assert!(problems.contains(
-            &"There should be exactly one space between the leading dash and the category"
+            &"There should be exactly one space after the leading dash"
                 .to_string()
         ));
         assert!(problems.contains(
-            &"There should be exactly one space between the category and the description"
+            &"There should be exactly one space before the description"
                 .to_string()
         ));
         assert!(problems

@@ -1,5 +1,5 @@
 use super::change_type::{self, ChangeType};
-use crate::{config::Config, errors::ReleaseError, utils::version};
+use crate::{config::Config, errors::{CommonError, ReleaseError}, utils::version};
 use regex::RegexBuilder;
 use std::{
     fs,
@@ -40,13 +40,13 @@ impl Release {
 
     // TODO: implement
     // TODO: should also get a CLI action
-    pub fn add_summary(&self, summary: &str) -> Result<(), ReleaseError> {
+    pub fn add_summary(&self, _summary: &str) -> Result<(), ReleaseError> {
         Ok(())
     }
 
     /// Returns a boolean value if the given release has the unreleased tag.
     pub fn is_unreleased(&self) -> bool {
-        self.version.eq_ignore_ascii_case("unreleased")
+        is_unreleased(&self.version)
     }
 
     /// Returns a boolean value whether the release version is lower than or equal to the
@@ -69,9 +69,9 @@ impl Release {
 pub fn parse(config: &Config, dir: &Path) -> Result<Release, ReleaseError> {
     let base_name = dir
         .file_name()
-        .expect("failed to get base name")
+        .ok_or_else(|| CommonError::InvalidPath("no base name found".into()))?
         .to_str()
-        .expect("failed to get base name string");
+        .ok_or_else(|| CommonError::InvalidPath("failed to convert base name to str".into()))?;
 
     let version = base_name.to_string();
     let mut problems: Vec<String> = Vec::new();

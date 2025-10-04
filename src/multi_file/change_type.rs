@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{config::config, errors::ChangeTypeError};
+use crate::{config::config, errors::{CommonError, ChangeTypeError}};
 
 use super::entry::{self, MultiFileEntry};
 
@@ -35,9 +35,9 @@ impl ChangeType {
 pub fn parse(config: &config::Config, dir: &Path) -> Result<ChangeType, ChangeTypeError> {
     let base_name = dir
         .file_name()
-        .expect("no base name of path found")
+        .ok_or_else(|| CommonError::InvalidPath("no base name found".into()))?
         .to_str()
-        .expect("failed to unpack base name string");
+        .ok_or_else(|| CommonError::InvalidPath("failed to convert base name to str".into()))?;
 
     let mut problems: Vec<String> = Vec::new();
 
@@ -50,7 +50,7 @@ pub fn parse(config: &config::Config, dir: &Path) -> Result<ChangeType, ChangeTy
     }
 
     let entries: Vec<MultiFileEntry> = fs::read_dir(dir)
-        .expect("failed to read dir contents")
+        .map_err(|e| CommonError::InvalidPath(e.to_string()))?
         .filter_map(Result::ok)
         .map(|e| e.path())
         .filter(|p| p.is_file())
