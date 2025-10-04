@@ -45,7 +45,7 @@ pub fn run(fix: bool) -> Result<(), LintError> {
             Err(LintError::ProblemsInChangelog)
         }
         config::Mode::Multi => {
-            let changelog = multi_file::load(&used_config)?;
+            let mut changelog = multi_file::load(&used_config)?;
 
             if changelog.problems.is_empty() {
                 println!("changelog has no problems");
@@ -53,6 +53,7 @@ pub fn run(fix: bool) -> Result<(), LintError> {
             }
 
             println!("found problems in changelog:");
+            changelog.problems.sort();
             changelog.problems.iter().for_each(|p| println!("{}", p));
 
             Err(LintError::ProblemsInChangelog)
