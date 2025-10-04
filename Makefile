@@ -1,6 +1,6 @@
 # Run tests
 test:
-	cargo test
+	cargo nextest run
 
 # Build binary locally
 build:
