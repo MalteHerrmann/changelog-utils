@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v3
 
       # NOTE: instructions copied from: https://nexte.st/docs/installation/pre-built-binaries/#linux-x86_64
-      - run: curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
+      - run: curl -LsSf https://get.nexte.st/0.9.105/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
 
       # Setup rust
       - run: rustup update stable && rustup default stable
@@ -26,3 +26,5 @@ jobs:
 
       # Run tests
       - run: cargo nextest run --verbose --features remote --profile CI
+        env:
+          CARGO_TERM_COLOR: always
