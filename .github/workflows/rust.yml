@@ -14,7 +14,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: taiki-e/install-action@nextest
+
+      # NOTE: instructions copied from: https://nexte.st/docs/installation/pre-built-binaries/#linux-x86_64
+      - run: curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
+
+      # Setup rust
       - run: rustup update stable && rustup default stable
+
+      # Build
       - run: cargo build --verbose --locked
+
+      # Run tests
       - run: cargo nextest run --verbose --features remote --profile CI
