@@ -23,7 +23,7 @@
   "commit_message": "add changelog entry",
   "expected_spellings": {
     "IBC": "ibc",
-    "$USDN": "\\s*$usdn",
+    "$USDN": "\\$*usdn",
     "CometBFT": "comet[-\\s]*bft"
   },
   "legacy_version": null,

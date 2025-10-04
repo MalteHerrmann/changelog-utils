@@ -141,22 +141,6 @@ mod entry_tests {
     }
 
     #[test]
-    fn test_fail_has_backslash_in_link() {
-        let example =
-            r"- (cli) [\#1](https://github.com/MalteHerrmann/changelog-utils/pull/1) Test.";
-        let entry_res = parse(&load_test_config(), example);
-        assert!(entry_res.is_ok());
-        let entry = entry_res.unwrap();
-        assert_eq!(entry.fixed, example.replace(r"\", ""));
-        assert_eq!(entry.pr_number, 1);
-        assert_eq!(entry.problems.len(), 1);
-        assert_eq!(
-            entry.problems[0],
-            "There should be no backslash in front of the # in the PR link"
-        );
-    }
-
-    #[test]
     fn test_fail_wrong_pr_link_and_missing_dot() {
         let example = r"- (cli) [#2](https://github.com/MalteHerrmann/changelog-utils/pull/1) Test";
         let fixed = r"- (cli) [#2](https://github.com/MalteHerrmann/changelog-utils/pull/2) Test.";

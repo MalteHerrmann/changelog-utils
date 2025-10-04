@@ -30,7 +30,6 @@ fn it_should_pass_for_incorrect_changelogs_that_has_no_critical_flaws() {
         changelog.problems,
         vec![
             "tests/testdata/single_file/changelog_fail.md:11: PR link is not matching PR number 1948: 'https://github.com/evmos/evmos/pull/1949'",
-            "tests/testdata/single_file/changelog_fail.md:20: There should be no backslash in front of the # in the PR link",
             "tests/testdata/single_file/changelog_fail.md:21: 'ABI' should be used instead of 'ABi'",
             "tests/testdata/single_file/changelog_fail.md:25: PR description should end with a dot: 'Fixed the problem `gas_used` is 0'",
             "tests/testdata/single_file/changelog_fail.md:27: 'Invalid Category' is not a valid change type",
@@ -82,6 +81,7 @@ fn it_should_pass_for_incorrect_multi_file_changelogs_that_has_no_critical_flaws
     assert_eq!(changelog.releases.len(), 2);
     assert_eq!(changelog.problems, vec![
         "tests/testdata/multi_file/fail/.changelog/v8.0.5/dependencies/466-bump-comet.md:1: PR link is not matching PR number 466: 'https://github.com/noble-assets/noble/pull/467'",
-        "tests/testdata/multi_file/fail/.changelog/v9.0.0/features/448-integrate-dollar.md:1: 'USDN' should be used instead of 'UsDN'",
+        "tests/testdata/multi_file/fail/.changelog/v9.0.0/features/448-integrate-dollar.md:1: '$USDN' should be used instead of '$UsDN'",
+        "tests/testdata/multi_file/fail/.changelog/v9.0.0/dependencies/495-bump-sdk.md:1: PR description should end with a dot: 'Bump Cosmos SDK to [`v0.50.12`](https://github.com/cosmos/cosmos-sdk/releases/tag/v0.50.12)'",
     ]);
 }

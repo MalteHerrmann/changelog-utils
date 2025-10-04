@@ -263,13 +263,39 @@ mod description_tests {
 }
 
 #[cfg(test)]
+/// Creates an empty config to be filled in test setups.
+fn empty_config() -> config::Config {
+    use std::collections::BTreeMap;
+
+    config::Config {
+        categories: vec![],
+        change_types: vec![],
+        commit_message: "".into(),
+        changelog_path: "".into(),
+        changelog_dir: None,
+        expected_spellings: BTreeMap::new(),
+        legacy_version: None,
+        mode: config::Mode::Single,
+        target_repo: "".into(),
+        use_categories: false,
+    }
+}
+
+#[cfg(test)]
 mod spelling_tests {
+    use std::collections::BTreeMap;
+
     use super::*;
 
     #[test]
     fn test_pass() {
+        let mut test_config = empty_config();
+
+        let exp_spellings = BTreeMap::from([("API".to_string(), "api".to_string())]);
+        test_config.expected_spellings = exp_spellings;
+
         let example = "Fix API.";
-        let (fixed, problems) = check_spelling(&load_test_config(), example);
+        let (fixed, problems) = check_spelling(&test_config, example);
         assert_eq!(fixed, example);
         assert!(problems.is_empty());
     }
@@ -319,6 +345,18 @@ mod spelling_tests {
     fn test_fail_usdn() {
         let example = "- Integrate our custom Dollar module, that enables the issuance of Noble's stablecoin $UsDN. ([#448](https://github.com/noble-assets/noble/pull/448))";
         let (_, problems) = check_spelling(&load_multi_file_config(), example);
+        assert_eq!(problems, vec!["'$USDN' should be used instead of '$UsDN'"]);
+    }
+
+    #[test]
+    fn test_fail_usdn2() {
+        let mut test_config = empty_config();
+
+        test_config.expected_spellings =
+            BTreeMap::from([("$USDN".to_string(), r#"\$*usdn"#.to_string())]);
+
+        let example = "- Integrate our custom Dollar module, that enables the issuance of Noble's stablecoin $UsDN. ([#448](https://github.com/noble-assets/noble/pull/448))";
+        let (_, problems) = check_spelling(&test_config, example);
         assert_eq!(problems, vec!["'$USDN' should be used instead of '$UsDN'"]);
     }
 }
