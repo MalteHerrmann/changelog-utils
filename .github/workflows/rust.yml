@@ -13,7 +13,7 @@ jobs:
     name: build & test changelog utils
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
 
       # NOTE: instructions copied from: https://nexte.st/docs/installation/pre-built-binaries/#linux-x86_64
       - run: curl -LsSf https://get.nexte.st/0.9.105/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
