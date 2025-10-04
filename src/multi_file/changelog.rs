@@ -26,7 +26,7 @@ pub fn load(config: &Config) -> Result<MultiFileChangelog, ChangelogError> {
 
     let changelog_path = match fs::read_dir(Path::new("./"))?.find(|e| {
         e.as_ref()
-            .is_ok_and(|e| e.file_name().eq_ignore_ascii_case(&expected_path))
+            .is_ok_and(|e| e.file_name().eq_ignore_ascii_case(expected_path))
     }) {
         Some(d) => d.unwrap(),
         None => {
