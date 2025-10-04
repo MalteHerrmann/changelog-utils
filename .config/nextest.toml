@@ -1,0 +1,3 @@
+[profile.CI]
+# CI profile that does not fail fast - runs all tests even if some fail
+fail-fast = false
