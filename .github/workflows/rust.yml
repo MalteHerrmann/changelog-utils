@@ -19,7 +19,7 @@ jobs:
       - run: curl -LsSf https://get.nexte.st/0.9.105/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
 
       # Setup rust
-      - uses: dtolnay/rust-toolchain@stable
+      - run: rustup update stable && rustup default stable
 
       # Build
       - run: cargo build --verbose --locked
