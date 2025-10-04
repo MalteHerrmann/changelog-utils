@@ -69,7 +69,9 @@ fn it_should_pass_for_correct_multi_file_changelogs() {
     let changelog = multi_file::parse_changelog(&load_multi_test_config(), correct_changelog)
         .expect("failed to parse correct changelog");
     assert_eq!(changelog.releases.len(), 2);
-    assert!(changelog.problems.is_empty());
+
+    let expected: Vec<String> = Vec::new();
+    assert_eq!(changelog.problems, expected);
 }
 
 #[test]
