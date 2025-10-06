@@ -55,6 +55,7 @@ in existing projects. In that case, it will only create the default configuratio
 
 ## Configuration
 
+<!-- TODO: update this for recent changes -->
 You can add or remove configurations as you like with the
 corresponding subcommands of `clu config`.
 

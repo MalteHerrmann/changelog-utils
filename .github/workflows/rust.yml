@@ -25,6 +25,6 @@ jobs:
       - run: cargo build --verbose --locked
 
       # Run tests
-      - run: cargo nextest run --verbose --features remote --profile CI
+      - run: make test-ci
         env:
           CARGO_TERM_COLOR: always
