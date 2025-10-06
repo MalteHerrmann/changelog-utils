@@ -1,6 +1,10 @@
 # Run tests
+.PHONY: test test-ci
 test:
 	cargo nextest run
+
+test-ci:
+	cargo nextest run --verbose --profile CI --features remote
 
 # Build binary locally
 build:
@@ -26,4 +30,4 @@ docker-build:
 lint:
 	cargo clippy
 
-PHONY: test build format install docker-run docker-build lint
+PHONY: build format install docker-run docker-build lint
