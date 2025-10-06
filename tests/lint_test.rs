@@ -10,7 +10,7 @@ fn load_test_config() -> config::Config {
 #[test]
 fn it_should_pass_for_correct_changelogs() {
     let correct_changelog = Path::new("tests/testdata/single_file/changelog_ok.md");
-    let changelog = changelog::parse_changelog(load_test_config(), correct_changelog)
+    let changelog = changelog::parse_changelog(&load_test_config(), correct_changelog)
         .expect("failed to parse correct changelog");
     assert_eq!(changelog.releases.len(), 3);
     assert!(changelog.problems.is_empty());
@@ -23,7 +23,7 @@ fn it_should_pass_for_correct_changelogs() {
 #[test]
 fn it_should_pass_for_incorrect_changelogs_that_has_no_critical_flaws() {
     let incorrect_changelog = Path::new("tests/testdata/single_file/changelog_fail.md");
-    let changelog = changelog::parse_changelog(load_test_config(), incorrect_changelog)
+    let changelog = changelog::parse_changelog(&load_test_config(), incorrect_changelog)
         .expect("failed to parse incorrect changelog");
     assert_eq!(changelog.releases.len(), 3);
     assert_eq!(
@@ -44,7 +44,10 @@ fn it_should_pass_for_incorrect_changelogs_that_has_no_critical_flaws() {
 #[test]
 fn it_should_fix_the_changelog_as_expected() {
     let incorrect_changelog = Path::new("tests/testdata/single_file/changelog_to_be_fixed.md");
-    let changelog = changelog::parse_changelog(load_test_config(), incorrect_changelog)
+
+    let config = load_test_config();
+
+    let changelog = changelog::parse_changelog(&config, incorrect_changelog)
         .expect("failed to parse changelog");
 
     let expected = fs::read_to_string(Path::new("tests/testdata/single_file/changelog_fixed.md"))
@@ -52,7 +55,7 @@ fn it_should_fix_the_changelog_as_expected() {
 
     assert_eq!(
         expected.trim(),
-        changelog.get_fixed_contents().trim(),
+        changelog.get_fixed_contents(&config).trim(),
         "expected different fixed changelog"
     );
 }

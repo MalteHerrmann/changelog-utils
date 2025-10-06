@@ -82,7 +82,7 @@ pub async fn run(pr_number: Option<u64>, accept: bool) -> Result<(), AddError> {
     let (selected_change_type, pr_number, cat, desc) =
         get_entry_inputs(&config, &mut pr_info, accept, retrieved)?;
 
-    let mut changelog = changelog::load(config.clone())?;
+    let mut changelog = changelog::load(&config)?;
     add_entry(
         &config,
         &mut changelog,
@@ -92,7 +92,7 @@ pub async fn run(pr_number: Option<u64>, accept: bool) -> Result<(), AddError> {
         pr_number,
     );
 
-    changelog.write(&changelog.path)?;
+    changelog.write(&config, &changelog.path)?;
 
     let cm = inputs::get_commit_message(&config)?;
     Ok(commit(&config, &cm)?)

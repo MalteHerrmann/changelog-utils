@@ -16,7 +16,7 @@ pub async fn run() -> Result<(), CheckDiffError> {
 
     let diff = git::get_diff(&git_info.branch, &target_branch)?;
 
-    let changelog = changelog::load(config)?;
+    let changelog = changelog::load(&config)?;
 
     check_diff(&changelog, &diff, pr_info.number)?;
 

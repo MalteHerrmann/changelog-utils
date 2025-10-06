@@ -12,7 +12,7 @@ fn load_example_config() -> config::Config {
 fn test_pass_add_into_new_change_type() {
     let config = load_example_config();
     let mut changelog = changelog::parse_changelog(
-        config.clone(),
+        &config,
         Path::new("tests/testdata/single_file/changelog_new_category_after_add.md"),
     )
     .expect("failed to parse example changelog");
@@ -45,7 +45,7 @@ fn test_pass_add_into_new_change_type() {
 fn test_pass_add_with_no_unreleased_section() {
     let config = load_example_config();
     let mut changelog = changelog::parse_changelog(
-        config.clone(),
+        &config,
         Path::new("tests/testdata/single_file/changelog_no_unreleased.md"),
     )
     .expect("failed to parse example changelog");
@@ -79,7 +79,7 @@ fn test_pass_add_with_no_unreleased_section() {
 fn test_pass_add_new_with_auto_fix() {
     let config = load_example_config();
     let mut changelog = changelog::parse_changelog(
-        config.clone(),
+        &config,
         Path::new("tests/testdata/single_file/changelog_new_category_after_add.md"),
     )
     .expect("failed to parse example changelog");
@@ -97,10 +97,10 @@ fn test_pass_add_new_with_auto_fix() {
     // export to temporary file
     let tmp_path = NamedTempFile::new("tmp_changelog.md").expect("failed to save tmp changelog");
     changelog
-        .write(tmp_path.path())
+        .write(&config, tmp_path.path())
         .expect("failed to write tmp changelog");
 
-    let updated_changelog = changelog::parse_changelog(config.clone(), tmp_path.path()).unwrap();
+    let updated_changelog = changelog::parse_changelog(&config, tmp_path.path()).unwrap();
     let added_entry = updated_changelog
         .releases
         .get(0)

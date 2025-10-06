@@ -13,7 +13,7 @@ use chrono::offset::Local;
 /// Creates a new release with the given version based on the given version.
 pub fn run(version_option: Option<String>) -> Result<(), ReleaseCLIError> {
     let config = config::load()?;
-    let mut changelog = changelog::load(config.clone())?;
+    let mut changelog = changelog::load(&config)?;
 
     let version = match version_option {
         Some(v) => version::parse(v.as_str())?,
@@ -43,7 +43,7 @@ pub fn run(version_option: Option<String>) -> Result<(), ReleaseCLIError> {
         today.date_naive()
     );
 
-    Ok(changelog.write(&changelog.path)?)
+    Ok(changelog.write(&config, &changelog.path)?)
 }
 
 /// Queries the user for the desired release type and then derives the required

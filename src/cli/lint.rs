@@ -22,7 +22,7 @@ pub fn run(fix: bool) -> Result<(), LintError> {
 
     match used_config.mode {
         config::Mode::Single => {
-            let changelog = single_file::load(used_config)?;
+            let changelog = single_file::load(&used_config)?;
 
             if changelog.problems.is_empty() {
                 println!("changelog has no problems");
@@ -30,7 +30,7 @@ pub fn run(fix: bool) -> Result<(), LintError> {
             }
 
             if fix {
-                changelog.write(changelog.path.as_path())?;
+                changelog.write(&used_config, changelog.path.as_path())?;
                 println!(
                     "automated fixes were applied to {}",
                     changelog.path.to_string_lossy()
@@ -65,5 +65,5 @@ pub fn lint(
     config: config::Config,
     changelog_path: &Path,
 ) -> Result<SingleFileChangelog, LintError> {
-    Ok(parse_changelog(config, changelog_path)?)
+    Ok(parse_changelog(&config, changelog_path)?)
 }

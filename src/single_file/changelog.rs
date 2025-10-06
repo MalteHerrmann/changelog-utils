@@ -23,12 +23,12 @@ pub struct SingleFileChangelog {
 
 impl SingleFileChangelog {
     /// Exports the changelog contents to the given filepath.
-    pub fn write(&self, export_path: &Path) -> Result<(), ChangelogError> {
-        Ok(fs::write(export_path, self.get_fixed_contents())?)
+    pub fn write(&self, config: &Config, export_path: &Path) -> Result<(), ChangelogError> {
+        Ok(fs::write(export_path, self.get_fixed_contents(&config))?)
     }
 
     /// Returns the fixed contents as a String to be exported.
-    pub fn get_fixed_contents(&self) -> String {
+    pub fn get_fixed_contents(&self, config: &Config) -> String {
         let mut exported_string = "".to_string();
 
         self.comments
@@ -38,7 +38,7 @@ impl SingleFileChangelog {
 
         self.releases.iter().for_each(|release| {
             exported_string.push('\n');
-            exported_string.push_str(release.get_fixed_contents().as_str());
+            exported_string.push_str(release.get_fixed_contents(config).as_str());
         });
 
         self.legacy_contents
@@ -51,7 +51,7 @@ impl SingleFileChangelog {
 
 /// Loads the changelog from the default changelog path.
 ///
-pub fn load(config: Config) -> Result<SingleFileChangelog, ChangelogError> {
+pub fn load(config: &Config) -> Result<SingleFileChangelog, ChangelogError> {
     let changelog_file = match fs::read_dir(Path::new("./"))?.find(|e| {
         e.as_ref()
             .is_ok_and(|e| e.file_name().eq_ignore_ascii_case("changelog.md"))
@@ -68,7 +68,7 @@ pub fn load(config: Config) -> Result<SingleFileChangelog, ChangelogError> {
 
 /// Parses the given changelog contents.
 pub fn parse_changelog(
-    config: Config,
+    config: &Config,
     file_path: &Path,
 ) -> Result<SingleFileChangelog, ChangelogError> {
     let contents = fs::read_to_string(file_path)?;

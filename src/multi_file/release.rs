@@ -13,7 +13,7 @@ use std::{
 /// Holds the information about a given release in the changelog.
 ///
 /// TODO: abstract common interface / traits between single and multi-line implementations.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Release {
     pub change_types: Vec<ChangeType>,
     pub path: PathBuf,
@@ -27,14 +27,16 @@ impl Release {
     // level entries and changetypes should be adjusted
     //
     // TODO: rework?
-    pub fn get_fixed_contents(&self) -> String {
+    pub fn get_fixed_contents(&self, config: &Config) -> String {
         let mut exported_string = String::new();
 
-        // TODO: fix
         exported_string.push_str(&format!("## {}", &self.version));
         exported_string.push('\n');
 
-        self.change_types.iter().for_each(|change_type| {
+        let mut change_types = self.change_types.clone();
+        change_types.sort_by_key(|ct| config.change_types.iter().position(|c| c.long == ct.name).unwrap());
+
+        change_types.iter().for_each(|change_type| {
             exported_string.push('\n');
             exported_string.push_str(change_type.get_fixed_contents().as_str());
         });
@@ -154,4 +156,59 @@ fn check_link(config: &Config, link: &str, version: &str) -> (String, Vec<String
     }
 
     (fixed_link, problems)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        multi_file::change_type::ChangeType,
+        config::ChangeTypeConfig,
+    };
+
+    #[test]
+    fn test_change_types_order() {
+        let mut release = Release::default();
+
+        release.change_types.push(ChangeType {
+            name: "Bug Fixes".to_string(),
+            fixed: "Bug Fixes".to_string(),
+            problems: Vec::new(),
+            entries: Vec::new(),
+            path: PathBuf::from(""),
+        });
+        release.change_types.push(ChangeType {
+            name: "Features".to_string(),
+            fixed: "Features".to_string(),
+            problems: Vec::new(),
+            entries: Vec::new(),
+            path: PathBuf::from(""),
+        });
+
+        let mut test_config = Config::default();
+
+        test_config.change_types = vec![
+            ChangeTypeConfig {
+                short: "feat".into(),
+                long: "Features".into(),
+            },
+            ChangeTypeConfig {
+                short: "fix".into(),
+                long: "Bug Fixes".into(),
+            },
+        ];
+
+        // NOTE: we're checking that the Features are printed before the Bug Fixes
+        // as it is specified in the config.
+        let out = release.get_fixed_contents(&test_config);
+        assert_eq!(out.lines().collect::<Vec<&str>>(), vec![
+            "## ", // using an empty title here since it's not important for the test
+            "",
+            "### Features",
+            "", // this is the empty line between change type header and contents
+            "", // this is the empty line after the contents
+            "### Bug Fixes",
+            "",
+        ]);
+    }
 }
