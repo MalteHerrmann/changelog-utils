@@ -1,9 +1,10 @@
 use super::{add, inputs};
 use crate::{
     ai::diff_prompt,
+    config,
     errors::CreateError,
     single_file::changelog,
-    utils::{config, git, github},
+    utils::{git, github},
 };
 
 /// Runs the main logic to open a new PR for the current branch.
@@ -69,7 +70,7 @@ pub async fn run() -> Result<(), CreateError> {
             .expect("received no error creating the PR but html_url was None")
     );
 
-    let mut changelog = changelog::load(config.clone())?;
+    let mut changelog = changelog::load(&config)?;
     add::add_entry(
         &config,
         &mut changelog,
@@ -79,7 +80,7 @@ pub async fn run() -> Result<(), CreateError> {
         created_pr.number,
     );
 
-    changelog.write(&changelog.path)?;
+    changelog.write(&config, &changelog.path)?;
 
     let cm = inputs::get_commit_message(&config)?;
     if let Err(e) = git::commit_and_push(&config, &cm) {

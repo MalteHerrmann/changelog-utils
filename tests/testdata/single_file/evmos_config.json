@@ -22,11 +22,14 @@
     { "long": "Bug Fixes", "short": "fix" }
   ],
   "changelog_path": "CHANGELOG.md",
+  "changelog_dir": null,
   "commit_message": "add changelog entry",
   "expected_spellings": {
     "ABI": "abi",
     "EIP-712": "eip[-\\s]*712"
   },
   "legacy_version": "v2.0.0",
-  "target_repo": "https://github.com/evmos/evmos"
+  "mode": "single",
+  "target_repo": "https://github.com/evmos/evmos",
+  "use_categories": true
 }

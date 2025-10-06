@@ -1,3 +1,4 @@
+use super::{change_type::ChangeTypeConfig, mode::Mode};
 use crate::errors::{ConfigAdjustError, ConfigError};
 use serde::{Deserialize, Serialize};
 use serde_json;
@@ -17,6 +18,8 @@ pub struct Config {
     pub commit_message: String,
     /// The relative path of the changelog file.
     pub changelog_path: String,
+    /// In multi mode, this defines the directory where entries are created.
+    pub changelog_dir: Option<String>,
     /// The map of expected spellings.
     ///
     /// Note: The key is the correct spelling and the value
@@ -29,9 +32,13 @@ pub struct Config {
     ///
     /// TODO: use Version type directly instead
     pub legacy_version: Option<String>,
+    /// Controls whether a single or multi file changelog is used.
+    pub mode: Mode,
     /// The target repository, that represents the base url
     /// enforced to occur in PR links.
     pub target_repo: String,
+    /// Sets whether categories are enforced in entries or are left out.
+    pub use_categories: bool,
 }
 
 impl Config {
@@ -124,6 +131,18 @@ impl Config {
             None => Err(ConfigAdjustError::NotFound),
         }
     }
+
+    pub fn set_changelog_dir(&mut self, value: Option<String>) {
+        self.changelog_dir = value;
+    }
+
+    pub fn set_mode(&mut self, mode: Mode) {
+        self.mode = mode;
+    }
+
+    pub fn set_use_categories(&mut self, value: bool) {
+        self.use_categories = value;
+    }
 }
 
 impl fmt::Display for Config {
@@ -157,9 +176,15 @@ impl Default for Config {
             change_types: default_change_types,
             commit_message,
             changelog_path,
+            // TODO: add config method to set this.
+            changelog_dir: None,
             expected_spellings: BTreeMap::default(),
             legacy_version: None,
+            // TODO: add config method to set this.
+            mode: Mode::Single,
             target_repo: String::default(),
+            // TODO: add config method to set this.
+            use_categories: true,
         }
     }
 }
@@ -174,16 +199,6 @@ pub fn unpack_config(contents: &str) -> Result<Config, ConfigError> {
 // and load the configuration.
 pub fn load() -> Result<Config, ConfigError> {
     unpack_config(fs::read_to_string(".clconfig.json")?.as_str())
-}
-
-// This type defines the information about a change type.
-// This consists of a short version of the long-form change type.
-//
-// Examples: short: imp; long: Improvements
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct ChangeTypeConfig {
-    pub short: String,
-    pub long: String,
 }
 
 // Checks if the given value is a valid GitHub URL and sets the target

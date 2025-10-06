@@ -1,8 +1,5 @@
 use super::change_type::ChangeType;
-use crate::{
-    errors::ReleaseError,
-    utils::{config, version},
-};
+use crate::{config, errors::ReleaseError, utils::version};
 use regex::RegexBuilder;
 
 /// Holds the information about a release section in the changelog.
@@ -16,13 +13,16 @@ pub struct Release {
 }
 
 impl Release {
-    pub fn get_fixed_contents(&self) -> String {
+    pub fn get_fixed_contents(&self, config: &config::Config) -> String {
         let mut exported_string = String::new();
 
         exported_string.push_str(&self.fixed);
         exported_string.push('\n');
 
-        self.change_types.iter().for_each(|change_type| {
+        let mut change_types = self.change_types.clone();
+        change_types.sort_by_key(|ct| config.change_types.iter().position(|c| c.long == ct.name).unwrap());
+
+        change_types.iter().for_each(|change_type| {
             exported_string.push('\n');
             exported_string.push_str(change_type.get_fixed_contents().as_str());
         });
@@ -219,6 +219,50 @@ mod release_tests {
                 "got: 'https://github.com/MalteHerrmann/changelog-utils/releases/tag/v0.2.0'"
             )]
         );
+    }
+
+    #[test]
+    fn test_change_types_order() {
+        let mut release = new_empty_release();
+
+        release.change_types.push(ChangeType {
+            name: "Bug Fixes".to_string(),
+            fixed: "### Bug Fixes".to_string(),
+            problems: Vec::new(),
+            entries: Vec::new(),
+        });
+        release.change_types.push(ChangeType {
+            name: "Features".to_string(),
+            fixed: "### Features".to_string(),
+            problems: Vec::new(),
+            entries: Vec::new(),
+        });
+
+        let mut test_config = config::Config::default();
+
+        test_config.change_types = vec![
+            config::ChangeTypeConfig {
+                short: "feat".into(),
+                long: "Features".into(),
+            },
+            config::ChangeTypeConfig {
+                short: "fix".into(),
+                long: "Bug Fixes".into(),
+            },
+        ];
+
+        // NOTE: we're checking that the Features are printed before the Bug Fixes
+        // as it is specified in the config.
+        let out = release.get_fixed_contents(&test_config);
+        assert_eq!(out.lines().collect::<Vec<&str>>(), vec![
+            "", // using an empty title here since it's not important for the test
+            "",
+            "### Features",
+            "", // this is the empty line between change type header and contents
+            "", // this is the empty line after the contents
+            "### Bug Fixes",
+            "",
+        ]);
     }
 }
 

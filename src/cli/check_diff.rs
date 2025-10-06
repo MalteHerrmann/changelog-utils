@@ -1,7 +1,8 @@
 use crate::{
+    config,
     errors::CheckDiffError,
     single_file::changelog,
-    utils::{config, git, github},
+    utils::{git, github},
 };
 
 /// Runs the logic to check for a corresponding diff in the changelog,
@@ -15,7 +16,7 @@ pub async fn run() -> Result<(), CheckDiffError> {
 
     let diff = git::get_diff(&git_info.branch, &target_branch)?;
 
-    let changelog = changelog::load(config)?;
+    let changelog = changelog::load(&config)?;
 
     check_diff(&changelog, &diff, pr_info.number)?;
 
@@ -27,7 +28,7 @@ pub async fn run() -> Result<(), CheckDiffError> {
 /// of an entry in the unreleased section of the changelog.
 fn check_diff(
     // TODO: this should use a common util instead of the single file thing
-    changelog: &changelog::Changelog,
+    changelog: &changelog::SingleFileChangelog,
     diff: &str,
     pr_number: u64,
 ) -> Result<(), CheckDiffError> {

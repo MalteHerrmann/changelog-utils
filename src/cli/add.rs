@@ -1,9 +1,9 @@
 use super::inputs;
 use crate::{
+    config,
     errors::AddError,
     single_file::{change_type, changelog, entry, release},
     utils::{
-        config,
         git::{commit, get_git_info},
         github::{get_pr_info, PRInfo},
     },
@@ -82,7 +82,7 @@ pub async fn run(pr_number: Option<u64>, accept: bool) -> Result<(), AddError> {
     let (selected_change_type, pr_number, cat, desc) =
         get_entry_inputs(&config, &mut pr_info, accept, retrieved)?;
 
-    let mut changelog = changelog::load(config.clone())?;
+    let mut changelog = changelog::load(&config)?;
     add_entry(
         &config,
         &mut changelog,
@@ -92,7 +92,7 @@ pub async fn run(pr_number: Option<u64>, accept: bool) -> Result<(), AddError> {
         pr_number,
     );
 
-    changelog.write(&changelog.path)?;
+    changelog.write(&config, &changelog.path)?;
 
     let cm = inputs::get_commit_message(&config)?;
     Ok(commit(&config, &cm)?)
@@ -102,7 +102,8 @@ pub async fn run(pr_number: Option<u64>, accept: bool) -> Result<(), AddError> {
 /// of the changelog.
 pub fn add_entry(
     config: &config::Config,
-    changelog: &mut changelog::Changelog,
+    // TODO: implement support for multi file changelog
+    changelog: &mut changelog::SingleFileChangelog,
     change_type: &str,
     cat: &str,
     desc: &str,

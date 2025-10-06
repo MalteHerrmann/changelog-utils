@@ -1,4 +1,4 @@
-use crate::{errors::CreateError, utils::config::Config};
+use crate::{config::Config, errors::CreateError};
 use regex::Regex;
 use rig::{
     completion::Prompt,
@@ -44,7 +44,7 @@ pub struct Suggestions {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::config::unpack_config;
+    use crate::config::unpack_config;
 
     fn load_example_config() -> Config {
         unpack_config(include_str!("../testdata/example_config.json"))

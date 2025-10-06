@@ -17,6 +17,7 @@ This changelog was created using the `clu` binary
 
 ### Features
 
+- (all) [#104](https://github.com/MalteHerrmann/changelog-utils/pull/104) Add multi file implementation.
 - (cli) [#96](https://github.com/MalteHerrmann/changelog-utils/pull/96) Add functionality to check diff for entry on current PR.
 
 ## [v1.5.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.5.0) - 2025-05-19

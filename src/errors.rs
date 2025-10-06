@@ -38,7 +38,7 @@ pub enum CLIError {
     #[error("failed to read configuration: {0}")]
     Config(#[from] ConfigError),
     #[error("failed to adjust configuration: {0}")]
-    ConfigAdjustment(#[from] ConfigAdjustError),
+    ConfigAdjustError(#[from] ConfigAdjustError),
     #[error("failed to read/write: {0}")]
     IOError(#[from] io::Error),
     #[error("failed to create new release in changelog: {0}")]
@@ -127,6 +127,8 @@ pub enum LintError {
 pub enum ChangelogError {
     #[error("failed to parse change type: {0}")]
     InvalidChangeType(#[from] ChangeTypeError),
+    #[error("invalid configuration: {0}")]
+    InvalidConfig(#[from] ConfigError),
     #[error("failed to parse entry: {0}")]
     InvalidEntry(#[from] EntryError),
     #[error("failed to build regex: {0}")]
@@ -145,6 +147,8 @@ pub enum ChangelogError {
 pub enum EntryError {
     #[error("invalid entry: {0}")]
     InvalidEntry(String),
+    #[error("failed to read file contents: {0}")]
+    FailedToRead(#[from] io::Error),
 }
 
 #[derive(Error, Debug)]
@@ -213,6 +217,8 @@ pub enum ConfigError {
     FailedToReadWrite(#[from] io::Error),
     #[error("failed to parse configuration")]
     FailedToParse(#[from] serde_json::Error),
+    #[error("invalid configuration: {0}")]
+    InvalidConfig(String),
 }
 
 #[derive(Error, Debug, PartialEq)]
@@ -229,10 +235,16 @@ pub enum ConfigAdjustError {
     NotFound,
     #[error("target repository should be a GitHub link")]
     NoGitHubRepository,
+    #[error("invalid mode: {0}")]
+    InvalidMode(String),
+    #[error("invalid boolean value: {0}")]
+    InvalidBoolean(String),
 }
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ChangeTypeError {
+    #[error("{0}")]
+    Common(#[from] CommonError),
     #[error("invalid regex: {0}")]
     InvalidRegex(#[from] regex::Error),
     #[error("no matches found")]
@@ -240,7 +252,15 @@ pub enum ChangeTypeError {
 }
 
 #[derive(Error, Debug, PartialEq)]
+pub enum CommonError {
+    #[error("invalid path: {0}")]
+    InvalidPath(String),
+}
+
+#[derive(Error, Debug, PartialEq)]
 pub enum ReleaseError {
+    #[error("{0}")]
+    Common(#[from] CommonError),
     #[error("invalid regex: {0}")]
     InvalidRegex(#[from] regex::Error),
     #[error("invalid version: {0}")]

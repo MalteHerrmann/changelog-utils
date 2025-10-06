@@ -1,8 +1,8 @@
 use assert_fs::{prelude::*, TempDir};
 use clu::{
     cli::init,
+    config::{self, ChangeTypeConfig},
     errors::InitError,
-    utils::config::{self, ChangeTypeConfig},
 };
 use predicates::prelude::*;
 use std::fs;
@@ -30,7 +30,7 @@ fn test_init_changelog_exists() {
     let temp_dir = TempDir::new().expect("failed to create temporary directory");
 
     temp_dir
-        .copy_from("tests/testdata", &["changelog_fail.md"])
+        .copy_from("tests/testdata/single_file", &["changelog_fail.md"])
         .expect("failed to create dummy changelog");
 
     assert!(fs::rename(

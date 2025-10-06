@@ -1,12 +1,12 @@
 use super::commands::GetArgs;
-use crate::{errors::GetError, single_file::changelog, utils::config};
+use crate::{config, errors::GetError, single_file::changelog};
 
 /// Executes the get command to display a specific version's release notes.
 pub fn run(args: GetArgs) -> Result<(), GetError> {
     let config = config::load()?;
-    let changelog = changelog::load(config)?;
+    let changelog = changelog::load(&config)?;
 
-    if let Err(e) = get(&changelog, &args) {
+    if let Err(e) = get(&config, &changelog, &args) {
         eprintln!("Version {} not found in changelog: {}", args.version, e);
         return Err(e);
     }
@@ -14,13 +14,13 @@ pub fn run(args: GetArgs) -> Result<(), GetError> {
     Ok(())
 }
 
-fn get(changelog: &changelog::Changelog, args: &GetArgs) -> Result<(), GetError> {
+fn get(config: &config::Config, changelog: &changelog::SingleFileChangelog, args: &GetArgs) -> Result<(), GetError> {
     if let Some(release) = changelog
         .releases
         .iter()
         .find(|r| r.version == args.version)
     {
-        println!("{}", release.get_fixed_contents());
+        println!("{}", release.get_fixed_contents(config));
         return Ok(());
     }
 
@@ -54,7 +54,7 @@ mod tests {
             return;
         }
 
-        let changelog = match changelog::parse_changelog(config, changelog_path) {
+        let changelog = match changelog::parse_changelog(&config, changelog_path) {
             Ok(cl) => cl,
             Err(ChangelogError::NoChangelogFound) => {
                 // Skip test if changelog not found
@@ -65,6 +65,7 @@ mod tests {
 
         // The v1.0.0 version should exist in the changelog
         let result = get(
+            &config,
             &changelog,
             &GetArgs {
                 version: "v1.0.0".to_string(),
@@ -86,7 +87,7 @@ mod tests {
             return;
         }
 
-        let changelog = match changelog::parse_changelog(config, changelog_path) {
+        let changelog = match changelog::parse_changelog(&config, changelog_path) {
             Ok(cl) => cl,
             Err(ChangelogError::NoChangelogFound) => {
                 // Skip test if changelog not found
@@ -97,6 +98,7 @@ mod tests {
 
         // A version that definitely doesn't exist
         let result = get(
+            &config,
             &changelog,
             &GetArgs {
                 version: "v999.999.999".to_string(),

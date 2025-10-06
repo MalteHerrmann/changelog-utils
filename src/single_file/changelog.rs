@@ -1,8 +1,9 @@
 use super::{change_type, entry, release};
 use crate::{
+    common::add_to_problems,
+    config::{ChangeTypeConfig, Config},
     errors::ChangelogError,
     escapes,
-    utils::config::{ChangeTypeConfig, Config},
 };
 use regex::Regex;
 use std::{
@@ -12,7 +13,7 @@ use std::{
 
 /// Represents the changelog contents.
 #[derive(Debug)]
-pub struct Changelog {
+pub struct SingleFileChangelog {
     pub path: PathBuf,
     comments: Vec<String>,
     legacy_contents: Vec<String>,
@@ -20,14 +21,14 @@ pub struct Changelog {
     pub problems: Vec<String>,
 }
 
-impl Changelog {
+impl SingleFileChangelog {
     /// Exports the changelog contents to the given filepath.
-    pub fn write(&self, export_path: &Path) -> Result<(), ChangelogError> {
-        Ok(fs::write(export_path, self.get_fixed_contents())?)
+    pub fn write(&self, config: &Config, export_path: &Path) -> Result<(), ChangelogError> {
+        Ok(fs::write(export_path, self.get_fixed_contents(&config))?)
     }
 
     /// Returns the fixed contents as a String to be exported.
-    pub fn get_fixed_contents(&self) -> String {
+    pub fn get_fixed_contents(&self, config: &Config) -> String {
         let mut exported_string = "".to_string();
 
         self.comments
@@ -37,7 +38,7 @@ impl Changelog {
 
         self.releases.iter().for_each(|release| {
             exported_string.push('\n');
-            exported_string.push_str(release.get_fixed_contents().as_str());
+            exported_string.push_str(release.get_fixed_contents(config).as_str());
         });
 
         self.legacy_contents
@@ -49,7 +50,8 @@ impl Changelog {
 }
 
 /// Loads the changelog from the default changelog path.
-pub fn load(config: Config) -> Result<Changelog, ChangelogError> {
+///
+pub fn load(config: &Config) -> Result<SingleFileChangelog, ChangelogError> {
     let changelog_file = match fs::read_dir(Path::new("./"))?.find(|e| {
         e.as_ref()
             .is_ok_and(|e| e.file_name().eq_ignore_ascii_case("changelog.md"))
@@ -65,7 +67,10 @@ pub fn load(config: Config) -> Result<Changelog, ChangelogError> {
 }
 
 /// Parses the given changelog contents.
-pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, ChangelogError> {
+pub fn parse_changelog(
+    config: &Config,
+    file_path: &Path,
+) -> Result<SingleFileChangelog, ChangelogError> {
     let contents = fs::read_to_string(file_path)?;
 
     let mut n_releases = 0;
@@ -127,7 +132,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
                 add_to_problems(
                     &mut problems,
                     file_path,
-                    i,
+                    Some(i),
                     format!("duplicate release: {}", &current_release.version),
                 );
             } else {
@@ -148,7 +153,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
             current_release
                 .problems
                 .into_iter()
-                .for_each(|p| add_to_problems(&mut problems, file_path, i, p.to_string()));
+                .for_each(|p| add_to_problems(&mut problems, file_path, Some(i), p.to_string()));
 
             continue;
         }
@@ -161,7 +166,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
                 add_to_problems(
                     &mut problems,
                     file_path,
-                    i,
+                    Some(i),
                     format!(
                         "duplicate change type in release {}: {}",
                         current_release.version.clone(),
@@ -175,7 +180,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
             current_change_type
                 .problems
                 .iter()
-                .for_each(|p| add_to_problems(&mut problems, file_path, i, p.to_string()));
+                .for_each(|p| add_to_problems(&mut problems, file_path, Some(i), p.to_string()));
 
             let last_release = releases
                 .get_mut(n_releases - 1)
@@ -194,7 +199,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
             Ok(e) => e,
             Err(err) => {
                 if !escapes.contains(&escapes::LinterEscape::FullLine) {
-                    add_to_problems(&mut problems, file_path, i, err.to_string());
+                    add_to_problems(&mut problems, file_path, Some(i), err.to_string());
                 }
 
                 // reset escapes after processing entry
@@ -211,7 +216,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
             add_to_problems(
                 &mut problems,
                 file_path,
-                i,
+                Some(i),
                 format!("duplicate PR: #{}", &current_entry.pr_number,),
             );
             escapes.retain(|e| e.ne(&escapes::LinterEscape::DuplicatePR));
@@ -223,7 +228,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
             current_entry
                 .problems
                 .iter()
-                .for_each(|p| add_to_problems(&mut problems, file_path, i, p.to_string()));
+                .for_each(|p| add_to_problems(&mut problems, file_path, Some(i), p.to_string()));
         }
 
         let last_release = releases
@@ -241,7 +246,7 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
         escapes.clear();
     }
 
-    Ok(Changelog {
+    Ok(SingleFileChangelog {
         path: file_path.to_path_buf(),
         releases,
         comments,
@@ -250,23 +255,11 @@ pub fn parse_changelog(config: Config, file_path: &Path) -> Result<Changelog, Ch
     })
 }
 
-/// Used for formatting the problem statements in the changelog.
-///
-/// NOTE: The line ID will be incremented by one based on the loop enumeration where it is used.
-fn add_to_problems(problems: &mut Vec<String>, fp: &Path, line: usize, problem: impl Into<String>) {
-    problems.push(format!(
-        "{}:{}: {}",
-        fp.to_string_lossy(),
-        line + 1,
-        problem.into()
-    ))
-}
-
 #[cfg(test)]
 mod changelog_tests {
     use std::str::FromStr;
 
-    use crate::utils::config;
+    use crate::config;
 
     use super::*;
 
@@ -283,7 +276,7 @@ mod changelog_tests {
             "Add initial Python implementation."
         );
 
-        let mut cl = Changelog {
+        let mut cl = SingleFileChangelog {
             path: PathBuf::from_str("test").unwrap(),
             releases: Vec::new(),
             comments: Vec::new(),
