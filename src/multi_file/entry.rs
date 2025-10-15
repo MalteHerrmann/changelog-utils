@@ -1,11 +1,12 @@
 use crate::{common, config::Config, errors::EntryError};
 use regex::Regex;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[derive(Clone, Debug)]
 pub struct MultiFileEntry {
     pub category: String,
     pub fixed: String,
+    pub path: PathBuf,
     pub pr_number: u64,
     pub problems: Vec<String>,
 }
@@ -13,14 +14,12 @@ pub struct MultiFileEntry {
 pub fn parse(config: &Config, path: &Path) -> Result<MultiFileEntry, EntryError> {
     let contents = std::fs::read_to_string(path)?;
 
-    // TODO: parse the contents for the following structure
-
     let entry_pattern = Regex::new(concat!(
         // TODO: have category as optional?
         r"^(?P<ws0>\s*)-(?P<ws1>\s*)\((?P<category>[a-zA-Z0-9\-]+)\)",
         r"(?P<ws2>\s*)(?P<desc>.+)",
         r"(?P<ws3>\s*)\(\[#(?P<pr>\d+)]",
-        r"(?P<ws4>\s*)\((?P<link>[^)]*)\)\)$"
+        r"(?P<ws4>\s*)\((?P<link>[^)]*)\)\)\s*$"
     ))
     .expect("invalid regex pattern");
 
@@ -70,6 +69,7 @@ pub fn parse(config: &Config, path: &Path) -> Result<MultiFileEntry, EntryError>
     Ok(MultiFileEntry {
         category: fixed_category,
         fixed,
+        path: path.into(),
         pr_number,
         problems,
     })

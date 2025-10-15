@@ -1,4 +1,7 @@
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use crate::{config::config, errors::ChangeTypeError};
 
@@ -8,6 +11,7 @@ use super::entry::{self, MultiFileEntry};
 pub struct ChangeType {
     pub name: String,
     pub fixed: String,
+    pub path: PathBuf,
     pub problems: Vec<String>,
     pub entries: Vec<MultiFileEntry>,
 }
@@ -60,7 +64,8 @@ pub fn parse(config: &config::Config, dir: &Path) -> Result<ChangeType, ChangeTy
         name: base_name.into(),
         // TODO: I guess this should rather be lowercase, but rather only when generating the
         // full changelog based on the individual entries.
-        fixed: base_name.into(), // TODO: capitalize
+        fixed: base_name.into(),
+        path: dir.to_path_buf(),
         problems,
         entries,
     })

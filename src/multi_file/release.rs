@@ -34,7 +34,7 @@ impl Release {
         exported_string
     }
 
-    // TODO: implement
+    // TODO: implement?
     pub fn add_summary(&self, summary: &str) -> Result<(), ReleaseError> {
         Ok(())
     }
@@ -61,26 +61,6 @@ impl Release {
     }
 }
 
-/// Returns a new Release instance for the unreleased section without any contained blocks.
-pub fn new_unreleased() -> Release {
-    Release {
-        version: "Unreleased".to_string(),
-        change_types: Vec::new(),
-        problems: Vec::new(),
-        summary: None,
-    }
-}
-
-pub fn new_empty_release() -> Release {
-    Release {
-        version: "".to_string(),
-        change_types: Vec::new(),
-        problems: Vec::new(),
-        summary: None,
-    }
-}
-
-// TODO: remove the config passing here?
 pub fn parse(config: &Config, dir: &Path) -> Result<Release, ReleaseError> {
     let base_name = dir
         .file_name()
@@ -88,7 +68,6 @@ pub fn parse(config: &Config, dir: &Path) -> Result<Release, ReleaseError> {
         .to_str()
         .expect("failed to get base name string");
 
-    let change_types: Vec<ChangeType> = Vec::new();
     let mut problems: Vec<String> = Vec::new();
 
     // Check unreleased pattern
@@ -104,22 +83,6 @@ pub fn parse(config: &Config, dir: &Path) -> Result<Release, ReleaseError> {
     {
         problems.push(format!("invalid version string: {version}"));
     };
-
-    // // TODO: this needs to be adjusted for sure! remove the ##, that should only go into the
-    // // generated one
-    // let captures = match RegexBuilder::new(concat!(
-    //     r#"^\s*##\s*\[(?P<version>v\d+\.\d+\.\d+(-rc\d+)?)]"#,
-    //     r#"(?P<link>\(.*\))?\s*-\s*(?P<date>\d{4}-\d{2}-\d{2})$"#,
-    // ))
-    // .case_insensitive(true)
-    // .build()?
-    // .captures(base_name)
-    // {
-    //     Some(c) => c,
-    //     None => return Err(ReleaseError::NoMatchFound),
-    // };
-    //
-    // let version = captures.name("version").unwrap().as_str().to_string();
 
     // // TODO: I guess this whole thing rather applies to the Summary.md which should contain the link etc.
     //
