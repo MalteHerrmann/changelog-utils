@@ -5,6 +5,8 @@ use clap::{Args, Parser, Subcommand};
 pub enum ChangelogCLI {
     #[command(about = "Adds a new entry to the unreleased section of the changelog")]
     Add(AddArgs),
+    #[command(about = "Does basic checks for the setup of the tool")]
+    Check,
     #[command(
         about = "Checks if a changelog entry was created for a pull request related to the current branch"
     )]

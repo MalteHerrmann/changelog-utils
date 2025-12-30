@@ -3,7 +3,9 @@ Main file to run the changelog utils application.
 */
 use clap::Parser;
 use clu::{
-    cli::{add, check_diff, commands::ChangelogCLI, config, create_pr, get, init, lint, release},
+    cli::{
+        add, check, check_diff, commands::ChangelogCLI, config, create_pr, get, init, lint, release,
+    },
     errors::CLIError,
 };
 
@@ -11,6 +13,7 @@ use clu::{
 async fn main() -> Result<(), CLIError> {
     match ChangelogCLI::parse() {
         ChangelogCLI::Add(add_args) => Ok(add::run(add_args.number, add_args.yes).await?),
+        ChangelogCLI::Check => Ok(check::run().await?),
         ChangelogCLI::CheckDiff => Ok(check_diff::run().await?),
         ChangelogCLI::CreatePR => Ok(create_pr::run().await?),
         ChangelogCLI::Fix => Ok(lint::run(true)?),
