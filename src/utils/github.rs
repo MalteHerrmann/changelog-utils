@@ -71,12 +71,10 @@ pub fn get_authenticated_github_client() -> Result<Octocrab, GitHubError> {
 /// Note: Unauthenticated clients have lower rate limits than authenticated ones.
 pub fn get_github_client() -> Octocrab {
     match std::env::var("GITHUB_TOKEN") {
-        Ok(token) => {
-            octocrab::OctocrabBuilder::new()
-                .personal_token(token)
-                .build()
-                .unwrap_or_default()
-        }
+        Ok(token) => octocrab::OctocrabBuilder::new()
+            .personal_token(token)
+            .build()
+            .unwrap_or_default(),
         Err(_) => {
             // No token available, use unauthenticated client
             Octocrab::default()
@@ -154,18 +152,15 @@ pub async fn get_pr_info(
 /// Returns a sorted, deduplicated list of PR numbers.
 pub async fn get_merged_pr_numbers(git_info: &GitInfo) -> Result<Vec<u64>, GitHubError> {
     let client = get_github_client();
-    
+
     // Get the default branch for the repository
-    let repo = client
-        .repos(&git_info.owner, &git_info.repo)
-        .get()
-        .await?;
-    
+    let repo = client.repos(&git_info.owner, &git_info.repo).get().await?;
+
     let default_branch = repo.default_branch.unwrap_or_else(|| "main".to_string());
-    
+
     let mut pr_numbers = Vec::new();
     let mut page = 1u32;
-    
+
     loop {
         let pulls = client
             .pulls(&git_info.owner, &git_info.repo)
@@ -176,24 +171,24 @@ pub async fn get_merged_pr_numbers(git_info: &GitInfo) -> Result<Vec<u64>, GitHu
             .page(page)
             .send()
             .await?;
-        
+
         if pulls.items.is_empty() {
             break;
         }
-        
+
         for pr in pulls.items {
             // Only include PRs that were actually merged
             if pr.merged_at.is_some() {
                 pr_numbers.push(pr.number);
             }
         }
-        
+
         page += 1;
     }
-    
+
     // Sort and deduplicate
     pr_numbers.sort_unstable();
     pr_numbers.dedup();
-    
+
     Ok(pr_numbers)
 }

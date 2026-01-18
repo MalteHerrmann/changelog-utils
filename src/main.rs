@@ -12,7 +12,9 @@ use clu::{
 #[tokio::main]
 async fn main() -> Result<(), CLIError> {
     match ChangelogCLI::parse() {
-        ChangelogCLI::Add(add_args) => Ok(add::run(add_args.number, add_args.yes, add_args.all_previous).await?),
+        ChangelogCLI::Add(add_args) => {
+            Ok(add::run(add_args.number, add_args.yes, add_args.all_previous).await?)
+        }
         ChangelogCLI::Check => Ok(check::run().await?),
         ChangelogCLI::CheckDiff => Ok(check_diff::run().await?),
         ChangelogCLI::CreatePR => Ok(create_pr::run().await?),

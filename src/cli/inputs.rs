@@ -130,14 +130,14 @@ pub fn select_prs_to_add(pr_list: Vec<(u64, String)>) -> Result<Vec<u64>, InputE
         .iter()
         .map(|(num, title)| format!("#{}: {}", num, title))
         .collect();
-    
+
     let selected = MultiSelect::new(
         "Select PRs to add (use Space to toggle, Enter to confirm):",
         options,
     )
     .with_all_selected_by_default()
     .prompt()?;
-    
+
     // Extract PR numbers from selected items
     let selected_prs: Vec<u64> = selected
         .iter()
@@ -151,6 +151,6 @@ pub fn select_prs_to_add(pr_list: Vec<(u64, String)>) -> Result<Vec<u64>, InputE
                 .ok()
         })
         .collect();
-    
+
     Ok(selected_prs)
 }
