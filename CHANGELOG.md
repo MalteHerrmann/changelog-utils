@@ -18,6 +18,7 @@ This changelog was created using the `clu` binary
 
 ### Features
 
+- (cli) [#111](https://github.com/MalteHerrmann/changelog-utils/pull/111) Add CLI command to check tool setup.
 - (all) [#104](https://github.com/MalteHerrmann/changelog-utils/pull/104) Add multi file implementation.
 - (cli) [#96](https://github.com/MalteHerrmann/changelog-utils/pull/96) Add functionality to check diff for entry on current PR.
 
