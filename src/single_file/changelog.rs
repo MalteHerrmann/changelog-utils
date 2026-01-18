@@ -24,7 +24,7 @@ pub struct SingleFileChangelog {
 impl SingleFileChangelog {
     /// Exports the changelog contents to the given filepath.
     pub fn write(&self, config: &Config, export_path: &Path) -> Result<(), ChangelogError> {
-        Ok(fs::write(export_path, self.get_fixed_contents(&config))?)
+        Ok(fs::write(export_path, self.get_fixed_contents(config))?)
     }
 
     /// Returns the fixed contents as a String to be exported.
@@ -124,7 +124,7 @@ pub fn parse_changelog(
         }
 
         if trimmed_line.starts_with("## ") {
-            current_release = release::parse(&config, line)?;
+            current_release = release::parse(config, line)?;
 
             releases.push(current_release.clone());
             n_releases += 1;
@@ -144,7 +144,7 @@ pub fn parse_changelog(
             n_change_types = 0;
 
             if current_release
-                .is_legacy(&config)
+                .is_legacy(config)
                 .expect("failed to check legacy")
             {
                 is_legacy = true;
@@ -195,7 +195,7 @@ pub fn parse_changelog(
             continue;
         }
 
-        let current_entry = match entry::parse(&config, line) {
+        let current_entry = match entry::parse(config, line) {
             Ok(e) => e,
             Err(err) => {
                 if !escapes.contains(&escapes::LinterEscape::FullLine) {

@@ -67,8 +67,7 @@ async fn check() -> Result<(), CheckError> {
             if models.is_empty() {
                 println!(" ⚠️  no LLM provider available (AI features unavailable)");
             } else {
-                let provider_names: Vec<String> =
-                    models.iter().map(|m| m.get_name()).collect();
+                let provider_names: Vec<String> = models.iter().map(|m| m.get_name()).collect();
                 println!(" ✅ LLM available: {}", provider_names.join(", "));
             }
         }

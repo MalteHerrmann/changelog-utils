@@ -1,4 +1,5 @@
 {
+  "config_version": 1,
   "categories": ["cli", "test"],
   "change_types": [
     {

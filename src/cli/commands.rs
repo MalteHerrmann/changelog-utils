@@ -72,6 +72,8 @@ pub enum ConfigSubcommands {
     Mode(StringValue),
     #[command(about = "Sets whether categories are enforced in entries")]
     UseCategories(ConditionalArgs),
+    #[command(about = "Migrates the configuration to the current version")]
+    Migrate,
 }
 
 #[derive(Args, Debug)]
