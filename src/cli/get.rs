@@ -14,7 +14,11 @@ pub fn run(args: GetArgs) -> Result<(), GetError> {
     Ok(())
 }
 
-fn get(config: &config::Config, changelog: &changelog::SingleFileChangelog, args: &GetArgs) -> Result<(), GetError> {
+fn get(
+    config: &config::Config,
+    changelog: &changelog::SingleFileChangelog,
+    args: &GetArgs,
+) -> Result<(), GetError> {
     if let Some(release) = changelog
         .releases
         .iter()

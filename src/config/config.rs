@@ -5,9 +5,14 @@ use serde_json;
 use std::{collections::BTreeMap, fmt, fs, path::Path};
 use url::Url;
 
+/// Current version of the configuration format
+pub const CURRENT_CONFIG_VERSION: u16 = 1;
+
 /// Holds the configuration of the application
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
+    /// Version of the configuration format
+    pub config_version: u16,
     /// The list of categories for a given entry,
     /// that can be used.
     pub categories: Vec<String>,
@@ -143,6 +148,21 @@ impl Config {
     pub fn set_use_categories(&mut self, value: bool) {
         self.use_categories = value;
     }
+
+    /// Gets the config version
+    pub fn get_version(&self) -> u16 {
+        self.config_version
+    }
+
+    /// Checks if the config version matches the current version
+    pub fn is_current_version(&self) -> bool {
+        self.config_version == CURRENT_CONFIG_VERSION
+    }
+
+    /// Sets the config version to the current version
+    pub fn update_to_current_version(&mut self) {
+        self.config_version = CURRENT_CONFIG_VERSION;
+    }
 }
 
 impl fmt::Display for Config {
@@ -172,6 +192,7 @@ impl Default for Config {
         let changelog_path = "CHANGELOG.md".to_string();
 
         Config {
+            config_version: CURRENT_CONFIG_VERSION,
             categories: Vec::default(),
             change_types: default_change_types,
             commit_message,
@@ -198,7 +219,16 @@ pub fn unpack_config(contents: &str) -> Result<Config, ConfigError> {
 // Tries to open the configuration file in the expected location
 // and load the configuration.
 pub fn load() -> Result<Config, ConfigError> {
-    unpack_config(fs::read_to_string(".clconfig.json")?.as_str())
+    let config = unpack_config(fs::read_to_string(".clconfig.json")?.as_str())?;
+
+    if !config.is_current_version() {
+        eprintln!("Warning: Configuration version mismatch.");
+        eprintln!("  Current version: {}", config.get_version());
+        eprintln!("  Expected version: {}", CURRENT_CONFIG_VERSION);
+        eprintln!("  Run 'clu config migrate' to update your configuration.");
+    }
+
+    Ok(config)
 }
 
 // Checks if the given value is a valid GitHub URL and sets the target

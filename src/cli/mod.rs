@@ -8,6 +8,7 @@ pub mod get;
 pub mod init;
 pub mod inputs;
 pub mod lint;
+mod migrate;
 pub mod release;
 
 pub use check::run;

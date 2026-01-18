@@ -34,7 +34,13 @@ impl Release {
         exported_string.push('\n');
 
         let mut change_types = self.change_types.clone();
-        change_types.sort_by_key(|ct| config.change_types.iter().position(|c| c.long == ct.name).unwrap());
+        change_types.sort_by_key(|ct| {
+            config
+                .change_types
+                .iter()
+                .position(|c| c.long == ct.name)
+                .unwrap()
+        });
 
         change_types.iter().for_each(|change_type| {
             exported_string.push('\n');
@@ -161,10 +167,7 @@ fn check_link(config: &Config, link: &str, version: &str) -> (String, Vec<String
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        multi_file::change_type::ChangeType,
-        config::ChangeTypeConfig,
-    };
+    use crate::{config::ChangeTypeConfig, multi_file::change_type::ChangeType};
 
     #[test]
     fn test_change_types_order() {
@@ -201,14 +204,17 @@ mod tests {
         // NOTE: we're checking that the Features are printed before the Bug Fixes
         // as it is specified in the config.
         let out = release.get_fixed_contents(&test_config);
-        assert_eq!(out.lines().collect::<Vec<&str>>(), vec![
-            "## ", // using an empty title here since it's not important for the test
-            "",
-            "### Features",
-            "", // this is the empty line between change type header and contents
-            "", // this is the empty line after the contents
-            "### Bug Fixes",
-            "",
-        ]);
+        assert_eq!(
+            out.lines().collect::<Vec<&str>>(),
+            vec![
+                "## ", // using an empty title here since it's not important for the test
+                "",
+                "### Features",
+                "", // this is the empty line between change type header and contents
+                "", // this is the empty line after the contents
+                "### Bug Fixes",
+                "",
+            ]
+        );
     }
 }
