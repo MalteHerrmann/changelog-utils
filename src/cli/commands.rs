@@ -43,6 +43,8 @@ pub struct AddArgs {
     pub number: Option<u64>,
     #[arg(short, long)]
     pub yes: bool,
+    #[arg(long)]
+    pub all_previous: bool,
 }
 
 #[derive(Args, Debug)]

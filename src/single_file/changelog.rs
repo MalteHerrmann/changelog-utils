@@ -47,6 +47,16 @@ impl SingleFileChangelog {
 
         exported_string
     }
+
+    /// Returns all PR numbers found in the changelog across all releases.
+    pub fn get_all_pr_numbers(&self) -> Vec<u64> {
+        self.releases
+            .iter()
+            .flat_map(|release| &release.change_types)
+            .flat_map(|change_type| &change_type.entries)
+            .map(|entry| entry.pr_number)
+            .collect()
+    }
 }
 
 /// Loads the changelog from the default changelog path.
