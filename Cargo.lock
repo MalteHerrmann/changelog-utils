@@ -264,6 +264,7 @@ dependencies = [
  "clap",
  "inquire",
  "octocrab",
+ "parrot",
  "predicates",
  "regex",
  "rig-core",
@@ -1303,6 +1304,14 @@ dependencies = [
  "redox_syscall",
  "smallvec",
  "windows-link",
+]
+
+[[package]]
+name = "parrot"
+version = "0.0.2"
+source = "git+https://github.com/malteherrmann/parrot?tag=v0.0.2#35f22f06ffc428e2aec6695c6df0e6ccb36232f7"
+dependencies = [
+ "thiserror 2.0.17",
 ]
 
 [[package]]

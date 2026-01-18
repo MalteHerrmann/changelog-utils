@@ -6,7 +6,18 @@ use std::{env::VarError, io, num::ParseIntError, string::FromUtf8Error};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum CheckError {}
+pub enum CheckError {
+    #[error("changelog not found")]
+    ChangelogNotFound,
+    #[error("config invalid")]
+    ConfigInvalid,
+    #[error("failed to check path: {0}")]
+    FailedToCheckPath(#[from] io::Error),
+    #[error("failed to check LLMs: {0}")]
+    FailedToCheckLLMs(String),
+    #[error("multi-file changelog directory not found")]
+    MultiFileDirNotFound,
+}
 
 #[derive(Error, Debug)]
 pub enum CheckDiffError {
