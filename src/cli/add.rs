@@ -5,7 +5,7 @@ use crate::{
     single_file::{change_type, changelog, entry, release},
     utils::{
         git::{commit, get_git_info},
-        github::{get_pr_info, PRInfo},
+        github::{get_merged_pr_numbers, get_pr_info, PRInfo},
     },
 };
 use std::collections::HashMap;
@@ -72,9 +72,17 @@ fn get_entry_inputs(
 // to commit the changes.
 //
 // NOTE: the changes are NOT pushed to the origin when running the `add` command.
-pub async fn run(pr_number: Option<u64>, accept: bool) -> Result<(), AddError> {
+pub async fn run(pr_number: Option<u64>, accept: bool, all_previous: bool) -> Result<(), AddError> {
     let config = config::load()?;
     let git_info = get_git_info(&config)?;
+
+    if all_previous {
+        if pr_number.is_some() {
+            eprintln!("Error: Cannot specify both a PR number and --all-previous flag");
+            std::process::exit(1);
+        }
+        return run_batch(config, git_info, accept).await;
+    }
 
     let mut pr_info = get_pr_info(&config, &git_info, pr_number).await?;
     let retrieved = pr_info.number != 0;
@@ -96,6 +104,120 @@ pub async fn run(pr_number: Option<u64>, accept: bool) -> Result<(), AddError> {
 
     let cm = inputs::get_commit_message(&config)?;
     Ok(commit(&config, &cm)?)
+}
+
+/// Runs batch processing to add changelog entries for all previous merged PRs
+/// that don't yet have changelog entries.
+async fn run_batch(
+    config: config::Config,
+    git_info: crate::utils::git::GitInfo,
+    accept: bool,
+) -> Result<(), AddError> {
+    // Inform user about authentication status
+    if std::env::var("GITHUB_TOKEN").is_err() {
+        println!("⚠ No GITHUB_TOKEN found. Using unauthenticated GitHub API with rate limiting.");
+        println!("  Set GITHUB_TOKEN environment variable for higher rate limits.\n");
+    }
+
+    println!("Fetching merged PRs from repository...");
+    let merged_prs = get_merged_pr_numbers(&git_info).await?;
+    println!("Found {} merged PRs", merged_prs.len());
+
+    let mut changelog = changelog::load(&config)?;
+    let existing_prs = changelog.get_all_pr_numbers();
+
+    let missing_prs: Vec<u64> = merged_prs
+        .into_iter()
+        .filter(|pr| !existing_prs.contains(pr))
+        .collect();
+
+    if missing_prs.is_empty() {
+        println!("All merged PRs already have changelog entries!");
+        return Ok(());
+    }
+
+    println!(
+        "\nFound {} PRs without changelog entries",
+        missing_prs.len()
+    );
+    println!("Fetching PR details...\n");
+
+    // Fetch PR info for all missing PRs to show titles
+    let mut pr_details = Vec::new();
+    for pr_number in &missing_prs {
+        match get_pr_info(&config, &git_info, Some(*pr_number)).await {
+            Ok(pr_info) => {
+                pr_details.push((*pr_number, pr_info.description));
+            }
+            Err(_) => {
+                pr_details.push((*pr_number, String::from("(unable to fetch title)")));
+            }
+        }
+    }
+
+    // Let user select which PRs to add
+    let selected_prs = inputs::select_prs_to_add(pr_details)?;
+
+    if selected_prs.is_empty() {
+        println!("No PRs selected. Aborted.");
+        return Ok(());
+    }
+
+    println!("\nProcessing {} selected PRs...", selected_prs.len());
+
+    let mut added_count = 0;
+    let mut skipped_count = 0;
+
+    for pr_number in selected_prs {
+        print!("Processing PR #{}... ", pr_number);
+
+        match get_pr_info(&config, &git_info, Some(pr_number)).await {
+            Ok(mut pr_info) => {
+                let retrieved = pr_info.number != 0;
+
+                match get_entry_inputs(&config, &mut pr_info, accept, retrieved) {
+                    Ok((selected_change_type, pr_num, cat, desc)) => {
+                        add_entry(
+                            &config,
+                            &mut changelog,
+                            &selected_change_type,
+                            &cat,
+                            &desc,
+                            pr_num,
+                        );
+                        added_count += 1;
+                        println!("✓ added");
+                    }
+                    Err(e) => {
+                        skipped_count += 1;
+                        println!("⚠ skipped ({})", e);
+                    }
+                }
+            }
+            Err(e) => {
+                skipped_count += 1;
+                println!("⚠ skipped ({})", e);
+            }
+        }
+    }
+
+    if added_count > 0 {
+        changelog.write(&config, &changelog.path)?;
+
+        let commit_message = format!(
+            "chore: Add changelog entries for {} previous PRs",
+            added_count
+        );
+        commit(&config, &commit_message)?;
+
+        println!("\n✓ Successfully added {} entries", added_count);
+    }
+
+    if skipped_count > 0 {
+        println!("⚠ Skipped {} PRs", skipped_count);
+    }
+
+    Ok(())
 }
 
 /// Adds the given contents into a new entry in the unreleased section

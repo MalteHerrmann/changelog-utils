@@ -1,5 +1,5 @@
 use crate::{config::Config, errors::InputError, utils::release_type::ReleaseType};
-use inquire::{Confirm, Editor, Select, Text};
+use inquire::{Confirm, Editor, MultiSelect, Select, Text};
 use octocrab::{models::repos::Branch, Page};
 
 pub fn get_change_type(config: &Config, suggestion: &str) -> Result<String, InputError> {
@@ -123,4 +123,34 @@ pub fn get_use_ai() -> Result<bool, InputError> {
             "Do you want to use AI to suggest changelog contents? Requires API keys to be set in environment. (y/n)\n")
         .prompt()?
     )
+}
+
+pub fn select_prs_to_add(pr_list: Vec<(u64, String)>) -> Result<Vec<u64>, InputError> {
+    let options: Vec<String> = pr_list
+        .iter()
+        .map(|(num, title)| format!("#{}: {}", num, title))
+        .collect();
+
+    let selected = MultiSelect::new(
+        "Select PRs to add (use Space to toggle, Enter to confirm):",
+        options,
+    )
+    .with_all_selected_by_default()
+    .prompt()?;
+
+    // Extract PR numbers from selected items
+    let selected_prs: Vec<u64> = selected
+        .iter()
+        .filter_map(|s| {
+            // Parse "#123: title" to extract 123
+            s.split(':')
+                .next()?
+                .trim_start_matches('#')
+                .trim()
+                .parse::<u64>()
+                .ok()
+        })
+        .collect();
+
+    Ok(selected_prs)
 }

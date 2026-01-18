@@ -18,6 +18,7 @@ This changelog was created using the `clu` binary
 
 ### Features
 
+- (cli) [#114](https://github.com/MalteHerrmann/changelog-utils/pull/114) Enable batch-adding previously merged PRs.
 - (cli) [#112](https://github.com/MalteHerrmann/changelog-utils/pull/112) Add version to configuration file.
 - (cli) [#111](https://github.com/MalteHerrmann/changelog-utils/pull/111) Add CLI command to check tool setup.
 - (all) [#104](https://github.com/MalteHerrmann/changelog-utils/pull/104) Add multi file implementation.

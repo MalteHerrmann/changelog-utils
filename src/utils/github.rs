@@ -67,6 +67,21 @@ pub fn get_authenticated_github_client() -> Result<Octocrab, GitHubError> {
         .build()?)
 }
 
+/// Returns a GitHub client, authenticated if GITHUB_TOKEN is available, otherwise unauthenticated.
+/// Note: Unauthenticated clients have lower rate limits than authenticated ones.
+pub fn get_github_client() -> Octocrab {
+    match std::env::var("GITHUB_TOKEN") {
+        Ok(token) => octocrab::OctocrabBuilder::new()
+            .personal_token(token)
+            .build()
+            .unwrap_or_default(),
+        Err(_) => {
+            // No token available, use unauthenticated client
+            Octocrab::default()
+        }
+    }
+}
+
 /// Checks if the given branch exists on the GitHub repository.
 pub async fn branch_exists_on_remote(client: &Octocrab, git_info: &GitInfo) -> bool {
     client
@@ -79,7 +94,7 @@ pub async fn branch_exists_on_remote(client: &Octocrab, git_info: &GitInfo) -> b
 /// Returns an option for an open PR from the current local branch in the configured target
 /// repository if it exists.
 pub async fn get_open_pr(git_info: &GitInfo) -> Result<PullRequest, GitHubError> {
-    let octocrab = get_authenticated_github_client().unwrap_or_default();
+    let octocrab = get_github_client();
 
     let pulls = octocrab
         .pulls(git_info.owner.to_owned(), git_info.repo.to_owned())
@@ -104,7 +119,7 @@ pub async fn get_open_pr(git_info: &GitInfo) -> Result<PullRequest, GitHubError>
 
 /// Returns a PR from the repository by its number.
 async fn get_pr_by_number(git_info: &GitInfo, pr_number: u64) -> Result<PullRequest, GitHubError> {
-    let client = get_authenticated_github_client()?;
+    let client = get_github_client();
     client
         .pulls(&git_info.owner, &git_info.repo)
         .get(pr_number)
@@ -131,4 +146,49 @@ pub async fn get_pr_info(
     }
 
     Ok(PRInfo::default())
+}
+
+/// Gets all merged PR numbers from the repository's default branch.
+/// Returns a sorted, deduplicated list of PR numbers.
+pub async fn get_merged_pr_numbers(git_info: &GitInfo) -> Result<Vec<u64>, GitHubError> {
+    let client = get_github_client();
+
+    // Get the default branch for the repository
+    let repo = client.repos(&git_info.owner, &git_info.repo).get().await?;
+
+    let default_branch = repo.default_branch.unwrap_or_else(|| "main".to_string());
+
+    let mut pr_numbers = Vec::new();
+    let mut page = 1u32;
+
+    loop {
+        let pulls = client
+            .pulls(&git_info.owner, &git_info.repo)
+            .list()
+            .state(octocrab::params::State::Closed)
+            .base(&default_branch)
+            .per_page(100)
+            .page(page)
+            .send()
+            .await?;
+
+        if pulls.items.is_empty() {
+            break;
+        }
+
+        for pr in pulls.items {
+            // Only include PRs that were actually merged
+            if pr.merged_at.is_some() {
+                pr_numbers.push(pr.number);
+            }
+        }
+
+        page += 1;
+    }
+
+    // Sort and deduplicate
+    pr_numbers.sort_unstable();
+    pr_numbers.dedup();
+
+    Ok(pr_numbers)
 }
