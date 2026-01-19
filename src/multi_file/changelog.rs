@@ -36,16 +36,19 @@ impl crate::common::changelog::Changelog for MultiFileChangelog {
             .collect()
     }
 
-    fn write(&self, _config: &Config, _export_path: &std::path::Path) -> Result<(), crate::errors::ChangelogError> {
-        Err(crate::errors::ChangelogError::NotImplemented(
-            "write operation not yet implemented for multi-file changelogs".to_string(),
-        ))
+    fn write(
+        &self,
+        _config: &Config,
+        _export_path: &std::path::Path,
+    ) -> Result<(), crate::errors::ChangelogError> {
+        unimplemented!("write operation not yet implemented for multi-file changelogs")
     }
 
-    fn get_fixed_contents(&self, _config: &Config) -> Result<String, crate::errors::ChangelogError> {
-        Err(crate::errors::ChangelogError::NotImplemented(
-            "get_fixed_contents not yet implemented for multi-file changelogs".to_string(),
-        ))
+    fn get_fixed_contents(
+        &self,
+        _config: &Config,
+    ) -> Result<String, crate::errors::ChangelogError> {
+        unimplemented!("get_fixed_contents not yet implemented for multi-file changelogs")
     }
 }
 

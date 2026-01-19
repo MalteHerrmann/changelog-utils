@@ -1,8 +1,7 @@
 use crate::{
     config::{self, Config},
     errors::ChangelogError,
-    multi_file,
-    single_file,
+    multi_file, single_file,
 };
 use std::path::{Path, PathBuf};
 
@@ -18,11 +17,9 @@ pub trait Changelog {
     fn get_all_pr_numbers(&self) -> Vec<u64>;
 
     /// Writes the changelog to the given path
-    /// Multi-file implementations may return NotImplemented error
     fn write(&self, config: &Config, export_path: &Path) -> Result<(), ChangelogError>;
 
     /// Returns the fixed contents as a String
-    /// Multi-file implementations may return NotImplemented error
     fn get_fixed_contents(&self, config: &Config) -> Result<String, ChangelogError>;
 
     /// Returns the path to the changelog as a PathBuf
