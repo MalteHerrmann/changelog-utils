@@ -8,6 +8,7 @@ This changelog was created using the `clu` binary
 
 ### Improvements
 
+- (all) [#115](https://github.com/MalteHerrmann/changelog-utils/pull/115) Add common trait for changelogs.
 - (ci) [#108](https://github.com/MalteHerrmann/changelog-utils/pull/108) Add makefile target for tests run in CI.
 - (ci) [#105](https://github.com/MalteHerrmann/changelog-utils/pull/105) Use nextest as test runner.
 - (all) [#103](https://github.com/MalteHerrmann/changelog-utils/pull/103) Refactor into submodules.

@@ -1,5 +1,6 @@
 use super::inputs;
 use crate::{
+    common::changelog::Changelog,
     config,
     errors::AddError,
     single_file::{change_type, changelog, entry, release},

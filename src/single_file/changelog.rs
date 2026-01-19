@@ -21,14 +21,29 @@ pub struct SingleFileChangelog {
     pub problems: Vec<String>,
 }
 
-impl SingleFileChangelog {
-    /// Exports the changelog contents to the given filepath.
-    pub fn write(&self, config: &Config, export_path: &Path) -> Result<(), ChangelogError> {
-        Ok(fs::write(export_path, self.get_fixed_contents(config))?)
+impl crate::common::changelog::Changelog for SingleFileChangelog {
+    fn get_path(&self) -> &Path {
+        &self.path
     }
 
-    /// Returns the fixed contents as a String to be exported.
-    pub fn get_fixed_contents(&self, config: &Config) -> String {
+    fn get_problems(&self) -> &[String] {
+        &self.problems
+    }
+
+    fn get_all_pr_numbers(&self) -> Vec<u64> {
+        self.releases
+            .iter()
+            .flat_map(|release| &release.change_types)
+            .flat_map(|change_type| &change_type.entries)
+            .map(|entry| entry.pr_number)
+            .collect()
+    }
+
+    fn write(&self, config: &Config, export_path: &Path) -> Result<(), ChangelogError> {
+        Ok(fs::write(export_path, self.get_fixed_contents(config)?)?)
+    }
+
+    fn get_fixed_contents(&self, config: &Config) -> Result<String, ChangelogError> {
         let mut exported_string = "".to_string();
 
         self.comments
@@ -45,17 +60,7 @@ impl SingleFileChangelog {
             .iter()
             .for_each(|l| exported_string.push_str(format!("{}\n", l).as_str()));
 
-        exported_string
-    }
-
-    /// Returns all PR numbers found in the changelog across all releases.
-    pub fn get_all_pr_numbers(&self) -> Vec<u64> {
-        self.releases
-            .iter()
-            .flat_map(|release| &release.change_types)
-            .flat_map(|change_type| &change_type.entries)
-            .map(|entry| entry.pr_number)
-            .collect()
+        Ok(exported_string)
     }
 }
 

@@ -1,5 +1,6 @@
 use super::inputs::get_release_type;
 use crate::{
+    common::changelog::Changelog,
     config,
     errors::ReleaseCLIError,
     single_file::{

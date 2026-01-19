@@ -1,5 +1,5 @@
 use assert_fs::NamedTempFile;
-use clu::{cli::add, config, single_file::changelog};
+use clu::{cli::add, common::Changelog, config, single_file::changelog};
 use std::{borrow::BorrowMut, path::Path};
 
 #[cfg(test)]
