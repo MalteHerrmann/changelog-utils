@@ -1,6 +1,7 @@
 use super::{add, inputs};
 use crate::{
     ai::diff_prompt,
+    common::changelog::Changelog,
     config,
     errors::CreateError,
     single_file::changelog,

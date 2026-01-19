@@ -1,4 +1,4 @@
-use clu::{config, multi_file, single_file::changelog};
+use clu::{common::Changelog, config, multi_file, single_file::changelog};
 use std::{fs, path::Path};
 
 #[cfg(test)]
@@ -55,7 +55,7 @@ fn it_should_fix_the_changelog_as_expected() {
 
     assert_eq!(
         expected.trim(),
-        changelog.get_fixed_contents(&config).trim(),
+        changelog.get_fixed_contents(&config).expect("failed to get fixed contents").trim(),
         "expected different fixed changelog"
     );
 }

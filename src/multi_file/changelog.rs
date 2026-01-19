@@ -18,6 +18,37 @@ pub struct MultiFileChangelog {
     pub path: PathBuf,
 }
 
+impl crate::common::changelog::Changelog for MultiFileChangelog {
+    fn get_path(&self) -> &std::path::Path {
+        &self.path
+    }
+
+    fn get_problems(&self) -> &[String] {
+        &self.problems
+    }
+
+    fn get_all_pr_numbers(&self) -> Vec<u64> {
+        self.releases
+            .iter()
+            .flat_map(|release| &release.change_types)
+            .flat_map(|change_type| &change_type.entries)
+            .map(|entry| entry.pr_number)
+            .collect()
+    }
+
+    fn write(&self, _config: &Config, _export_path: &std::path::Path) -> Result<(), crate::errors::ChangelogError> {
+        Err(crate::errors::ChangelogError::NotImplemented(
+            "write operation not yet implemented for multi-file changelogs".to_string(),
+        ))
+    }
+
+    fn get_fixed_contents(&self, _config: &Config) -> Result<String, crate::errors::ChangelogError> {
+        Err(crate::errors::ChangelogError::NotImplemented(
+            "get_fixed_contents not yet implemented for multi-file changelogs".to_string(),
+        ))
+    }
+}
+
 pub fn load(config: &Config) -> Result<MultiFileChangelog, ChangelogError> {
     let expected_path = config
         .changelog_dir

@@ -16,9 +16,17 @@ pub async fn run() -> Result<(), CheckDiffError> {
 
     let diff = git::get_diff(&git_info.branch, &target_branch)?;
 
-    let changelog = changelog::load(&config)?;
-
-    check_diff(&changelog, &diff, pr_info.number)?;
+    // For now, check_diff only works with single-file mode
+    // Load the single file changelog directly to access release structure
+    match config.mode {
+        config::Mode::Single => {
+            let changelog = changelog::load(&config)?;
+            check_diff(&changelog, &diff, pr_info.number)?;
+        }
+        config::Mode::Multi => {
+            unimplemented!();
+        }
+    }
 
     println!("changelog contains expected entry");
     Ok(())
@@ -27,7 +35,6 @@ pub async fn run() -> Result<(), CheckDiffError> {
 /// Checks the contents of the given diff for the existence
 /// of an entry in the unreleased section of the changelog.
 fn check_diff(
-    // TODO: this should use a common util instead of the single file thing
     changelog: &changelog::SingleFileChangelog,
     diff: &str,
     pr_number: u64,
