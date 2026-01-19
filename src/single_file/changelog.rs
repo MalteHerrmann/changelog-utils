@@ -40,7 +40,7 @@ impl crate::common::changelog::Changelog for SingleFileChangelog {
     }
 
     fn write(&self, config: &Config, export_path: &Path) -> Result<(), ChangelogError> {
-        Ok(fs::write(export_path, self.get_fixed_contents(config)?)?) 
+        Ok(fs::write(export_path, self.get_fixed_contents(config)?)?)
     }
 
     fn get_fixed_contents(&self, config: &Config) -> Result<String, ChangelogError> {

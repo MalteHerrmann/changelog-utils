@@ -55,7 +55,10 @@ fn it_should_fix_the_changelog_as_expected() {
 
     assert_eq!(
         expected.trim(),
-        changelog.get_fixed_contents(&config).expect("failed to get fixed contents").trim(),
+        changelog
+            .get_fixed_contents(&config)
+            .expect("failed to get fixed contents")
+            .trim(),
         "expected different fixed changelog"
     );
 }

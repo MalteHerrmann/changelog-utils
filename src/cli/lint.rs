@@ -31,4 +31,3 @@ pub fn run(fix: bool) -> Result<(), LintError> {
 
     Err(LintError::ProblemsInChangelog)
 }
-
