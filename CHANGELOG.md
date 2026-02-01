@@ -8,6 +8,7 @@ This changelog was created using the `clu` binary
 
 ### Chores
 
+- (ci) [#118](https://github.com/MalteHerrmann/changelog-utils/pull/118) Update changelog lint action to v0.4.0.
 - (config) [#117](https://github.com/MalteHerrmann/changelog-utils/pull/117) Update `.clconfig.json` and regenerate changelog.
 
 ## [v1.6.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.6.0) - 2026-02-01
