@@ -1,4 +1,5 @@
 {
+  "config_version": 1,
   "categories": [
     "all",
     "ci",
@@ -11,15 +12,31 @@
     "test"
   ],
   "change_types": [
-    {"short": "feat", "long": "Features"},
-    {"short": "imp", "long": "Improvements"},
-    {"short": "fix", "long": "Bug Fixes"}
+    {
+      "short": "feat",
+      "long": "Features"
+    },
+    {
+      "short": "imp",
+      "long": "Improvements"
+    },
+    {
+      "short": "fix",
+      "long": "Bug Fixes"
+    },
+    {
+      "short": "chore",
+      "long": "Chores"
+    }
   ],
   "changelog_path": "CHANGELOG.md",
+  "changelog_dir": null,
   "commit_message": "add changelog entry",
   "expected_spellings": {
     "CLI": "cli"
   },
   "legacy_version": null,
-  "target_repo": "https://github.com/MalteHerrmann/changelog-utils"
+  "mode": "single",
+  "target_repo": "https://github.com/MalteHerrmann/changelog-utils",
+  "use_categories": true
 }
