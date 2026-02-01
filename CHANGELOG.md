@@ -4,7 +4,21 @@ This changelog was created using the `clu` binary
 -->
 # Changelog
 
+## Unreleased
+
+### Chores
+
+- (config) [#117](https://github.com/MalteHerrmann/changelog-utils/pull/117) Update `.clconfig.json` and regenerate changelog.
+
 ## [v1.6.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.6.0) - 2026-02-01
+
+### Features
+
+- (cli) [#114](https://github.com/MalteHerrmann/changelog-utils/pull/114) Enable batch-adding previously merged PRs.
+- (cli) [#112](https://github.com/MalteHerrmann/changelog-utils/pull/112) Add version to configuration file.
+- (cli) [#111](https://github.com/MalteHerrmann/changelog-utils/pull/111) Add CLI command to check tool setup.
+- (all) [#104](https://github.com/MalteHerrmann/changelog-utils/pull/104) Add multi file implementation.
+- (cli) [#96](https://github.com/MalteHerrmann/changelog-utils/pull/96) Add functionality to check diff for entry on current PR.
 
 ### Improvements
 
@@ -16,14 +30,6 @@ This changelog was created using the `clu` binary
 - (cli) [#94](https://github.com/MalteHerrmann/changelog-utils/pull/94) Fail PR creation when having problems parsing the LLM response.
 - (cli) [#93](https://github.com/MalteHerrmann/changelog-utils/pull/93) Add check for empty diffs when creating PRs.
 - (ci) [#92](https://github.com/MalteHerrmann/changelog-utils/pull/92) Update changelog lint action to v0.3.0 and adjust config.
-
-### Features
-
-- (cli) [#114](https://github.com/MalteHerrmann/changelog-utils/pull/114) Enable batch-adding previously merged PRs.
-- (cli) [#112](https://github.com/MalteHerrmann/changelog-utils/pull/112) Add version to configuration file.
-- (cli) [#111](https://github.com/MalteHerrmann/changelog-utils/pull/111) Add CLI command to check tool setup.
-- (all) [#104](https://github.com/MalteHerrmann/changelog-utils/pull/104) Add multi file implementation.
-- (cli) [#96](https://github.com/MalteHerrmann/changelog-utils/pull/96) Add functionality to check diff for entry on current PR.
 
 ## [v1.5.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.5.0) - 2025-05-19
 
@@ -43,9 +49,9 @@ This changelog was created using the `clu` binary
 
 ## [v1.4.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.4.0) - 2025-05-15
 
-### Bug Fixes
+### Features
 
-- (docker) [#75](https://github.com/MalteHerrmann/changelog-utils/pull/75) Adjust required Rust version in Dockerfile.
+- (cli) [#78](https://github.com/MalteHerrmann/changelog-utils/pull/78) Add AI-assisted changelog generation to create PRs.
 
 ### Improvements
 
@@ -53,11 +59,19 @@ This changelog was created using the `clu` binary
 - (config) [#80](https://github.com/MalteHerrmann/changelog-utils/pull/80) Convert to have deterministic order of change types in config.
 - (cli) [#76](https://github.com/MalteHerrmann/changelog-utils/pull/76) Improve error handling when creating a PR and only the local changelog commit fails.
 
-### Features
+### Bug Fixes
 
-- (cli) [#78](https://github.com/MalteHerrmann/changelog-utils/pull/78) Add AI-assisted changelog generation to create PRs.
+- (docker) [#75](https://github.com/MalteHerrmann/changelog-utils/pull/75) Adjust required Rust version in Dockerfile.
 
 ## [v1.3.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.3.0) - 2025-03-30
+
+### Features
+
+- (cli) [#74](https://github.com/MalteHerrmann/changelog-utils/pull/74) Enable adding entries for previous PRs.
+- (config) [#70](https://github.com/MalteHerrmann/changelog-utils/pull/70) Add changelog path to the configuration.
+- (cli) [#68](https://github.com/MalteHerrmann/changelog-utils/pull/68) Commit and push changelog entry after adding.
+- (cli) [#67](https://github.com/MalteHerrmann/changelog-utils/pull/67) Add option to push branch to remote.
+- (cli) [#63](https://github.com/MalteHerrmann/changelog-utils/pull/63) Enable switching between release types when not specifying a version.
 
 ### Improvements
 
@@ -68,14 +82,6 @@ This changelog was created using the `clu` binary
 
 - (cli) [#71](https://github.com/MalteHerrmann/changelog-utils/pull/71) Fix creating PRs functionality plus refactors and TODOs.
 - (lint) [#61](https://github.com/MalteHerrmann/changelog-utils/pull/61) Fix version comparison.
-
-### Features
-
-- (cli) [#74](https://github.com/MalteHerrmann/changelog-utils/pull/74) Enable adding entries for previous PRs.
-- (config) [#70](https://github.com/MalteHerrmann/changelog-utils/pull/70) Add changelog path to the configuration.
-- (cli) [#68](https://github.com/MalteHerrmann/changelog-utils/pull/68) Commit and push changelog entry after adding.
-- (cli) [#67](https://github.com/MalteHerrmann/changelog-utils/pull/67) Add option to push branch to remote.
-- (cli) [#63](https://github.com/MalteHerrmann/changelog-utils/pull/63) Enable switching between release types when not specifying a version.
 
 ## [v1.2.0](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.2.0) - 2024-08-03
 
