@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG RUST_VERSION=1.85.1
+ARG RUST_VERSION=1.94.0
 ARG REVIEWDOG_VERSION=v0.17.1
 
 ################################################################################
