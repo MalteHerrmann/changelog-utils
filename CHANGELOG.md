@@ -6,6 +6,10 @@ This changelog was created using the `clu` binary
 
 ## Unreleased
 
+### Improvements
+
+- (all) [#119](https://github.com/MalteHerrmann/changelog-utils/pull/119) Upgrade dependencies and fix AI model selection.
+
 ### Chores
 
 - (ci) [#118](https://github.com/MalteHerrmann/changelog-utils/pull/118) Update changelog lint action to v0.4.0.
