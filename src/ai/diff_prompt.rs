@@ -1,8 +1,9 @@
 use crate::{config::Config, errors::CreateError};
 use regex::Regex;
 use rig::{
+    client::{CompletionClient, ProviderClient},
     completion::Prompt,
-    providers::anthropic::{self, CLAUDE_3_7_SONNET},
+    providers::anthropic::{self, completion::CLAUDE_4_SONNET},
 };
 use serde::Deserialize;
 
@@ -21,11 +22,12 @@ fn parse_suggestions(llm_response: &str) -> Result<Suggestions, CreateError> {
     serde_json::from_str(json).map_err(CreateError::FailedToParse)
 }
 
+/// TODO: prompt using parrot instead of rig-core
 async fn prompt(config: &Config, diff: &str) -> Result<String, CreateError> {
     let prompt = format!("{}\n{}", include_str!("diff_prompt.txt"), config);
     let anthropic_client = anthropic::Client::from_env();
     let sonnet = anthropic_client
-        .agent(CLAUDE_3_7_SONNET)
+        .agent(CLAUDE_4_SONNET)
         .preamble(&prompt)
         .max_tokens(1e3 as u64)
         .build();
@@ -51,8 +53,8 @@ mod tests {
             .expect("failed to load example config")
     }
 
-    #[cfg(not(feature = "remote"))]
     #[tokio::test]
+    #[cfg(not(feature = "remote"))]
     async fn test_parse_prompt() {
         let example_config = load_example_config();
         let diff = include_str!("../testdata/example_git_diff.txt");
