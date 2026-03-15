@@ -1,5 +1,6 @@
 use super::change_type::ChangeType;
-use crate::{config, errors::ReleaseError, utils::version};
+use crate::{config, utils::version};
+use eyre::WrapErr;
 use regex::RegexBuilder;
 
 /// Holds the information about a release section in the changelog.
@@ -45,13 +46,15 @@ impl Release {
     /// legacy version defined in the configuration.
     ///
     /// If no legacy version is defined, it returns false.
-    pub fn is_legacy(&self, config: &config::Config) -> Result<bool, ReleaseError> {
+    pub fn is_legacy(&self, config: &config::Config) -> eyre::Result<bool> {
         if self.is_unreleased() || !config.has_legacy_version() {
             return Ok(false);
         }
 
-        let legacy_version = version::parse(config.legacy_version.as_ref().unwrap())?;
-        let parsed_version = version::parse(self.version.as_str())?;
+        let legacy_version = version::parse(config.legacy_version.as_ref().unwrap())
+            .wrap_err("Failed to parse legacy version from config")?;
+        let parsed_version = version::parse(self.version.as_str())
+            .wrap_err_with(|| format!("Failed to parse release version '{}'", self.version))?;
 
         Ok(!parsed_version.gt(&legacy_version))
     }
@@ -79,7 +82,7 @@ pub fn new_empty_release() -> Release {
 }
 
 /// Parses the contents of a release line in the changelog.
-pub fn parse(config: &config::Config, line: &str) -> Result<Release, ReleaseError> {
+pub fn parse(config: &config::Config, line: &str) -> eyre::Result<Release> {
     let change_types: Vec<ChangeType> = Vec::new();
     let mut problems: Vec<String> = Vec::new();
 
@@ -88,17 +91,15 @@ pub fn parse(config: &config::Config, line: &str) -> Result<Release, ReleaseErro
         return Ok(r);
     }
 
-    let captures = match RegexBuilder::new(concat!(
+    let captures = RegexBuilder::new(concat!(
         r#"^\s*##\s*\[(?P<version>v\d+\.\d+\.\d+(-rc\d+)?)]"#,
         r#"(?P<link>\(.*\))?\s*-\s*(?P<date>\d{4}-\d{2}-\d{2})$"#,
     ))
     .case_insensitive(true)
-    .build()?
+    .build()
+    .wrap_err("Failed to build release regex pattern")?
     .captures(line)
-    {
-        Some(c) => c,
-        None => return Err(ReleaseError::NoMatchFound),
-    };
+    .ok_or_else(|| eyre::eyre!("No match found for release pattern in line: '{}'", line))?;
 
     let version = captures.name("version").unwrap().as_str().to_string();
 
@@ -197,7 +198,7 @@ mod release_tests {
     fn test_fail_malformed() {
         let example = "## invalid entry";
         let err = parse(&load_test_config(), example).expect_err("expected parsing to fail");
-        assert_eq!(err, ReleaseError::NoMatchFound);
+        assert!(err.to_string().contains("No match found for release pattern"));
     }
 
     #[test]

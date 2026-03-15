@@ -1,8 +1,8 @@
 use super::{Config, CURRENT_CONFIG_VERSION};
-use crate::errors::ConfigError;
+use eyre::WrapErr;
 
 /// Represents a migration function that transforms a config from one version to another
-type MigrationFn = fn(&mut Config) -> Result<(), ConfigError>;
+type MigrationFn = fn(&mut Config) -> eyre::Result<()>;
 
 /// Represents a migration between two versions
 struct Migration {
@@ -25,7 +25,7 @@ fn get_migrations() -> Vec<Migration> {
 }
 
 /// Applies all necessary migrations to bring a config to the current version
-pub fn migrate_to_current(config: &mut Config) -> Result<(), ConfigError> {
+pub fn migrate_to_current(config: &mut Config) -> eyre::Result<()> {
     let current_version = config.get_version();
 
     if current_version == CURRENT_CONFIG_VERSION {
@@ -45,13 +45,15 @@ pub fn migrate_to_current(config: &mut Config) -> Result<(), ConfigError> {
             .iter()
             .find(|m| m.from_version == version)
             .ok_or_else(|| {
-                ConfigError::InvalidConfig(format!(
+                eyre::eyre!(
                     "No migration path found from version {} to {}",
-                    version, CURRENT_CONFIG_VERSION
-                ))
+                    version,
+                    CURRENT_CONFIG_VERSION
+                )
             })?;
 
-        (migration.migrate)(config)?;
+        (migration.migrate)(config)
+            .wrap_err_with(|| format!("Failed to migrate config from version {}", version))?;
         version = migration.to_version;
     }
 

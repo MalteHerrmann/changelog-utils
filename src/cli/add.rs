@@ -2,13 +2,13 @@ use super::inputs;
 use crate::{
     common::changelog::Changelog,
     config,
-    errors::AddError,
     single_file::{change_type, changelog, entry, release},
     utils::{
         git::{commit, get_git_info},
         github::{get_merged_pr_numbers, get_pr_info, PRInfo},
     },
 };
+use eyre::WrapErr;
 use std::collections::HashMap;
 
 /// Determines if user input is required based on the accept flag and whether PR info was retrieved.
@@ -22,7 +22,7 @@ fn get_entry_inputs(
     pr_info: &mut PRInfo,
     accept: bool,
     retrieved: bool,
-) -> Result<(String, u64, String, String), AddError> {
+) -> eyre::Result<(String, u64, String, String)> {
     let selectable_change_types: Vec<String> = config
         .change_types
         .iter()
@@ -42,12 +42,14 @@ fn get_entry_inputs(
     }
 
     if get_inputs["change_type"] {
-        selected_change_type = inputs::get_change_type(config, &pr_info.change_type)?;
+        selected_change_type = inputs::get_change_type(config, &pr_info.change_type)
+            .wrap_err("Failed to get change type for entry")?;
     }
 
     let mut pr_number = pr_info.number;
     if get_inputs["pr_number"] {
-        pr_number = inputs::get_pr_number(pr_info.number)?;
+        pr_number = inputs::get_pr_number(pr_info.number)
+            .wrap_err("Failed to get PR number for entry")?;
     }
 
     let mut cat = pr_info.category.clone();
@@ -56,12 +58,14 @@ fn get_entry_inputs(
     }
 
     if get_inputs["category"] {
-        cat = inputs::get_category(config, &pr_info.category)?;
+        cat = inputs::get_category(config, &pr_info.category)
+            .wrap_err("Failed to get category for entry")?;
     }
 
     let mut desc = pr_info.description.clone();
     if get_inputs["description"] {
-        desc = inputs::get_description(pr_info.description.as_str())?;
+        desc = inputs::get_description(pr_info.description.as_str())
+            .wrap_err("Failed to get description for entry")?;
     }
 
     Ok((selected_change_type, pr_number, cat, desc))
@@ -73,9 +77,11 @@ fn get_entry_inputs(
 // to commit the changes.
 //
 // NOTE: the changes are NOT pushed to the origin when running the `add` command.
-pub async fn run(pr_number: Option<u64>, accept: bool, all_previous: bool) -> Result<(), AddError> {
-    let config = config::load()?;
-    let git_info = get_git_info(&config)?;
+pub async fn run(pr_number: Option<u64>, accept: bool, all_previous: bool) -> eyre::Result<()> {
+    let config = config::load()
+        .wrap_err("Failed to load configuration")?;
+    let git_info = get_git_info(&config)
+        .wrap_err("Failed to get git information")?;
 
     if all_previous {
         if pr_number.is_some() {
@@ -85,13 +91,16 @@ pub async fn run(pr_number: Option<u64>, accept: bool, all_previous: bool) -> Re
         return run_batch(config, git_info, accept).await;
     }
 
-    let mut pr_info = get_pr_info(&config, &git_info, pr_number).await?;
+    let mut pr_info = get_pr_info(&config, &git_info, pr_number)
+        .await
+        .wrap_err("Failed to get PR information")?;
     let retrieved = pr_info.number != 0;
 
     let (selected_change_type, pr_number, cat, desc) =
         get_entry_inputs(&config, &mut pr_info, accept, retrieved)?;
 
-    let mut changelog = changelog::load(&config)?;
+    let mut changelog = changelog::load(&config)
+        .wrap_err("Failed to load changelog")?;
     add_entry(
         &config,
         &mut changelog,
@@ -101,10 +110,13 @@ pub async fn run(pr_number: Option<u64>, accept: bool, all_previous: bool) -> Re
         pr_number,
     );
 
-    changelog.write(&config, &changelog.path)?;
+    changelog.write(&config, &changelog.path)
+        .wrap_err("Failed to write changelog")?;
 
-    let cm = inputs::get_commit_message(&config)?;
-    Ok(commit(&config, &cm)?)
+    let cm = inputs::get_commit_message(&config)
+        .wrap_err("Failed to get commit message")?;
+    commit(&config, &cm)
+        .wrap_err("Failed to commit changes")
 }
 
 /// Runs batch processing to add changelog entries for all previous merged PRs
@@ -113,7 +125,7 @@ async fn run_batch(
     config: config::Config,
     git_info: crate::utils::git::GitInfo,
     accept: bool,
-) -> Result<(), AddError> {
+) -> eyre::Result<()> {
     // Inform user about authentication status
     if std::env::var("GITHUB_TOKEN").is_err() {
         println!("⚠ No GITHUB_TOKEN found. Using unauthenticated GitHub API with rate limiting.");
@@ -121,10 +133,13 @@ async fn run_batch(
     }
 
     println!("Fetching merged PRs from repository...");
-    let merged_prs = get_merged_pr_numbers(&git_info).await?;
+    let merged_prs = get_merged_pr_numbers(&git_info)
+        .await
+        .wrap_err("Failed to fetch merged PR numbers")?;
     println!("Found {} merged PRs", merged_prs.len());
 
-    let mut changelog = changelog::load(&config)?;
+    let mut changelog = changelog::load(&config)
+        .wrap_err("Failed to load changelog")?;
     let existing_prs = changelog.get_all_pr_numbers();
 
     let missing_prs: Vec<u64> = merged_prs
@@ -157,7 +172,8 @@ async fn run_batch(
     }
 
     // Let user select which PRs to add
-    let selected_prs = inputs::select_prs_to_add(pr_details)?;
+    let selected_prs = inputs::select_prs_to_add(pr_details)
+        .wrap_err("Failed to select PRs to add")?;
 
     if selected_prs.is_empty() {
         println!("No PRs selected. Aborted.");
@@ -203,13 +219,15 @@ async fn run_batch(
     }
 
     if added_count > 0 {
-        changelog.write(&config, &changelog.path)?;
+        changelog.write(&config, &changelog.path)
+            .wrap_err("Failed to write changelog with new entries")?;
 
         let commit_message = format!(
             "chore: Add changelog entries for {} previous PRs",
             added_count
         );
-        commit(&config, &commit_message)?;
+        commit(&config, &commit_message)
+            .wrap_err("Failed to commit changelog changes")?;
 
         println!("\n✓ Successfully added {} entries", added_count);
     }

@@ -1,6 +1,5 @@
 use crate::{
     config::{self, Config},
-    errors::ChangelogError,
     multi_file, single_file,
 };
 use std::path::{Path, PathBuf};
@@ -17,10 +16,10 @@ pub trait Changelog {
     fn get_all_pr_numbers(&self) -> Vec<u64>;
 
     /// Writes the changelog to the given path
-    fn write(&self, config: &Config, export_path: &Path) -> Result<(), ChangelogError>;
+    fn write(&self, config: &Config, export_path: &Path) -> eyre::Result<()>;
 
     /// Returns the fixed contents as a String
-    fn get_fixed_contents(&self, config: &Config) -> Result<String, ChangelogError>;
+    fn get_fixed_contents(&self, config: &Config) -> eyre::Result<String>;
 
     /// Returns the path to the changelog as a PathBuf
     fn path(&self) -> PathBuf {
@@ -29,7 +28,7 @@ pub trait Changelog {
 }
 
 /// Loads the changelog based on the mode specified in the configuration
-pub fn load(config: &Config) -> Result<Box<dyn Changelog>, ChangelogError> {
+pub fn load(config: &Config) -> eyre::Result<Box<dyn Changelog>> {
     match config.mode {
         config::Mode::Single => Ok(Box::new(single_file::load(config)?)),
         config::Mode::Multi => Ok(Box::new(multi_file::load(config)?)),

@@ -5,9 +5,9 @@ use std::{
 
 use crate::{
     config::config,
-    errors::{ChangeTypeError, CommonError},
 };
 
+use eyre::WrapErr;
 use super::entry::{self, MultiFileEntry};
 
 #[derive(Clone, Debug)]
@@ -35,12 +35,12 @@ impl ChangeType {
     }
 }
 
-pub fn parse(config: &config::Config, dir: &Path) -> Result<ChangeType, ChangeTypeError> {
+pub fn parse(config: &config::Config, dir: &Path) -> eyre::Result<ChangeType> {
     let base_name = dir
         .file_name()
-        .ok_or_else(|| CommonError::InvalidPath("no base name found".into()))?
+        .ok_or_else(|| eyre::eyre!("Invalid path: no base name found for {}", dir.display()))?
         .to_str()
-        .ok_or_else(|| CommonError::InvalidPath("failed to convert base name to str".into()))?;
+        .ok_or_else(|| eyre::eyre!("Failed to convert base name to string for path {}", dir.display()))?;
 
     let mut problems: Vec<String> = Vec::new();
 
@@ -53,7 +53,7 @@ pub fn parse(config: &config::Config, dir: &Path) -> Result<ChangeType, ChangeTy
     }
 
     let entries: Vec<MultiFileEntry> = fs::read_dir(dir)
-        .map_err(|e| CommonError::InvalidPath(e.to_string()))?
+        .wrap_err_with(|| format!("Failed to read change type directory at {}", dir.display()))?
         .filter_map(Result::ok)
         .map(|e| e.path())
         .filter(|p| p.is_file())
