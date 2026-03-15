@@ -2,7 +2,6 @@ use super::inputs::get_release_type;
 use crate::{
     common::changelog::Changelog,
     config,
-    errors::ReleaseCLIError,
     single_file::{
         changelog::{self, SingleFileChangelog},
         release::Release,
@@ -10,15 +9,20 @@ use crate::{
     utils::version,
 };
 use chrono::offset::Local;
+use eyre::{bail, WrapErr};
 
 /// Creates a new release with the given version based on the given version.
-pub fn run(version_option: Option<String>) -> Result<(), ReleaseCLIError> {
-    let config = config::load()?;
-    let mut changelog = changelog::load(&config)?;
+pub fn run(version_option: Option<String>) -> eyre::Result<()> {
+    let config = config::load()
+        .wrap_err("Failed to load configuration")?;
+    let mut changelog = changelog::load(&config)
+        .wrap_err("Failed to load changelog")?;
 
     let version = match version_option {
-        Some(v) => version::parse(v.as_str())?,
-        None => get_next_release_version(&changelog)?,
+        Some(v) => version::parse(v.as_str())
+            .wrap_err_with(|| format!("Failed to parse version string '{}'", v))?,
+        None => get_next_release_version(&changelog)
+            .wrap_err("Failed to determine next release version")?,
     };
 
     if changelog
@@ -26,12 +30,12 @@ pub fn run(version_option: Option<String>) -> Result<(), ReleaseCLIError> {
         .iter()
         .any(|x| x.version.eq(&version.to_string()))
     {
-        return Err(ReleaseCLIError::DuplicateVersion(version.to_string()));
+        bail!("Version '{}' already exists in changelog", version);
     }
 
     let unreleased = match changelog.releases.iter_mut().find(|x| x.is_unreleased()) {
         Some(r) => r,
-        None => return Err(ReleaseCLIError::NoUnreleased),
+        None => bail!("No unreleased section found in changelog"),
     };
 
     let today = Local::now();
@@ -44,7 +48,8 @@ pub fn run(version_option: Option<String>) -> Result<(), ReleaseCLIError> {
         today.date_naive()
     );
 
-    Ok(changelog.write(&config, &changelog.path)?)
+    changelog.write(&config, &changelog.path)
+        .wrap_err("Failed to write changelog with new release")
 }
 
 /// Queries the user for the desired release type and then derives the required
@@ -54,7 +59,7 @@ pub fn run(version_option: Option<String>) -> Result<(), ReleaseCLIError> {
 /// the released version would be `1.2.4`.
 fn get_next_release_version(
     changelog: &SingleFileChangelog,
-) -> Result<version::Version, ReleaseCLIError> {
+) -> eyre::Result<version::Version> {
     let mut prior_releases: Vec<&Release> = changelog
         .releases
         .iter()
@@ -65,9 +70,11 @@ fn get_next_release_version(
     prior_releases.sort_by(|a, b| a.version.cmp(&b.version));
 
     let latest_release = prior_releases.last().unwrap();
-    let latest_version = version::parse(&latest_release.version)?;
+    let latest_version = version::parse(&latest_release.version)
+        .wrap_err_with(|| format!("Failed to parse latest release version '{}'", latest_release.version))?;
 
-    let release_type = get_release_type()?;
+    let release_type = get_release_type()
+        .wrap_err("Failed to get release type from user")?;
 
     let new_version = version::bump_version(&latest_version, &release_type);
 

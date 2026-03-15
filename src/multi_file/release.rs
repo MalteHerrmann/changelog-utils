@@ -1,9 +1,9 @@
 use super::change_type::{self, ChangeType};
 use crate::{
     config::Config,
-    errors::{CommonError, ReleaseError},
     utils::version,
 };
+use eyre::WrapErr;
 use regex::RegexBuilder;
 use std::{
     fs,
@@ -52,7 +52,7 @@ impl Release {
 
     // TODO: implement
     // TODO: should also get a CLI action
-    pub fn add_summary(&self, _summary: &str) -> Result<(), ReleaseError> {
+    pub fn add_summary(&self, _summary: &str) -> eyre::Result<()> {
         Ok(())
     }
 
@@ -66,31 +66,34 @@ impl Release {
     ///
     /// If no legacy version is defined, it returns false.
     // TODO: can be removed?
-    pub fn is_legacy(&self, config: &Config) -> Result<bool, ReleaseError> {
+    pub fn is_legacy(&self, config: &Config) -> eyre::Result<bool> {
         if self.is_unreleased() || !config.has_legacy_version() {
             return Ok(false);
         }
 
-        let legacy_version = version::parse(config.legacy_version.as_ref().unwrap())?;
-        let parsed_version = version::parse(self.version.as_str())?;
+        let legacy_version = version::parse(config.legacy_version.as_ref().unwrap())
+            .wrap_err("Failed to parse legacy version from configuration")?;
+        let parsed_version = version::parse(self.version.as_str())
+            .wrap_err_with(|| format!("Failed to parse release version '{}'", self.version))?;
 
         Ok(!parsed_version.gt(&legacy_version))
     }
 }
 
-pub fn parse(config: &Config, dir: &Path) -> Result<Release, ReleaseError> {
+pub fn parse(config: &Config, dir: &Path) -> eyre::Result<Release> {
     let base_name = dir
         .file_name()
-        .ok_or_else(|| CommonError::InvalidPath("no base name found".into()))?
+        .ok_or_else(|| eyre::eyre!("Invalid path: no base name found for {}", dir.display()))?
         .to_str()
-        .ok_or_else(|| CommonError::InvalidPath("failed to convert base name to str".into()))?;
+        .ok_or_else(|| eyre::eyre!("Failed to convert base name to string for path {}", dir.display()))?;
 
     let version = base_name.to_string();
     let mut problems: Vec<String> = Vec::new();
 
     if !is_unreleased(base_name)
         && !RegexBuilder::new(r#"v\d+\.\d+\.\d+(-rc\d+)?"#)
-            .build()?
+            .build()
+            .wrap_err("Failed to compile version validation regex")?
             .is_match(&version)
     {
         problems.push(format!("invalid version string: {version}"));
@@ -117,7 +120,7 @@ pub fn parse(config: &Config, dir: &Path) -> Result<Release, ReleaseError> {
     // let fixed = format!("## [{version}]({fixed_link}) - {date}");
 
     let change_types = fs::read_dir(dir)
-        .expect("failed to read directory")
+        .wrap_err_with(|| format!("Failed to read release directory at {}", dir.display()))?
         .filter_map(Result::ok)
         .map(|e| e.path())
         .filter(|p| p.is_dir())

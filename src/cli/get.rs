@@ -1,17 +1,21 @@
 use super::commands::GetArgs;
-use crate::{config, errors::GetError, multi_file, single_file};
+use crate::{config, multi_file, single_file};
+use eyre::{bail, WrapErr};
 
 /// Executes the get command to display a specific version's release notes.
-pub fn run(args: GetArgs) -> Result<(), GetError> {
-    let config = config::load()?;
+pub fn run(args: GetArgs) -> eyre::Result<()> {
+    let config = config::load()
+        .wrap_err("Failed to load configuration")?;
 
     match config.mode {
         config::Mode::Single => {
-            let changelog = single_file::changelog::load(&config)?;
+            let changelog = single_file::changelog::load(&config)
+                .wrap_err("Failed to load single-file changelog")?;
             get_single(&config, &changelog, &args)?;
         }
         config::Mode::Multi => {
-            let changelog = multi_file::changelog::load(&config)?;
+            let changelog = multi_file::changelog::load(&config)
+                .wrap_err("Failed to load multi-file changelog")?;
             get_multi(&config, &changelog, &args)?;
         }
     }
@@ -27,7 +31,7 @@ fn get_single(
     config: &config::Config,
     changelog: &single_file::changelog::SingleFileChangelog,
     args: &GetArgs,
-) -> Result<(), GetError> {
+) -> eyre::Result<()> {
     if let Some(release) = changelog
         .releases
         .iter()
@@ -37,14 +41,14 @@ fn get_single(
         return Ok(());
     }
 
-    Err(GetError::VersionNotFound(args.version.clone()))
+    bail!("Version '{}' not found in changelog", args.version)
 }
 
 fn get_multi(
     config: &config::Config,
     changelog: &multi_file::changelog::MultiFileChangelog,
     args: &GetArgs,
-) -> Result<(), GetError> {
+) -> eyre::Result<()> {
     if let Some(release) = changelog
         .releases
         .iter()
@@ -54,13 +58,12 @@ fn get_multi(
         return Ok(());
     }
 
-    Err(GetError::VersionNotFound(args.version.clone()))
+    bail!("Version '{}' not found in changelog", args.version)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::errors::ChangelogError;
     use std::path::Path;
 
     /// Creates a test config from the example config file
@@ -86,11 +89,13 @@ mod tests {
 
         let changelog = match single_file::changelog::parse_changelog(&config, changelog_path) {
             Ok(cl) => cl,
-            Err(ChangelogError::NoChangelogFound) => {
-                // Skip test if changelog not found
-                return;
+            Err(e) => {
+                // Check if it's a "no changelog found" error
+                if e.to_string().contains("No changelog found") {
+                    return; // Skip test
+                }
+                panic!("Failed to parse changelog: {:?}", e);
             }
-            Err(e) => panic!("Failed to parse changelog: {:?}", e),
         };
 
         // The v1.0.0 version should exist in the changelog
@@ -119,11 +124,13 @@ mod tests {
 
         let changelog = match single_file::changelog::parse_changelog(&config, changelog_path) {
             Ok(cl) => cl,
-            Err(ChangelogError::NoChangelogFound) => {
-                // Skip test if changelog not found
-                return;
+            Err(e) => {
+                // Check if it's a "no changelog found" error
+                if e.to_string().contains("No changelog found") {
+                    return; // Skip test
+                }
+                panic!("Failed to parse changelog: {:?}", e);
             }
-            Err(e) => panic!("Failed to parse changelog: {:?}", e),
         };
 
         // A version that definitely doesn't exist
@@ -136,12 +143,9 @@ mod tests {
         );
         assert!(result.is_err());
 
-        // Check specific error type
-        match result {
-            Err(GetError::VersionNotFound(version)) => {
-                assert_eq!(version, "v999.999.999");
-            }
-            _ => panic!("Expected VersionNotFound error"),
-        }
+        // Check specific error message
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("v999.999.999"));
+        assert!(err.to_string().contains("not found"));
     }
 }

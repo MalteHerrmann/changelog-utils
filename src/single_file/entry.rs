@@ -1,4 +1,4 @@
-use crate::{common, config, errors::EntryError};
+use crate::{common, config};
 use regex::Regex;
 
 /// Represents an individual entry in the changelog.
@@ -34,7 +34,7 @@ impl Entry {
     }
 }
 
-pub fn parse(config: &config::Config, line: &str) -> Result<Entry, EntryError> {
+pub fn parse(config: &config::Config, line: &str) -> eyre::Result<Entry> {
     let entry_pattern = Regex::new(concat!(
         r"^(?P<ws0>\s*)-(?P<ws1>\s*)\((?P<category>[a-zA-Z0-9\-]+)\)",
         r"(?P<ws2>\s*)\[(?P<bs>\\)?#(?P<pr>\d+)]",
@@ -42,10 +42,9 @@ pub fn parse(config: &config::Config, line: &str) -> Result<Entry, EntryError> {
     ))
     .expect("invalid regex pattern");
 
-    let matches = match entry_pattern.captures(line) {
-        Some(c) => c,
-        None => return Err(EntryError::InvalidEntry(line.to_string())),
-    };
+    let matches = entry_pattern
+        .captures(line)
+        .ok_or_else(|| eyre::eyre!("malformed entry: '{}'", line))?;
 
     // NOTE: calling unwrap here is okay because we checked that the pattern matched above
     let category = matches.name("category").unwrap().as_str();

@@ -1,5 +1,6 @@
-use crate::{config, errors::MatchError};
-use regex::{Error, Regex, RegexBuilder};
+use crate::config;
+use eyre::{bail, WrapErr};
+use regex::{Regex, RegexBuilder};
 
 /// Check if the category is valid and return a fixed version that addresses
 /// well-known problems.
@@ -107,34 +108,39 @@ fn check_spelling(config: &config::Config, text: &str) -> (String, Vec<String>) 
 
 /// Compiles the regular expression pattern with the common settings
 /// used in this crate.
-fn compile_regex(pattern: &str) -> Result<Regex, Error> {
-    RegexBuilder::new(pattern).case_insensitive(true).build()
+fn compile_regex(pattern: &str) -> eyre::Result<Regex> {
+    RegexBuilder::new(pattern)
+        .case_insensitive(true)
+        .build()
+        .wrap_err_with(|| format!("Failed to compile regex pattern: {}", pattern))
 }
 
 /// Returns the first match of the given pattern in the text.
 /// Matching patterns inside of code blocks, links or within another word are ignored.
-fn get_spelling_match(pattern: &str, text: &str) -> Result<String, MatchError> {
+fn get_spelling_match(pattern: &str, text: &str) -> eyre::Result<String> {
     // Check if pattern is inside a code block
     if RegexBuilder::new(format!(r"`[^`]*({pattern})[^`]*`").as_str())
         .case_insensitive(true)
-        .build()?
+        .build()
+        .wrap_err("Failed to compile codeblock detection regex")?
         .find(text)
         .is_some()
     {
-        return Err(MatchError::MatchInCodeblock);
+        bail!("Match found in codeblock, ignoring");
     }
 
     // Check isolated words (i.e. pattern is not included in another word)
-    match RegexBuilder::new(format!(r"(^|\s)({pattern})($|[\s.])").as_str())
+    let regex = RegexBuilder::new(format!(r"(^|\s)({pattern})($|[\s.])").as_str())
         .case_insensitive(true)
-        .build()?
-        .captures(text)
-    {
+        .build()
+        .wrap_err("Failed to compile word boundary regex")?;
+
+    match regex.captures(text) {
         Some(m) => match m.get(2) {
             Some(m) => Ok(m.as_str().to_string()),
-            None => Err(MatchError::NoMatchFound),
+            None => bail!("No match found in capture group"),
         },
-        None => Err(MatchError::NoMatchFound),
+        None => bail!("No match found"),
     }
 }
 
@@ -365,20 +371,20 @@ mod match_tests {
     fn test_ignore_inside_codeblocks() {
         let found_err = get_spelling_match("api", "Fix `aPi in codeblocks`.")
             .expect_err("expected match in code block");
-        assert_eq!(found_err, MatchError::MatchInCodeblock);
+        assert!(found_err.to_string().contains("codeblock"));
     }
 
     #[test]
     fn test_ignore_in_word() {
         let found_err = get_spelling_match("api", "FixApI in word.")
             .expect_err("expected no match found error");
-        assert_eq!(found_err, MatchError::NoMatchFound);
+        assert!(found_err.to_string().contains("No match found"));
     }
 
     #[test]
     fn test_ignore_in_link() {
         let found_err = get_spelling_match("api", "Fix [abcdef](https://example/aPi.com)")
             .expect_err("expected no match found error");
-        assert_eq!(found_err, MatchError::NoMatchFound);
+        assert!(found_err.to_string().contains("No match found"));
     }
 }

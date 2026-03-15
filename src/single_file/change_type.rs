@@ -1,5 +1,5 @@
 use super::entry::Entry;
-use crate::{config, errors::ChangeTypeError};
+use crate::config;
 use regex::{Regex, RegexBuilder};
 
 #[derive(Clone, Debug)]
@@ -35,14 +35,11 @@ pub fn new(name: String, entries: Option<Vec<Entry>>) -> ChangeType {
     }
 }
 
-pub fn parse(config: config::Config, line: &str) -> Result<ChangeType, ChangeTypeError> {
-    let captures = match Regex::new(r"^\s*###\s*(?P<name>[a-zA-Z0-9\- ]+)\s*$")
+pub fn parse(config: config::Config, line: &str) -> eyre::Result<ChangeType> {
+    let captures = Regex::new(r"^\s*###\s*(?P<name>[a-zA-Z0-9\- ]+)\s*$")
         .expect("regex pattern should be valid")
         .captures(line)
-    {
-        Some(c) => c,
-        None => return Err(ChangeTypeError::NoMatchesFound),
-    };
+        .ok_or_else(|| eyre::eyre!("No matches found for change type pattern in line: '{}'", line))?;
 
     // NOTE: calling unwrap here is okay, because the match was checked above
     let name = captures.name("name").unwrap().as_str();
@@ -134,7 +131,7 @@ mod change_type_tests {
     fn test_fail_malformed_entry() {
         let example = "##jeaf";
         let err = parse(load_test_config(), example).expect_err("expected parsing to fail");
-        assert_eq!(err, ChangeTypeError::NoMatchesFound);
+        assert!(err.to_string().contains("No matches found for change type pattern"));
     }
 
     #[test]

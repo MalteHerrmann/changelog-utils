@@ -2,9 +2,9 @@ use super::{change_type, entry, release};
 use crate::{
     common::add_to_problems,
     config::{ChangeTypeConfig, Config},
-    errors::ChangelogError,
     escapes,
 };
+use eyre::WrapErr;
 use regex::Regex;
 use std::{
     fs,
@@ -39,11 +39,13 @@ impl crate::common::changelog::Changelog for SingleFileChangelog {
             .collect()
     }
 
-    fn write(&self, config: &Config, export_path: &Path) -> Result<(), ChangelogError> {
-        Ok(fs::write(export_path, self.get_fixed_contents(config)?)?)
+    fn write(&self, config: &Config, export_path: &Path) -> eyre::Result<()> {
+        fs::write(export_path, self.get_fixed_contents(config)?)
+            .wrap_err_with(|| format!("Failed to write changelog to '{}'", export_path.display()))?;
+        Ok(())
     }
 
-    fn get_fixed_contents(&self, config: &Config) -> Result<String, ChangelogError> {
+    fn get_fixed_contents(&self, config: &Config) -> eyre::Result<String> {
         let mut exported_string = "".to_string();
 
         self.comments
@@ -66,17 +68,17 @@ impl crate::common::changelog::Changelog for SingleFileChangelog {
 
 /// Loads the changelog from the default changelog path.
 ///
-pub fn load(config: &Config) -> Result<SingleFileChangelog, ChangelogError> {
-    let changelog_file = match fs::read_dir(Path::new("./"))?.find(|e| {
-        e.as_ref()
-            .is_ok_and(|e| e.file_name().eq_ignore_ascii_case("changelog.md"))
-    }) {
-        Some(f) => f.unwrap(),
-        None => {
-            println!("could not find the changelog in the current directory");
-            return Err(ChangelogError::NoChangelogFound);
-        }
-    };
+pub fn load(config: &Config) -> eyre::Result<SingleFileChangelog> {
+    let changelog_file = fs::read_dir(Path::new("./"))
+        .wrap_err("Failed to read current directory")?
+        .find(|e| {
+            e.as_ref()
+                .is_ok_and(|e| e.file_name().eq_ignore_ascii_case("changelog.md"))
+        })
+        .ok_or_else(|| {
+            eyre::eyre!("Could not find changelog.md in the current directory")
+        })?
+        .wrap_err("Failed to access changelog file")?;
 
     parse_changelog(config, changelog_file.path().as_path())
 }
@@ -85,8 +87,9 @@ pub fn load(config: &Config) -> Result<SingleFileChangelog, ChangelogError> {
 pub fn parse_changelog(
     config: &Config,
     file_path: &Path,
-) -> Result<SingleFileChangelog, ChangelogError> {
-    let contents = fs::read_to_string(file_path)?;
+) -> eyre::Result<SingleFileChangelog> {
+    let contents = fs::read_to_string(file_path)
+        .wrap_err_with(|| format!("Failed to read changelog file at '{}'", file_path.display()))?;
 
     let mut n_releases = 0;
     let mut n_change_types = 0;
@@ -106,8 +109,10 @@ pub fn parse_changelog(
     let mut is_comment = false;
     let mut is_legacy = false;
 
-    let enter_comment_regex = Regex::new("<!--")?;
-    let exit_comment_regex = Regex::new("-->")?;
+    let enter_comment_regex = Regex::new("<!--")
+        .wrap_err("Failed to compile comment start regex")?;
+    let exit_comment_regex = Regex::new("-->")
+        .wrap_err("Failed to compile comment end regex")?;
 
     for (i, line) in contents.lines().enumerate() {
         if is_legacy {
@@ -139,7 +144,8 @@ pub fn parse_changelog(
         }
 
         if trimmed_line.starts_with("## ") {
-            current_release = release::parse(config, line)?;
+            current_release = release::parse(config, line)
+                .wrap_err_with(|| format!("Failed to parse release line at line {}: '{}'", i + 1, line))?;
 
             releases.push(current_release.clone());
             n_releases += 1;
@@ -160,7 +166,7 @@ pub fn parse_changelog(
 
             if current_release
                 .is_legacy(config)
-                .expect("failed to check legacy")
+                .wrap_err_with(|| format!("Failed to check if release {} is legacy", current_release.version))?
             {
                 is_legacy = true;
             }
@@ -174,7 +180,8 @@ pub fn parse_changelog(
         }
 
         if trimmed_line.starts_with("### ") {
-            current_change_type = change_type::parse(config.clone(), line)?;
+            current_change_type = change_type::parse(config.clone(), line)
+                .wrap_err_with(|| format!("Failed to parse change type line at line {}: '{}'", i + 1, line))?;
 
             n_change_types += 1;
             if seen_change_types.contains(&current_change_type.name) {

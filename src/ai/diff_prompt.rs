@@ -1,4 +1,5 @@
-use crate::{config::Config, errors::CreateError};
+use crate::config::Config;
+use eyre::{bail, WrapErr};
 use regex::Regex;
 use rig::{
     client::{CompletionClient, ProviderClient},
@@ -7,23 +8,27 @@ use rig::{
 };
 use serde::Deserialize;
 
-pub async fn get_suggestions(config: &Config, diff: &str) -> Result<Suggestions, CreateError> {
-    parse_suggestions(prompt(config, diff).await?.as_str())
+pub async fn get_suggestions(config: &Config, diff: &str) -> eyre::Result<Suggestions> {
+    let response = prompt(config, diff)
+        .await
+        .wrap_err("Failed to get LLM response for diff")?;
+    parse_suggestions(response.as_str())
 }
 
-fn parse_suggestions(llm_response: &str) -> Result<Suggestions, CreateError> {
+fn parse_suggestions(llm_response: &str) -> eyre::Result<Suggestions> {
     let stripped = llm_response.lines().collect::<Vec<&str>>().join("");
 
     let json = match Regex::new(r##"\{.+}"##).unwrap().find(&stripped) {
         Some(s) => s.as_str(),
-        None => return Err(CreateError::FailedToMatch(stripped)),
+        None => bail!("Failed to extract JSON from LLM response: {}", stripped),
     };
 
-    serde_json::from_str(json).map_err(CreateError::FailedToParse)
+    serde_json::from_str(json)
+        .wrap_err("Failed to parse suggestions JSON from LLM response")
 }
 
 /// TODO: prompt using parrot instead of rig-core
-async fn prompt(config: &Config, diff: &str) -> Result<String, CreateError> {
+async fn prompt(config: &Config, diff: &str) -> eyre::Result<String> {
     let prompt = format!("{}\n{}", include_str!("diff_prompt.txt"), config);
     let anthropic_client = anthropic::Client::from_env();
     let sonnet = anthropic_client
@@ -32,7 +37,9 @@ async fn prompt(config: &Config, diff: &str) -> Result<String, CreateError> {
         .max_tokens(1e3 as u64)
         .build();
 
-    Ok(sonnet.prompt(diff).await?)
+    sonnet.prompt(diff)
+        .await
+        .wrap_err("Failed to send prompt to LLM")
 }
 
 #[derive(Debug, Default, Deserialize)]
