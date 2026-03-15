@@ -36,7 +36,7 @@ fn it_should_pass_for_incorrect_changelogs_that_has_no_critical_flaws() {
             "tests/testdata/single_file/changelog_fail.md:31: duplicate change type in release Unreleased: Bug Fixes",
             "tests/testdata/single_file/changelog_fail.md:43: duplicate release: v15.0.0",
             "tests/testdata/single_file/changelog_fail.md:47: duplicate PR: #1862",
-            "tests/testdata/single_file/changelog_fail.md:50: invalid entry: - another malformed entry in changelog",
+            "tests/testdata/single_file/changelog_fail.md:50: malformed entry: '- another malformed entry in changelog'",
         ]
     );
 }

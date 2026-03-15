@@ -44,7 +44,7 @@ pub fn parse(config: &config::Config, line: &str) -> eyre::Result<Entry> {
 
     let matches = entry_pattern
         .captures(line)
-        .ok_or_else(|| eyre::eyre!("Invalid entry format: '{}'", line))?;
+        .ok_or_else(|| eyre::eyre!("malformed entry: '{}'", line))?;
 
     // NOTE: calling unwrap here is okay because we checked that the pattern matched above
     let category = matches.name("category").unwrap().as_str();
