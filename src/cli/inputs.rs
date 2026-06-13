@@ -15,12 +15,10 @@ pub fn get_change_type(config: &Config, suggestion: &str) -> eyre::Result<String
         .position(|ct| ct.eq(suggestion))
         .unwrap_or_default();
 
-    Ok(
-        Select::new("Select change type to add into:", selectable_change_types)
+    Select::new("Select change type to add into:", selectable_change_types)
             .with_starting_cursor(ct_idx)
             .prompt()
-            .wrap_err("Failed to get change type selection")?,
-    )
+            .wrap_err("Failed to get change type selection")
 }
 
 pub fn get_pr_number(default_value: u64) -> eyre::Result<u64> {
@@ -40,29 +38,27 @@ pub fn get_category(config: &Config, suggestion: &str) -> eyre::Result<String> {
         .position(|cat| cat.eq(suggestion))
         .unwrap_or_default();
 
-    Ok(Select::new(
+    Select::new(
         "Select the category of the made changes:",
         config.categories.clone(),
     )
     .with_starting_cursor(idx)
     .prompt()
-    .wrap_err("Failed to get category selection")?)
+    .wrap_err("Failed to get category selection")
 }
 
 pub fn get_commit_message(config: &Config) -> eyre::Result<String> {
-    Ok(Text::new("Please provide the commit message:\n")
+    Text::new("Please provide the commit message:\n")
         .with_initial_value(&config.commit_message)
         .prompt()
-        .wrap_err("Failed to get commit message input")?)
+        .wrap_err("Failed to get commit message input")
 }
 
 pub fn get_description(default_value: &str) -> eyre::Result<String> {
-    Ok(
-        Text::new("Please provide a one-line description of the made changes:\n")
+    Text::new("Please provide a one-line description of the made changes:\n")
             .with_initial_value(default_value)
             .prompt()
-            .wrap_err("Failed to get description input")?,
-    )
+            .wrap_err("Failed to get description input")
 }
 
 pub fn get_permission_to_push(branch: &str) -> eyre::Result<bool> {
@@ -84,12 +80,12 @@ pub fn get_permission_to_push(branch: &str) -> eyre::Result<bool> {
 }
 
 pub fn get_pr_description(suggestion: &str) -> eyre::Result<String> {
-    Ok(Editor::new(
+    Editor::new(
         "Please provide the Pull Request body with a description of the made changes.\n",
     )
     .with_predefined_text(suggestion)
     .prompt()
-    .wrap_err("Failed to get PR description from editor")?)
+    .wrap_err("Failed to get PR description from editor")
 }
 
 pub fn get_release_type() -> eyre::Result<ReleaseType> {
@@ -121,22 +117,20 @@ pub fn get_target_branch(branches_page: Page<Branch>) -> eyre::Result<String> {
         }
     });
 
-    Ok(Select::new(
+    Select::new(
         "Select the target branch to merge the changes into:",
         branches,
     )
     .with_starting_cursor(start_idx)
     .prompt()
-    .wrap_err("Failed to get target branch selection")?)
+    .wrap_err("Failed to get target branch selection")
 }
 
 pub fn get_use_ai() -> eyre::Result<bool> {
-    Ok(
-        Confirm::new(
+    Confirm::new(
             "Do you want to use AI to suggest changelog contents? Requires API keys to be set in environment. (y/n)\n")
         .prompt()
-        .wrap_err("Failed to get AI usage confirmation")?
-    )
+        .wrap_err("Failed to get AI usage confirmation")
 }
 
 pub fn select_prs_to_add(pr_list: Vec<(u64, String)>) -> eyre::Result<Vec<u64>> {
