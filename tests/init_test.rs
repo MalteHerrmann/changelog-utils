@@ -2,7 +2,6 @@ use assert_fs::{prelude::*, TempDir};
 use clu::{
     cli::init,
     config::{self, ChangeTypeConfig},
-    errors::InitError,
 };
 use predicates::prelude::*;
 use std::fs;
@@ -118,8 +117,6 @@ fn test_init_changelog_and_config_exists() {
         res.is_err(),
         "expected failure trying to initialize with config already existing"
     );
-    assert_eq!(
-        res.unwrap_err().to_string(),
-        InitError::ConfigAlreadyFound.to_string()
-    )
+    let err = res.unwrap_err();
+    assert!(err.to_string().contains("Configuration file already exists"));
 }

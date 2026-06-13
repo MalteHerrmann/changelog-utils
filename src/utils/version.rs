@@ -1,5 +1,5 @@
 use super::release_type::ReleaseType;
-use crate::errors::VersionError;
+use eyre::WrapErr;
 use regex::Regex;
 use std::fmt;
 
@@ -63,24 +63,43 @@ impl fmt::Display for Version {
 
 /// Tries to parse the given version string.
 /// Returns an instance of Version, in case a valid version is passed.
-pub fn parse(version: &str) -> Result<Version, VersionError> {
-    let captures = match Regex::new(concat!(
+pub fn parse(version: &str) -> eyre::Result<Version> {
+    let regex = Regex::new(concat!(
         r"^v(?P<major>\d+)\.",
         r"(?P<minor>\d+)\.",
         r"(?P<patch>\d+)",
         r"(-rc(?P<rc>\d+))*$"
-    ))?
-    .captures(version)
-    {
-        Some(c) => c,
-        None => return Err(VersionError::NoMatchFound),
-    };
+    ))
+    .wrap_err("Failed to compile version regex pattern")?;
 
-    let major = captures.name("major").unwrap().as_str().parse::<u8>()?;
-    let minor = captures.name("minor").unwrap().as_str().parse::<u8>()?;
-    let patch = captures.name("patch").unwrap().as_str().parse::<u8>()?;
+    let captures = regex
+        .captures(version)
+        .ok_or_else(|| eyre::eyre!("Version string '{}' does not match expected format (e.g., v1.2.3 or v1.2.3-rc1)", version))?;
+
+    let major = captures
+        .name("major")
+        .unwrap()
+        .as_str()
+        .parse::<u8>()
+        .wrap_err_with(|| format!("Failed to parse major version from '{}'", version))?;
+    let minor = captures
+        .name("minor")
+        .unwrap()
+        .as_str()
+        .parse::<u8>()
+        .wrap_err_with(|| format!("Failed to parse minor version from '{}'", version))?;
+    let patch = captures
+        .name("patch")
+        .unwrap()
+        .as_str()
+        .parse::<u8>()
+        .wrap_err_with(|| format!("Failed to parse patch version from '{}'", version))?;
     let rc_version: Option<u8> = match captures.name("rc") {
-        Some(c) => Some(c.as_str().parse::<u8>()?),
+        Some(c) => Some(
+            c.as_str()
+                .parse::<u8>()
+                .wrap_err_with(|| format!("Failed to parse rc version from '{}'", version))?,
+        ),
         None => None,
     };
 

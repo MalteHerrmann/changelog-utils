@@ -1,11 +1,11 @@
 use crate::{
     common::add_to_problems,
     config::Config,
-    errors::{ChangelogError, ConfigError},
     multi_file::release,
 };
 
 use super::release::Release;
+use eyre::{bail, WrapErr};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -40,32 +40,34 @@ impl crate::common::changelog::Changelog for MultiFileChangelog {
         &self,
         _config: &Config,
         _export_path: &std::path::Path,
-    ) -> Result<(), crate::errors::ChangelogError> {
-        unimplemented!("write operation not yet implemented for multi-file changelogs")
+    ) -> eyre::Result<()> {
+        bail!("write operation not yet implemented for multi-file changelogs")
     }
 
     fn get_fixed_contents(
         &self,
         _config: &Config,
-    ) -> Result<String, crate::errors::ChangelogError> {
-        unimplemented!("get_fixed_contents not yet implemented for multi-file changelogs")
+    ) -> eyre::Result<String> {
+        bail!("get_fixed_contents not yet implemented for multi-file changelogs")
     }
 }
 
-pub fn load(config: &Config) -> Result<MultiFileChangelog, ChangelogError> {
+pub fn load(config: &Config) -> eyre::Result<MultiFileChangelog> {
     let expected_path = config
         .changelog_dir
         .as_ref()
-        .ok_or_else(|| ConfigError::InvalidConfig("changelog_dir must be set".to_string()))?;
+        .ok_or_else(|| eyre::eyre!("Invalid configuration: changelog_dir must be set for multi-file mode"))?;
 
-    let changelog_path = match fs::read_dir(Path::new("./"))?.find(|e| {
-        e.as_ref()
-            .is_ok_and(|e| e.file_name().eq_ignore_ascii_case(expected_path))
-    }) {
-        Some(d) => d.unwrap(),
+    let changelog_path = match fs::read_dir(Path::new("./"))
+        .wrap_err("Failed to read current directory")?
+        .find(|e| {
+            e.as_ref()
+                .is_ok_and(|e| e.file_name().eq_ignore_ascii_case(expected_path))
+        }) {
+        Some(d) => d.wrap_err("Failed to access changelog directory")?,
         None => {
             println!("could not find the changelog subdirectory in the current directory");
-            return Err(ChangelogError::NoChangelogFound);
+            bail!("No changelog found - expected directory '{}' not found in current directory", expected_path);
         }
     };
 
@@ -76,8 +78,9 @@ pub fn load(config: &Config) -> Result<MultiFileChangelog, ChangelogError> {
 pub fn parse_changelog(
     config: &Config,
     dir_path: &Path,
-) -> Result<MultiFileChangelog, ChangelogError> {
-    let dir_contents = fs::read_dir(dir_path)?;
+) -> eyre::Result<MultiFileChangelog> {
+    let dir_contents = fs::read_dir(dir_path)
+        .wrap_err_with(|| format!("Failed to read changelog directory at {}", dir_path.display()))?;
 
     let releases: Vec<Release> = dir_contents
         .into_iter()

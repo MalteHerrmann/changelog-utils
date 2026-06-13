@@ -1,18 +1,16 @@
+use eyre::{bail, WrapErr};
 use std::fs;
 
-use crate::{
-    config::{self, Config},
-    errors::{CheckError, ConfigError},
-};
+use crate::config::{self, Config};
 
 /// Runs the logic to check the tool's state in the current
 /// working directory.
-pub async fn run() -> Result<(), CheckError> {
+pub async fn run() -> eyre::Result<()> {
     check().await
 }
 
 /// Checks the state of the tool in the current working directory.
-async fn check() -> Result<(), CheckError> {
+async fn check() -> eyre::Result<()> {
     let mut config = Config::default();
     let mut has_critical_error = false;
 
@@ -22,29 +20,39 @@ async fn check() -> Result<(), CheckError> {
             config = c;
             println!(" ✅ valid config");
         }
-        Err(ConfigError::FailedToReadWrite(_)) => {
-            println!(" ❌ config not found");
-            println!(" 💡 run 'clu init' to create configuration");
-            has_critical_error = true;
-        }
-        Err(ConfigError::FailedToParse(e)) => {
-            println!(" ❌ invalid config: {}", e);
-            has_critical_error = true;
-        }
-        Err(ConfigError::InvalidConfig(e)) => {
-            println!(" ❌ invalid config: {}", e);
-            has_critical_error = true;
+        Err(e) => {
+            // Check if it's a file not found error
+            if let Some(io_err) = e.downcast_ref::<std::io::Error>() {
+                if io_err.kind() == std::io::ErrorKind::NotFound {
+                    println!(" ❌ config not found");
+                    println!(" 💡 run 'clu init' to create configuration");
+                    has_critical_error = true;
+                } else {
+                    println!(" ❌ invalid config: {}", e);
+                    has_critical_error = true;
+                }
+            } else {
+                println!(" ❌ invalid config: {}", e);
+                has_critical_error = true;
+            }
         }
     };
 
     // If config failed, we can't proceed with other checks
     if has_critical_error {
         println!("\n ❌ Check unsuccessful - see errors above");
-        return Err(CheckError::ConfigInvalid);
+        bail!("Configuration validation failed");
     }
 
     // Check changelog file
-    if fs::exists(&config.changelog_path)? {
+    if fs::exists(&config.changelog_path)
+        .wrap_err_with(|| {
+            format!(
+                "Failed to check if changelog exists at {}",
+                config.changelog_path
+            )
+        })?
+    {
         println!(" ✅ changelog exists");
     } else {
         println!(" ❌ no changelog found at: {}", config.changelog_path);
@@ -53,7 +61,9 @@ async fn check() -> Result<(), CheckError> {
 
     // Check multi-file changelog directory if configured
     if let Some(cd) = &config.changelog_dir {
-        if fs::exists(cd)? {
+        if fs::exists(cd)
+            .wrap_err_with(|| format!("Failed to check if changelog directory exists at {}", cd))?
+        {
             println!(" ✅ multi-file changelog directory exists");
         } else {
             println!(" ❌ multi-file changelog directory not found at: {}", cd);
@@ -79,16 +89,7 @@ async fn check() -> Result<(), CheckError> {
     // Return appropriate result
     if has_critical_error {
         println!("\n ❌ Check unsuccessful - see errors above");
-        if !fs::exists(&config.changelog_path)? {
-            return Err(CheckError::ChangelogNotFound);
-        }
-        if let Some(cd) = &config.changelog_dir {
-            if !fs::exists(cd)? {
-                return Err(CheckError::MultiFileDirNotFound);
-            }
-        }
-        // Fallback error if we have critical error but didn't match specific cases
-        return Err(CheckError::ConfigInvalid);
+        bail!("Check found critical errors");
     }
 
     println!("\n ✅ Check complete");

@@ -1,4 +1,5 @@
-use crate::{common, config::Config, errors::EntryError};
+use crate::{common, config::Config};
+use eyre::WrapErr;
 use regex::Regex;
 use std::path::{Path, PathBuf};
 
@@ -11,8 +12,9 @@ pub struct MultiFileEntry {
     pub problems: Vec<String>,
 }
 
-pub fn parse(config: &Config, path: &Path) -> Result<MultiFileEntry, EntryError> {
-    let contents = std::fs::read_to_string(path)?;
+pub fn parse(config: &Config, path: &Path) -> eyre::Result<MultiFileEntry> {
+    let contents = std::fs::read_to_string(path)
+        .wrap_err_with(|| format!("Failed to read changelog entry file at {}", path.display()))?;
 
     let mut pattern_string = r"^(?P<ws0>\s*)-(?P<ws1>\s*)".to_string();
     if config.use_categories {
@@ -24,10 +26,9 @@ pub fn parse(config: &Config, path: &Path) -> Result<MultiFileEntry, EntryError>
 
     let entry_pattern = Regex::new(&pattern_string).expect("invalid regex pattern");
 
-    let matches = match entry_pattern.captures(&contents) {
-        Some(c) => c,
-        None => return Err(EntryError::InvalidEntry(contents)),
-    };
+    let matches = entry_pattern
+        .captures(&contents)
+        .ok_or_else(|| eyre::eyre!("Invalid changelog entry format in file {}: content does not match expected pattern", path.display()))?;
 
     // NOTE: calling unwrap here is okay because we checked that the pattern matched above
     let description = matches.name("desc").unwrap().as_str();
@@ -265,11 +266,8 @@ mod tests {
         let result = parse(&load_example_config(), file.path());
         assert!(result.is_err());
 
-        if let Err(EntryError::InvalidEntry(invalid_content)) = result {
-            assert_eq!(invalid_content, content);
-        } else {
-            panic!("Expected InvalidEntry error");
-        }
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Invalid changelog entry format"));
     }
 
     #[test]

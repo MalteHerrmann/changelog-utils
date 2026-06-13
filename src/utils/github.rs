@@ -2,8 +2,8 @@ use super::git::GitInfo;
 use crate::{
     common::entry::{check_category, check_description},
     config::Config,
-    errors::GitHubError,
 };
+use eyre::WrapErr;
 use octocrab::models::pulls::PullRequest;
 use octocrab::params::repos::Reference::Branch;
 use octocrab::{self, Octocrab};
@@ -22,17 +22,18 @@ pub struct PRInfo {
 /// instance.
 ///
 /// TODO: instead of relying on the single file checker here, it should use some common utils?
-fn extract_pr_info(config: &Config, pr: &PullRequest) -> Result<PRInfo, GitHubError> {
+fn extract_pr_info(config: &Config, pr: &PullRequest) -> eyre::Result<PRInfo> {
     let mut change_type = String::new();
     let mut category = String::new();
     let mut description = String::new();
 
     let pr_title = pr.title.clone().unwrap_or_default();
 
-    if let Some(i) = RegexBuilder::new(r"^(?P<ct>\w+)?\s*(\((?P<cat>\w+)\))?[:\s]*(?P<desc>.+)$")
-        .build()?
-        .captures(pr_title.as_str())
-    {
+    let regex = RegexBuilder::new(r"^(?P<ct>\w+)?\s*(\((?P<cat>\w+)\))?[:\s]*(?P<desc>.+)$")
+        .build()
+        .wrap_err("Failed to compile PR title regex pattern")?;
+
+    if let Some(i) = regex.captures(pr_title.as_str()) {
         if let Some(ct) = i.name("ct") {
             if let Some(found_ct) = config.get_short_change_type(ct.as_str()) {
                 change_type.clone_from(&found_ct.short);
@@ -57,14 +58,16 @@ fn extract_pr_info(config: &Config, pr: &PullRequest) -> Result<PRInfo, GitHubEr
 }
 
 /// Returns an authenticated Octocrab instance if possible.
-pub fn get_authenticated_github_client() -> Result<Octocrab, GitHubError> {
+pub fn get_authenticated_github_client() -> eyre::Result<Octocrab> {
     // NOTE: make sure to export the token and not only define using GITHUB_TOKEN=... because Rust executes
     // in a child process, that cannot pick it up without using `export`
-    let token = std::env::var("GITHUB_TOKEN")?;
+    let token = std::env::var("GITHUB_TOKEN")
+        .wrap_err("GITHUB_TOKEN environment variable not found - set it with: export GITHUB_TOKEN=your_token")?;
 
-    Ok(octocrab::OctocrabBuilder::new()
+    octocrab::OctocrabBuilder::new()
         .personal_token(token)
-        .build()?)
+        .build()
+        .wrap_err("Failed to build authenticated GitHub client")
 }
 
 /// Returns a GitHub client, authenticated if GITHUB_TOKEN is available, otherwise unauthenticated.
@@ -93,38 +96,58 @@ pub async fn branch_exists_on_remote(client: &Octocrab, git_info: &GitInfo) -> b
 
 /// Returns an option for an open PR from the current local branch in the configured target
 /// repository if it exists.
-pub async fn get_open_pr(git_info: &GitInfo) -> Result<PullRequest, GitHubError> {
+pub async fn get_open_pr(git_info: &GitInfo) -> eyre::Result<PullRequest> {
     let octocrab = get_github_client();
 
     let pulls = octocrab
         .pulls(git_info.owner.to_owned(), git_info.repo.to_owned())
         .list()
         .send()
-        .await?
+        .await
+        .wrap_err_with(|| {
+            format!(
+                "Failed to fetch pull requests from {}/{}",
+                git_info.owner, git_info.repo
+            )
+        })?
         .items;
-    match pulls.iter().find(|pr| {
-        pr.head.label.as_ref().is_some_and(|l| {
-            let branch_parts: Vec<&str> = l.split(':').collect();
-            let got_branch = branch_parts
-                .get(1..)
-                .expect("unexpected branch identifier format")
-                .join("/");
-            got_branch.eq(git_info.branch.as_str())
+
+    pulls
+        .iter()
+        .find(|pr| {
+            pr.head.label.as_ref().is_some_and(|l| {
+                let branch_parts: Vec<&str> = l.split(':').collect();
+                let got_branch = branch_parts
+                    .get(1..)
+                    .expect("unexpected branch identifier format")
+                    .join("/");
+                got_branch.eq(git_info.branch.as_str())
+            })
         })
-    }) {
-        Some(pr) => Ok(pr.to_owned()),
-        None => Err(GitHubError::NoOpenPR),
-    }
+        .cloned()
+        .ok_or_else(|| {
+            eyre::eyre!(
+                "No open pull request found for branch '{}' in repository {}/{}",
+                git_info.branch,
+                git_info.owner,
+                git_info.repo
+            )
+        })
 }
 
 /// Returns a PR from the repository by its number.
-async fn get_pr_by_number(git_info: &GitInfo, pr_number: u64) -> Result<PullRequest, GitHubError> {
+async fn get_pr_by_number(git_info: &GitInfo, pr_number: u64) -> eyre::Result<PullRequest> {
     let client = get_github_client();
     client
         .pulls(&git_info.owner, &git_info.repo)
         .get(pr_number)
         .await
-        .map_err(|_| GitHubError::NoOpenPR)
+        .wrap_err_with(|| {
+            format!(
+                "Failed to fetch PR #{} from {}/{} - verify the PR exists and GITHUB_TOKEN has correct permissions",
+                pr_number, git_info.owner, git_info.repo
+            )
+        })
 }
 
 /// Retrieves PR information either from a specific PR number or from an open PR.
@@ -133,16 +156,20 @@ pub async fn get_pr_info(
     config: &Config,
     git_info: &GitInfo,
     pr_number: Option<u64>,
-) -> Result<PRInfo, GitHubError> {
+) -> eyre::Result<PRInfo> {
     if let Some(pr_number) = pr_number {
         // Try to fetch PR information using the provided PR number
-        let pr = get_pr_by_number(git_info, pr_number).await?;
-        return extract_pr_info(config, &pr);
+        let pr = get_pr_by_number(git_info, pr_number)
+            .await
+            .wrap_err_with(|| format!("Failed to fetch information for PR #{}", pr_number))?;
+        return extract_pr_info(config, &pr)
+            .wrap_err("Failed to extract PR information from pull request");
     }
 
     // If no PR number was provided, try to get open PR for current branch
     if let Ok(pr) = get_open_pr(git_info).await {
-        return extract_pr_info(config, &pr);
+        return extract_pr_info(config, &pr)
+            .wrap_err("Failed to extract PR information from pull request");
     }
 
     Ok(PRInfo::default())
@@ -150,11 +177,20 @@ pub async fn get_pr_info(
 
 /// Gets all merged PR numbers from the repository's default branch.
 /// Returns a sorted, deduplicated list of PR numbers.
-pub async fn get_merged_pr_numbers(git_info: &GitInfo) -> Result<Vec<u64>, GitHubError> {
+pub async fn get_merged_pr_numbers(git_info: &GitInfo) -> eyre::Result<Vec<u64>> {
     let client = get_github_client();
 
     // Get the default branch for the repository
-    let repo = client.repos(&git_info.owner, &git_info.repo).get().await?;
+    let repo = client
+        .repos(&git_info.owner, &git_info.repo)
+        .get()
+        .await
+        .wrap_err_with(|| {
+            format!(
+                "Failed to fetch repository information for {}/{}",
+                git_info.owner, git_info.repo
+            )
+        })?;
 
     let default_branch = repo.default_branch.unwrap_or_else(|| "main".to_string());
 
@@ -170,7 +206,13 @@ pub async fn get_merged_pr_numbers(git_info: &GitInfo) -> Result<Vec<u64>, GitHu
             .per_page(100)
             .page(page)
             .send()
-            .await?;
+            .await
+            .wrap_err_with(|| {
+                format!(
+                    "Failed to fetch merged PRs from {}/{} (page {})",
+                    git_info.owner, git_info.repo, page
+                )
+            })?;
 
         if pulls.items.is_empty() {
             break;

@@ -1,30 +1,36 @@
 use crate::{
     config,
-    errors::CheckDiffError,
     single_file::changelog,
     utils::{git, github},
 };
+use eyre::{bail, WrapErr};
 
 /// Runs the logic to check for a corresponding diff in the changelog,
 /// that details the changes of the given pull request, if one is found.
-pub async fn run() -> Result<(), CheckDiffError> {
-    let config = config::load()?;
-    let git_info = git::get_git_info(&config)?;
+pub async fn run() -> eyre::Result<()> {
+    let config = config::load()
+        .wrap_err("Failed to load configuration")?;
+    let git_info = git::get_git_info(&config)
+        .wrap_err("Failed to get git information")?;
 
-    let pr_info = github::get_open_pr(&git_info).await?;
+    let pr_info = github::get_open_pr(&git_info)
+        .await
+        .wrap_err("Failed to get open PR information")?;
     let target_branch = pr_info.base.ref_field;
 
-    let diff = git::get_diff(&git_info.branch, &target_branch)?;
+    let diff = git::get_diff(&git_info.branch, &target_branch)
+        .wrap_err_with(|| format!("Failed to get diff between {} and {}", git_info.branch, target_branch))?;
 
     // For now, check_diff only works with single-file mode
     // Load the single file changelog directly to access release structure
     match config.mode {
         config::Mode::Single => {
-            let changelog = changelog::load(&config)?;
+            let changelog = changelog::load(&config)
+                .wrap_err("Failed to load changelog")?;
             check_diff(&changelog, &diff, pr_info.number)?;
         }
         config::Mode::Multi => {
-            unimplemented!();
+            bail!("check_diff is not yet implemented for multi-file mode");
         }
     }
 
@@ -38,10 +44,10 @@ fn check_diff(
     changelog: &changelog::SingleFileChangelog,
     diff: &str,
     pr_number: u64,
-) -> Result<(), CheckDiffError> {
+) -> eyre::Result<()> {
     let unreleased = match changelog.releases.iter().find(|&r| r.is_unreleased()) {
         Some(r) => r,
-        None => return Err(CheckDiffError::NoUnreleased),
+        None => bail!("No unreleased section found in changelog"),
     };
 
     if !unreleased
@@ -51,7 +57,7 @@ fn check_diff(
         .any(|e| e.pr_number == pr_number)
     {
         println!("no changelog entry found for PR {}", pr_number);
-        return Err(CheckDiffError::NoEntry);
+        bail!("No changelog entry found for PR {}", pr_number);
     };
 
     // Check if the diff actually contains the entry.
@@ -63,7 +69,7 @@ fn check_diff(
         .any(|l| l.contains(format!("[#{}]", pr_number).as_str()))
     {
         println!("changelog entry for PR {} was already present", pr_number);
-        return Err(CheckDiffError::NoEntry);
+        bail!("Changelog entry for PR {} was already present in a previous commit", pr_number);
     };
 
     Ok(())

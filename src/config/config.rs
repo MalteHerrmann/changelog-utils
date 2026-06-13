@@ -1,5 +1,5 @@
 use super::{change_type::ChangeTypeConfig, mode::Mode};
-use crate::errors::{ConfigAdjustError, ConfigError};
+use eyre::{ensure, WrapErr};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::{collections::BTreeMap, fmt, fs, path::Path};
@@ -47,8 +47,10 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn export(&self, path: &Path) -> Result<(), ConfigError> {
-        Ok(fs::write(path, format!("{}", self))?)
+    pub fn export(&self, path: &Path) -> eyre::Result<()> {
+        fs::write(path, format!("{}", self))
+            .wrap_err_with(|| format!("Failed to write configuration to {}", path.display()))?;
+        Ok(())
     }
 
     pub fn has_legacy_version(&self) -> bool {
@@ -69,10 +71,12 @@ impl Config {
             .cloned()
     }
 
-    pub fn add_category(&mut self, value: String) -> Result<(), ConfigAdjustError> {
-        if self.categories.contains(&value) {
-            return Err(ConfigAdjustError::CategoryAlreadyFound);
-        }
+    pub fn add_category(&mut self, value: String) -> eyre::Result<()> {
+        ensure!(
+            !self.categories.contains(&value),
+            "Category '{}' already exists in configuration",
+            value
+        );
 
         self.categories.push(value);
         self.categories.sort_unstable();
@@ -80,11 +84,12 @@ impl Config {
         Ok(())
     }
 
-    pub fn remove_category(&mut self, value: String) -> Result<(), ConfigAdjustError> {
-        let i = match self.categories.iter().position(|cat| cat.eq(&value)) {
-            Some(i) => i,
-            None => return Err(ConfigAdjustError::NotFound),
-        };
+    pub fn remove_category(&mut self, value: String) -> eyre::Result<()> {
+        let i = self
+            .categories
+            .iter()
+            .position(|cat| cat.eq(&value))
+            .ok_or_else(|| eyre::eyre!("Category '{}' not found in configuration", value))?;
 
         self.categories.remove(i);
         Ok(())
@@ -94,24 +99,29 @@ impl Config {
         &mut self,
         long: String,
         short: String,
-    ) -> Result<(), ConfigAdjustError> {
-        if self.get_long_change_type(&long).is_some() {
-            return Err(ConfigAdjustError::DuplicateChangeType(long));
-        }
+    ) -> eyre::Result<()> {
+        ensure!(
+            self.get_long_change_type(&long).is_none(),
+            "Change type with long name '{}' already exists in configuration",
+            long
+        );
 
-        if self.get_short_change_type(&short).is_some() {
-            return Err(ConfigAdjustError::DuplicateChangeType(short));
-        }
+        ensure!(
+            self.get_short_change_type(&short).is_none(),
+            "Change type with short name '{}' already exists in configuration",
+            short
+        );
 
         self.change_types.push(ChangeTypeConfig { short, long });
         Ok(())
     }
 
-    pub fn remove_change_type(&mut self, short: String) -> Result<(), ConfigAdjustError> {
-        let i = match self.change_types.iter().position(|ct| ct.short.eq(&short)) {
-            Some(i) => i,
-            None => return Err(ConfigAdjustError::NotFound),
-        };
+    pub fn remove_change_type(&mut self, short: String) -> eyre::Result<()> {
+        let i = self
+            .change_types
+            .iter()
+            .position(|ct| ct.short.eq(&short))
+            .ok_or_else(|| eyre::eyre!("Change type '{}' not found in configuration", short))?;
 
         self.change_types.remove(i);
         Ok(())
@@ -121,20 +131,22 @@ impl Config {
         &mut self,
         key: String,
         value: String,
-    ) -> Result<(), ConfigAdjustError> {
-        if self.expected_spellings.contains_key(&key) {
-            return Err(ConfigAdjustError::KeyAlreadyFound);
-        };
+    ) -> eyre::Result<()> {
+        ensure!(
+            !self.expected_spellings.contains_key(&key),
+            "Expected spelling key '{}' already exists in configuration",
+            key
+        );
 
         self.expected_spellings.insert(key, value);
         Ok(())
     }
 
-    pub fn remove_expected_spelling(&mut self, key: String) -> Result<(), ConfigAdjustError> {
-        match self.expected_spellings.remove(&key) {
-            Some(_) => Ok(()),
-            None => Err(ConfigAdjustError::NotFound),
-        }
+    pub fn remove_expected_spelling(&mut self, key: String) -> eyre::Result<()> {
+        self.expected_spellings
+            .remove(&key)
+            .ok_or_else(|| eyre::eyre!("Expected spelling key '{}' not found in configuration", key))?;
+        Ok(())
     }
 
     pub fn set_changelog_dir(&mut self, value: Option<String>) {
@@ -211,15 +223,19 @@ impl Default for Config {
 }
 
 // Unpacks the configuration from a given raw string.
-pub fn unpack_config(contents: &str) -> Result<Config, ConfigError> {
-    let config: Config = serde_json::from_str(contents)?;
-    Ok(config)
+pub fn unpack_config(contents: &str) -> eyre::Result<Config> {
+    serde_json::from_str(contents)
+        .wrap_err("Failed to parse configuration JSON - file may be corrupted or have invalid syntax")
 }
 
 // Tries to open the configuration file in the expected location
 // and load the configuration.
-pub fn load() -> Result<Config, ConfigError> {
-    let config = unpack_config(fs::read_to_string(".clconfig.json")?.as_str())?;
+pub fn load() -> eyre::Result<Config> {
+    let contents = fs::read_to_string(".clconfig.json")
+        .wrap_err("Failed to read .clconfig.json - run 'clu init' to create configuration")?;
+
+    let config = unpack_config(&contents)
+        .wrap_err("Failed to load changelog configuration from .clconfig.json")?;
 
     if !config.is_current_version() {
         eprintln!("Warning: Configuration version mismatch.");
@@ -233,15 +249,22 @@ pub fn load() -> Result<Config, ConfigError> {
 
 // Checks if the given value is a valid GitHub URL and sets the target
 // repository field if it is the case.
-pub fn set_target_repo(config: &mut Config, value: String) -> Result<(), ConfigAdjustError> {
-    match Url::parse(value.as_str())?.domain() {
-        Some(d) => {
-            if d != "github.com" {
-                return Err(ConfigAdjustError::NoGitHubRepository);
-            }
-        }
-        None => return Err(ConfigAdjustError::NoGitHubRepository),
-    }
+pub fn set_target_repo(config: &mut Config, value: String) -> eyre::Result<()> {
+    let url = Url::parse(&value)
+        .wrap_err_with(|| format!("Failed to parse '{}' as a valid URL", value))?;
+
+    let domain = url.domain().ok_or_else(|| {
+        eyre::eyre!(
+            "URL '{}' does not have a valid domain - expected a GitHub repository URL",
+            value
+        )
+    })?;
+
+    ensure!(
+        domain == "github.com",
+        "Repository URL must be a GitHub URL (github.com), got: {}",
+        domain
+    );
 
     config.target_repo = value;
     Ok(())
@@ -326,10 +349,8 @@ mod config_adjustment_tests {
     fn test_add_category_duplicate() {
         let mut config = load_example_config();
         assert_eq!(config.categories.len(), 2);
-        assert_eq!(
-            config.add_category("test".to_string()).unwrap_err(),
-            ConfigAdjustError::CategoryAlreadyFound
-        );
+        let err = config.add_category("test".to_string()).unwrap_err();
+        assert!(err.to_string().contains("already exists"));
         assert_eq!(config.categories.len(), 2);
     }
 
@@ -345,10 +366,8 @@ mod config_adjustment_tests {
     fn test_remove_category_not_found() {
         let mut config = load_example_config();
         assert_eq!(config.categories.len(), 2);
-        assert_eq!(
-            config.remove_category("not-found".to_string()).unwrap_err(),
-            ConfigAdjustError::NotFound
-        );
+        let err = config.remove_category("not-found".to_string()).unwrap_err();
+        assert!(err.to_string().contains("not found"));
         assert_eq!(config.categories.len(), 2);
     }
 
@@ -424,12 +443,10 @@ mod config_adjustment_tests {
         let mut config = load_example_config();
         assert_eq!(config.expected_spellings.keys().len(), 3);
         assert!(config.expected_spellings.contains_key("API"));
-        assert_eq!(
-            config
-                .add_expected_spelling("API".to_string(), "newvalue".to_string())
-                .unwrap_err(),
-            ConfigAdjustError::KeyAlreadyFound
-        );
+        let err = config
+            .add_expected_spelling("API".to_string(), "newvalue".to_string())
+            .unwrap_err();
+        assert!(err.to_string().contains("already exists"));
         assert_eq!(config.expected_spellings.keys().len(), 3);
     }
 
@@ -447,12 +464,10 @@ mod config_adjustment_tests {
     fn test_remove_from_collection_not_found() {
         let mut config = load_example_config();
         assert_eq!(config.expected_spellings.keys().len(), 3);
-        assert_eq!(
-            config
-                .remove_expected_spelling("not found".to_string())
-                .unwrap_err(),
-            ConfigAdjustError::NotFound
-        );
+        let err = config
+            .remove_expected_spelling("not found".to_string())
+            .unwrap_err();
+        assert!(err.to_string().contains("not found"));
         assert_eq!(config.expected_spellings.keys().len(), 3);
     }
 
@@ -460,10 +475,8 @@ mod config_adjustment_tests {
     fn test_set_target_repo_fail() {
         let mut config = load_example_config();
         let new_target = "https://other-link.com/MalteHerrmann/other-repo";
-        assert_eq!(
-            set_target_repo(&mut config, new_target.to_string()).unwrap_err(),
-            ConfigAdjustError::NoGitHubRepository
-        );
+        let err = set_target_repo(&mut config, new_target.to_string()).unwrap_err();
+        assert!(err.to_string().contains("github.com") || err.to_string().contains("GitHub"));
         assert_ne!(config.target_repo, new_target);
     }
 
