@@ -57,12 +57,27 @@ fn extract_pr_info(config: &Config, pr: &PullRequest) -> eyre::Result<PRInfo> {
     })
 }
 
-/// Returns an authenticated Octocrab instance if possible.
+/// Reads the GITHUB_TOKEN from the environment, returning `None` when it is
+/// unset or empty.
+///
+/// The token is trimmed of surrounding whitespace because tools commonly used
+/// to inject it (e.g. `GITHUB_TOKEN=$(op read ...)`) can leave a trailing
+/// newline or spaces that would otherwise corrupt the `Authorization` header
+/// and make GitHub respond with a misleading `404 Not Found` on private repos.
+fn read_github_token() -> Option<String> {
+    match std::env::var("GITHUB_TOKEN") {
+        Ok(token) if !token.trim().is_empty() => Some(token.trim().to_string()),
+        _ => None,
+    }
+}
+
+/// Returns an authenticated Octocrab instance, requiring a GITHUB_TOKEN.
 pub fn get_authenticated_github_client() -> eyre::Result<Octocrab> {
-    // NOTE: make sure to export the token and not only define using GITHUB_TOKEN=... because Rust executes
-    // in a child process, that cannot pick it up without using `export`
-    let token = std::env::var("GITHUB_TOKEN")
-        .wrap_err("GITHUB_TOKEN environment variable not found - set it with: export GITHUB_TOKEN=your_token")?;
+    let token = read_github_token().ok_or_else(|| {
+        eyre::eyre!(
+            "GITHUB_TOKEN environment variable not found or empty - set it with: export GITHUB_TOKEN=your_token"
+        )
+    })?;
 
     octocrab::OctocrabBuilder::new()
         .personal_token(token)
@@ -71,33 +86,57 @@ pub fn get_authenticated_github_client() -> eyre::Result<Octocrab> {
 }
 
 /// Returns a GitHub client, authenticated if GITHUB_TOKEN is available, otherwise unauthenticated.
-/// Note: Unauthenticated clients have lower rate limits than authenticated ones.
-pub fn get_github_client() -> Octocrab {
-    match std::env::var("GITHUB_TOKEN") {
-        Ok(token) => octocrab::OctocrabBuilder::new()
+///
+/// Unlike a silent fallback, a build failure while a token *is* present is
+/// surfaced as an error instead of degrading to an unauthenticated client,
+/// which would otherwise make private repositories appear to not exist.
+/// Note: Unauthenticated clients have lower rate limits and cannot access
+/// private repositories.
+pub fn get_github_client() -> eyre::Result<Octocrab> {
+    match read_github_token() {
+        Some(token) => octocrab::OctocrabBuilder::new()
             .personal_token(token)
             .build()
-            .unwrap_or_default(),
-        Err(_) => {
-            // No token available, use unauthenticated client
-            Octocrab::default()
-        }
+            .wrap_err("Failed to build authenticated GitHub client"),
+        None => Ok(Octocrab::default()),
     }
 }
 
 /// Checks if the given branch exists on the GitHub repository.
-pub async fn branch_exists_on_remote(client: &Octocrab, git_info: &GitInfo) -> bool {
-    client
+///
+/// A `404 Not Found` is interpreted as the branch being absent, while any other
+/// error (authentication, network, etc.) is propagated so it is not silently
+/// mistaken for a missing branch - the previous behavior made pushed branches
+/// on private repositories appear to never exist.
+pub async fn branch_exists_on_remote(
+    client: &Octocrab,
+    git_info: &GitInfo,
+) -> eyre::Result<bool> {
+    match client
         .repos(&git_info.owner, &git_info.repo)
         .get_ref(&Branch(git_info.branch.clone()))
         .await
-        .is_ok()
+    {
+        Ok(_) => Ok(true),
+        Err(octocrab::Error::GitHub { source, .. })
+            if source.status_code.as_u16() == 404 =>
+        {
+            Ok(false)
+        }
+        Err(e) => Err(e).wrap_err_with(|| {
+            format!(
+                "Failed to check whether branch '{}' exists in {}/{} - \
+                 ensure GITHUB_TOKEN is set and has access to this (private) repository",
+                git_info.branch, git_info.owner, git_info.repo
+            )
+        }),
+    }
 }
 
 /// Returns an option for an open PR from the current local branch in the configured target
 /// repository if it exists.
 pub async fn get_open_pr(git_info: &GitInfo) -> eyre::Result<PullRequest> {
-    let octocrab = get_github_client();
+    let octocrab = get_github_client()?;
 
     let pulls = octocrab
         .pulls(git_info.owner.to_owned(), git_info.repo.to_owned())
@@ -137,7 +176,7 @@ pub async fn get_open_pr(git_info: &GitInfo) -> eyre::Result<PullRequest> {
 
 /// Returns a PR from the repository by its number.
 async fn get_pr_by_number(git_info: &GitInfo, pr_number: u64) -> eyre::Result<PullRequest> {
-    let client = get_github_client();
+    let client = get_github_client()?;
     client
         .pulls(&git_info.owner, &git_info.repo)
         .get(pr_number)
@@ -178,7 +217,7 @@ pub async fn get_pr_info(
 /// Gets all merged PR numbers from the repository's default branch.
 /// Returns a sorted, deduplicated list of PR numbers.
 pub async fn get_merged_pr_numbers(git_info: &GitInfo) -> eyre::Result<Vec<u64>> {
-    let client = get_github_client();
+    let client = get_github_client()?;
 
     // Get the default branch for the repository
     let repo = client
