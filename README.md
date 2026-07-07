@@ -56,6 +56,28 @@ as well as a default configuration (`.clconfig.json`).
 Note that a pre-existing changelog will not be overwritten, so you can also run this command
 in existing projects. In that case, it will only create the default configuration.
 
+## Non-Interactive Usage
+
+The `add` command is interactive by default, prompting for the change type, category and
+description. This doesn't work for agentic/CI workflows that can't respond to prompts.
+
+For single-file changelogs (the default mode), you can instead pass all required information
+as flags. When `--change-type`, `--category` and `--description` are all provided (together with
+the PR number), `clu` skips every prompt and GitHub lookup, validates the given values against
+`.clconfig.json`, and applies the entry directly:
+
+```bash
+clu add 42 \
+  --change-type "Bug Fixes" \
+  --category cli \
+  --description "Fixed a thing." \
+  --commit-message "fix: describe the change"
+```
+
+`--commit-message` is optional and defaults to the configured commit message.
+Non-interactive mode is not yet supported for multi-file changelogs; running it with
+`clu config mode multi` set returns an error instead of guessing.
+
 ## Configuration
 
 You can add or remove configurations as you like with the

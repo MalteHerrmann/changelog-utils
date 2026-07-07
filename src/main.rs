@@ -13,7 +13,7 @@ async fn main() -> eyre::Result<()> {
 
     match ChangelogCLI::parse() {
         ChangelogCLI::Add(add_args) => {
-            add::run(add_args.number, add_args.yes, add_args.all_previous)
+            add::run(add_args)
                 .await
                 .wrap_err("Failed to add changelog entry")?;
             Ok(())
