@@ -40,11 +40,36 @@ It creates an empty changelog skeleton if no existing changelog is found as well
 
 #[derive(Args, Debug)]
 pub struct AddArgs {
+    /// The PR number to link the entry to.
+    ///
+    /// Required for non-interactive mode (used together with --change-type, --category
+    /// and --description).
     pub number: Option<u64>,
     #[arg(short, long)]
     pub yes: bool,
     #[arg(long)]
     pub all_previous: bool,
+    /// Change type to file the entry under (e.g. "Bug Fixes").
+    ///
+    /// Must match one of the long change type names configured in .clconfig.json.
+    /// Providing this together with --category and --description skips all interactive
+    /// prompts and PR lookups, which is useful for agentic workflows that cannot
+    /// use the interactive flow.
+    #[arg(long)]
+    pub change_type: Option<String>,
+    /// Category of the change (e.g. "cli").
+    ///
+    /// Must match one of the categories configured in .clconfig.json.
+    #[arg(long)]
+    pub category: Option<String>,
+    /// One-line description of the made changes.
+    #[arg(long)]
+    pub description: Option<String>,
+    /// Commit message to use when committing the changelog entry.
+    ///
+    /// Defaults to the configured commit message if not set. Only used in non-interactive mode.
+    #[arg(long)]
+    pub commit_message: Option<String>,
 }
 
 #[derive(Args, Debug)]

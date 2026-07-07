@@ -1,4 +1,4 @@
-use super::inputs;
+use super::{commands::AddArgs, inputs};
 use crate::{
     common::changelog::Changelog,
     config,
@@ -8,8 +8,113 @@ use crate::{
         github::{get_merged_pr_numbers, get_pr_info, PRInfo},
     },
 };
-use eyre::WrapErr;
+use eyre::{ensure, WrapErr};
 use std::collections::HashMap;
+
+/// Holds the fully-resolved, validated inputs needed to add a changelog entry
+/// without any interactive prompts or GitHub lookups.
+#[derive(Debug)]
+struct NonInteractiveInputs {
+    change_type: String,
+    category: String,
+    description: String,
+    pr_number: u64,
+}
+
+/// Checks whether any of the non-interactive flags were provided.
+fn any_non_interactive_flags_set(args: &AddArgs) -> bool {
+    args.change_type.is_some() || args.category.is_some() || args.description.is_some()
+}
+
+/// Resolves and validates the non-interactive CLI flags against the given configuration.
+///
+/// Returns `Ok(None)` if none of the non-interactive flags were passed, so the caller can
+/// fall back to the regular interactive flow. Returns an error if only some of the required
+/// flags were passed, if the changelog is not in single-file mode, or if a given value does
+/// not match the configuration.
+fn resolve_non_interactive_inputs(
+    config: &config::Config,
+    args: &AddArgs,
+) -> eyre::Result<Option<NonInteractiveInputs>> {
+    if !any_non_interactive_flags_set(args) {
+        return Ok(None);
+    }
+
+    ensure!(
+        matches!(config.mode, config::Mode::Single),
+        "Non-interactive mode (--change-type, --category, --description) is not supported for \
+         multi-file changelogs yet; run 'clu config mode single' or use the interactive flow instead"
+    );
+
+    ensure!(
+        args.number.is_some()
+            && args.change_type.is_some()
+            && args.category.is_some()
+            && args.description.is_some(),
+        "Non-interactive mode requires all of the following to be set: the PR number, \
+         --change-type, --category and --description"
+    );
+
+    let change_type = args.change_type.clone().unwrap();
+    ensure!(
+        config.get_long_change_type(&change_type).is_some(),
+        "Invalid change type '{}'; allowed values are: {}",
+        change_type,
+        config
+            .change_types
+            .iter()
+            .map(|ct| ct.long.clone())
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+
+    let category = args.category.clone().unwrap().to_lowercase();
+    ensure!(
+        config.categories.contains(&category),
+        "Invalid category '{}'; allowed values are: {}",
+        category,
+        config.categories.join(", ")
+    );
+
+    let description = args.description.clone().unwrap();
+    ensure!(
+        !description.trim().is_empty(),
+        "Description must not be empty"
+    );
+
+    Ok(Some(NonInteractiveInputs {
+        change_type,
+        category,
+        description,
+        pr_number: args.number.unwrap(),
+    }))
+}
+
+/// Adds the changelog entry and commits the changes using the given fully-resolved
+/// inputs, without any interactive prompts or GitHub lookups.
+fn run_non_interactive(
+    config: &config::Config,
+    inputs: NonInteractiveInputs,
+    commit_message: Option<String>,
+) -> eyre::Result<()> {
+    let mut changelog = changelog::load(config).wrap_err("Failed to load changelog")?;
+
+    add_entry(
+        config,
+        &mut changelog,
+        &inputs.change_type,
+        &inputs.category,
+        &inputs.description,
+        inputs.pr_number,
+    );
+
+    changelog
+        .write(config, &changelog.path)
+        .wrap_err("Failed to write changelog")?;
+
+    let cm = commit_message.unwrap_or_else(|| config.commit_message.clone());
+    commit(config, &cm).wrap_err("Failed to commit changes")
+}
 
 /// Determines if user input is required based on the accept flag and whether PR info was retrieved.
 fn should_get_user_input(accept: bool, retrieved: bool) -> bool {
@@ -77,27 +182,39 @@ fn get_entry_inputs(
 // to commit the changes.
 //
 // NOTE: the changes are NOT pushed to the origin when running the `add` command.
-pub async fn run(pr_number: Option<u64>, accept: bool, all_previous: bool) -> eyre::Result<()> {
+pub async fn run(args: AddArgs) -> eyre::Result<()> {
     let config = config::load()
         .wrap_err("Failed to load configuration")?;
+
+    ensure!(
+        !(args.all_previous && any_non_interactive_flags_set(&args)),
+        "Cannot combine --all-previous with --change-type, --category or --description"
+    );
+
+    if let Some(inputs) = resolve_non_interactive_inputs(&config, &args)
+        .wrap_err("Failed to resolve non-interactive inputs")?
+    {
+        return run_non_interactive(&config, inputs, args.commit_message);
+    }
+
     let git_info = get_git_info(&config)
         .wrap_err("Failed to get git information")?;
 
-    if all_previous {
-        if pr_number.is_some() {
-            eprintln!("Error: Cannot specify both a PR number and --all-previous flag");
-            std::process::exit(1);
-        }
-        return run_batch(config, git_info, accept).await;
+    if args.all_previous {
+        ensure!(
+            args.number.is_none(),
+            "Cannot specify both a PR number and --all-previous flag"
+        );
+        return run_batch(config, git_info, args.yes).await;
     }
 
-    let mut pr_info = get_pr_info(&config, &git_info, pr_number)
+    let mut pr_info = get_pr_info(&config, &git_info, args.number)
         .await
         .wrap_err("Failed to get PR information")?;
     let retrieved = pr_info.number != 0;
 
     let (selected_change_type, pr_number, cat, desc) =
-        get_entry_inputs(&config, &mut pr_info, accept, retrieved)?;
+        get_entry_inputs(&config, &mut pr_info, args.yes, retrieved)?;
 
     let mut changelog = changelog::load(&config)
         .wrap_err("Failed to load changelog")?;
@@ -286,5 +403,126 @@ pub fn add_entry(
     } else {
         let new_ct = change_type::new(change_type.to_owned(), Some(vec![new_fixed_entry]));
         unreleased.change_types.push(new_ct);
+    }
+}
+
+#[cfg(test)]
+mod non_interactive_tests {
+    use super::*;
+
+    fn load_test_config() -> config::Config {
+        config::unpack_config(include_str!(
+            "../../tests/testdata/single_file/evmos_config.json"
+        ))
+        .expect("failed to load example config")
+    }
+
+    fn base_args() -> AddArgs {
+        AddArgs {
+            number: None,
+            yes: false,
+            all_previous: false,
+            change_type: None,
+            category: None,
+            description: None,
+            commit_message: None,
+        }
+    }
+
+    #[test]
+    fn test_none_when_no_flags_set() {
+        let config = load_test_config();
+        let result = resolve_non_interactive_inputs(&config, &base_args())
+            .expect("should not error when no flags are set");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_error_on_partial_flags() {
+        let config = load_test_config();
+        let args = AddArgs {
+            change_type: Some("Bug Fixes".to_string()),
+            ..base_args()
+        };
+        let err = resolve_non_interactive_inputs(&config, &args).unwrap_err();
+        assert!(err.to_string().contains("requires all of"));
+    }
+
+    #[test]
+    fn test_error_on_multi_mode() {
+        let mut config = load_test_config();
+        config.set_mode(config::Mode::Multi);
+
+        let args = AddArgs {
+            number: Some(1),
+            change_type: Some("Bug Fixes".to_string()),
+            category: Some("go".to_string()),
+            description: Some("Fixed a bug.".to_string()),
+            ..base_args()
+        };
+        let err = resolve_non_interactive_inputs(&config, &args).unwrap_err();
+        assert!(err.to_string().contains("multi-file changelogs"));
+    }
+
+    #[test]
+    fn test_error_on_invalid_change_type() {
+        let config = load_test_config();
+        let args = AddArgs {
+            number: Some(1),
+            change_type: Some("Not A Real Change Type".to_string()),
+            category: Some("go".to_string()),
+            description: Some("Fixed a bug.".to_string()),
+            ..base_args()
+        };
+        let err = resolve_non_interactive_inputs(&config, &args).unwrap_err();
+        assert!(err.to_string().contains("Invalid change type"));
+    }
+
+    #[test]
+    fn test_error_on_invalid_category() {
+        let config = load_test_config();
+        let args = AddArgs {
+            number: Some(1),
+            change_type: Some("Bug Fixes".to_string()),
+            category: Some("not-a-category".to_string()),
+            description: Some("Fixed a bug.".to_string()),
+            ..base_args()
+        };
+        let err = resolve_non_interactive_inputs(&config, &args).unwrap_err();
+        assert!(err.to_string().contains("Invalid category"));
+    }
+
+    #[test]
+    fn test_error_on_empty_description() {
+        let config = load_test_config();
+        let args = AddArgs {
+            number: Some(1),
+            change_type: Some("Bug Fixes".to_string()),
+            category: Some("go".to_string()),
+            description: Some("   ".to_string()),
+            ..base_args()
+        };
+        let err = resolve_non_interactive_inputs(&config, &args).unwrap_err();
+        assert!(err.to_string().contains("must not be empty"));
+    }
+
+    #[test]
+    fn test_success_lowercases_category() {
+        let config = load_test_config();
+        let args = AddArgs {
+            number: Some(42),
+            change_type: Some("Bug Fixes".to_string()),
+            category: Some("GO".to_string()),
+            description: Some("Fixed a bug.".to_string()),
+            ..base_args()
+        };
+        let resolved = resolve_non_interactive_inputs(&config, &args)
+            .expect("should resolve successfully")
+            .expect("should return Some inputs");
+
+        assert_eq!(resolved.change_type, "Bug Fixes");
+        assert_eq!(resolved.category, "go");
+        assert_eq!(resolved.description, "Fixed a bug.");
+        assert_eq!(resolved.pr_number, 42);
     }
 }
