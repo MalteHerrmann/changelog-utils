@@ -6,6 +6,10 @@ This changelog was created using the `clu` binary
 
 ## Unreleased
 
+### Features
+
+- (cli) [#124](https://github.com/MalteHerrmann/changelog-utils/pull/124) Add non-interactive arguments to `add` command for agentic workflows.
+
 ### Improvements
 
 - (all) [#120](https://github.com/MalteHerrmann/changelog-utils/pull/120) Replace thiserror with eyre for better user facing errors.
