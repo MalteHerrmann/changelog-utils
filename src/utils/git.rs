@@ -162,10 +162,15 @@ pub fn push_to_origin(branch_name: &str) -> eyre::Result<()> {
 ///   - `https://github.com/owner/repo` (optionally suffixed with `.git`)
 ///   - `git@github.com:owner/repo.git` (SCP-like SSH syntax)
 ///   - `ssh://git@github.com/owner/repo.git`
-///   - `github.com/owner/repo`
+///   - `git://github.com/owner/repo.git`
+///
+/// The host portion is anchored so that lookalike hosts such as
+/// `mygithub.com` or `internal-github.com` are not silently mapped onto the
+/// canonical `github.com`. A scheme (`https`/`http`/`ssh`/`git`) or the literal
+/// `git@` prefix is therefore required immediately before the host.
 pub fn parse_github_owner_repo(url: &str) -> eyre::Result<(String, String)> {
     let regex = Regex::new(
-        r"(?:https?://|ssh://)?(?:git@)?github\.com[/:](?P<owner>[\w.-]+)/(?P<repo>[\w.-]+?)(?:\.git)?/?$",
+        r"^(?:(?:https?|ssh|git)://(?:[^@/]+@)?|git@)(?:www\.)?github\.com(?::\d+)?[/:](?P<owner>[\w.-]+)/(?P<repo>[\w.-]+?)(?:\.git)?/?$",
     )
     .wrap_err("Failed to compile GitHub URL regex pattern")?;
 
@@ -272,10 +277,12 @@ mod tests {
             "https://github.com/MalteHerrmann/changelog-utils",
             "https://github.com/MalteHerrmann/changelog-utils.git",
             "https://github.com/MalteHerrmann/changelog-utils/",
+            "https://www.github.com/MalteHerrmann/changelog-utils",
+            "https://user@github.com/MalteHerrmann/changelog-utils.git",
             "git@github.com:MalteHerrmann/changelog-utils.git",
             "git@github.com:MalteHerrmann/changelog-utils",
             "ssh://git@github.com/MalteHerrmann/changelog-utils.git",
-            "github.com/MalteHerrmann/changelog-utils",
+            "git://github.com/MalteHerrmann/changelog-utils.git",
             "  git@github.com:MalteHerrmann/changelog-utils.git\n",
         ];
 
@@ -297,9 +304,20 @@ mod tests {
 
     #[test]
     fn test_parse_github_owner_repo_invalid() {
-        assert!(
-            parse_github_owner_repo("https://gitlab.com/owner/repo").is_err(),
-            "expected non-GitHub URL to fail parsing"
-        );
+        let cases = vec![
+            "https://gitlab.com/owner/repo",
+            "https://mygithub.com/owner/repo",
+            "https://internal-github.com/owner/repo",
+            "https://github.com.evil.com/owner/repo",
+            "github.com/owner/repo",
+        ];
+
+        for case in cases {
+            assert!(
+                parse_github_owner_repo(case).is_err(),
+                "expected '{}' to fail parsing",
+                case
+            );
+        }
     }
 }
