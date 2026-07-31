@@ -155,8 +155,53 @@ pub fn push_to_origin(branch_name: &str) -> eyre::Result<()> {
     Ok(())
 }
 
-/// Checks if there is a origin repository defined and returns the name
-/// if that's the case.
+/// Parses the owner and repository name from a GitHub URL or git remote.
+///
+/// This intentionally supports the most common URL forms so that private
+/// repositories cloned via SSH work just as well as ones cloned via HTTPS:
+///   - `https://github.com/owner/repo` (optionally suffixed with `.git`)
+///   - `git@github.com:owner/repo.git` (SCP-like SSH syntax)
+///   - `ssh://git@github.com/owner/repo.git`
+///   - `git://github.com/owner/repo.git`
+///
+/// The host portion is anchored so that lookalike hosts such as
+/// `mygithub.com` or `internal-github.com` are not silently mapped onto the
+/// canonical `github.com`. A scheme (`https`/`http`/`ssh`/`git`) or the literal
+/// `git@` prefix is therefore required immediately before the host.
+pub fn parse_github_owner_repo(url: &str) -> eyre::Result<(String, String)> {
+    let regex = Regex::new(
+        r"^(?:(?:https?|ssh|git)://(?:[^@/]+@)?|git@)(?:www\.)?github\.com(?::\d+)?[/:](?P<owner>[\w.-]+)/(?P<repo>[\w.-]+?)(?:\.git)?/?$",
+    )
+    .wrap_err("Failed to compile GitHub URL regex pattern")?;
+
+    let trimmed = url.trim();
+    let captures = regex.captures(trimmed).ok_or_else(|| {
+        eyre::eyre!(
+            "'{}' does not match a supported GitHub URL format \
+             (e.g. https://github.com/owner/repo or git@github.com:owner/repo)",
+            trimmed
+        )
+    })?;
+
+    let owner = captures
+        .name("owner")
+        .expect("regex should have owner capture group")
+        .as_str()
+        .to_string();
+    let repo = captures
+        .name("repo")
+        .expect("regex should have repo capture group")
+        .as_str()
+        .to_string();
+
+    Ok((owner, repo))
+}
+
+/// Checks if there is a origin repository defined and returns the canonical
+/// `https://github.com/owner/repo` URL if that's the case.
+///
+/// The origin remote may use either HTTPS or SSH; both are normalized to the
+/// canonical HTTPS form used for `target_repo` and for building PR/release links.
 pub fn get_origin() -> eyre::Result<String> {
     let output = Command::new("git")
         .args(vec!["remote", "get-url", "origin"])
@@ -171,21 +216,10 @@ pub fn get_origin() -> eyre::Result<String> {
     let origin = String::from_utf8(output.stdout)
         .wrap_err("Failed to parse git origin URL as UTF-8")?;
 
-    let regex = Regex::new(r"(https://github.com/[^.\s]+/[^.\s]+)(\.git)?")
-        .wrap_err("Failed to compile GitHub URL regex pattern")?;
+    let (owner, repo) = parse_github_owner_repo(&origin)
+        .wrap_err("Failed to parse GitHub owner/repo from the origin remote URL")?;
 
-    let captures = regex.captures(origin.as_str()).ok_or_else(|| {
-        eyre::eyre!(
-            "Origin URL '{}' does not match expected GitHub format (https://github.com/owner/repo)",
-            origin.trim()
-        )
-    })?;
-
-    Ok(captures
-        .get(1)
-        .expect("regex should have capture group 1")
-        .as_str()
-        .to_string())
+    Ok(format!("https://github.com/{}/{}", owner, repo))
 }
 
 /// Holds the relevant information for the Git configuration.
@@ -199,28 +233,13 @@ pub struct GitInfo {
 /// Retrieves the Git information like the currently checked out branch and
 /// repository owner and name.
 pub fn get_git_info(config: &Config) -> eyre::Result<GitInfo> {
-    let regex = Regex::new(r"github.com/(?P<owner>[\w-]+)/(?P<repo>[\w-]+)\.*")
-        .wrap_err("Failed to compile GitHub repository URL regex pattern")?;
+    let (owner, repo) = parse_github_owner_repo(&config.target_repo).wrap_err_with(|| {
+        format!(
+            "Failed to parse owner/repo from target repository '{}'",
+            config.target_repo
+        )
+    })?;
 
-    let captures = regex
-        .captures(config.target_repo.as_str())
-        .ok_or_else(|| {
-            eyre::eyre!(
-                "Target repository '{}' does not match expected GitHub format (github.com/owner/repo)",
-                config.target_repo
-            )
-        })?;
-
-    let owner = captures
-        .name("owner")
-        .expect("regex should have owner capture group")
-        .as_str()
-        .to_string();
-    let repo = captures
-        .name("repo")
-        .expect("regex should have repo capture group")
-        .as_str()
-        .to_string();
     let branch = get_current_local_branch()
         .wrap_err("Failed to get current git branch")?;
 
@@ -250,5 +269,55 @@ mod tests {
             origin, "https://github.com/MalteHerrmann/changelog-utils",
             "expected different origin"
         )
+    }
+
+    #[test]
+    fn test_parse_github_owner_repo() {
+        let cases = vec![
+            "https://github.com/MalteHerrmann/changelog-utils",
+            "https://github.com/MalteHerrmann/changelog-utils.git",
+            "https://github.com/MalteHerrmann/changelog-utils/",
+            "https://www.github.com/MalteHerrmann/changelog-utils",
+            "https://user@github.com/MalteHerrmann/changelog-utils.git",
+            "git@github.com:MalteHerrmann/changelog-utils.git",
+            "git@github.com:MalteHerrmann/changelog-utils",
+            "ssh://git@github.com/MalteHerrmann/changelog-utils.git",
+            "git://github.com/MalteHerrmann/changelog-utils.git",
+            "  git@github.com:MalteHerrmann/changelog-utils.git\n",
+        ];
+
+        for case in cases {
+            let (owner, repo) =
+                parse_github_owner_repo(case).unwrap_or_else(|_| panic!("failed to parse '{}'", case));
+            assert_eq!(owner, "MalteHerrmann", "unexpected owner for '{}'", case);
+            assert_eq!(repo, "changelog-utils", "unexpected repo for '{}'", case);
+        }
+    }
+
+    #[test]
+    fn test_parse_github_owner_repo_with_dots() {
+        let (owner, repo) = parse_github_owner_repo("git@github.com:noble-assets/my.repo.git")
+            .expect("failed to parse repo name containing dots");
+        assert_eq!(owner, "noble-assets");
+        assert_eq!(repo, "my.repo");
+    }
+
+    #[test]
+    fn test_parse_github_owner_repo_invalid() {
+        let cases = vec![
+            "https://gitlab.com/owner/repo",
+            "https://mygithub.com/owner/repo",
+            "https://internal-github.com/owner/repo",
+            "https://github.com.evil.com/owner/repo",
+            "github.com/owner/repo",
+        ];
+
+        for case in cases {
+            assert!(
+                parse_github_owner_repo(case).is_err(),
+                "expected '{}' to fail parsing",
+                case
+            );
+        }
     }
 }
