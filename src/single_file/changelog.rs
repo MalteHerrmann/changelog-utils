@@ -1,6 +1,6 @@
 use super::{change_type, entry, release};
 use crate::{
-    common::add_to_problems,
+    common::{add_to_problems, Problem},
     config::{ChangeTypeConfig, Config},
     escapes,
 };
@@ -18,7 +18,7 @@ pub struct SingleFileChangelog {
     comments: Vec<String>,
     legacy_contents: Vec<String>,
     pub releases: Vec<release::Release>,
-    pub problems: Vec<String>,
+    pub problems: Vec<Problem>,
 }
 
 impl crate::common::changelog::Changelog for SingleFileChangelog {
@@ -26,7 +26,7 @@ impl crate::common::changelog::Changelog for SingleFileChangelog {
         &self.path
     }
 
-    fn get_problems(&self) -> &[String] {
+    fn get_problems(&self) -> &[Problem] {
         &self.problems
     }
 
@@ -97,7 +97,7 @@ pub fn parse_changelog(
     let mut comments: Vec<String> = Vec::new();
     let mut legacy_contents: Vec<String> = Vec::new();
     let mut releases: Vec<release::Release> = Vec::new();
-    let mut problems: Vec<String> = Vec::new();
+    let mut problems: Vec<Problem> = Vec::new();
 
     let mut current_release = release::new_empty_release();
     let mut seen_releases: Vec<String> = Vec::new();

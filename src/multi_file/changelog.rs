@@ -1,5 +1,5 @@
 use crate::{
-    common::add_to_problems,
+    common::{add_to_problems, Problem},
     config::Config,
     multi_file::release,
 };
@@ -14,7 +14,7 @@ use std::{
 #[derive(Clone, Debug)]
 pub struct MultiFileChangelog {
     pub releases: Vec<Release>,
-    pub problems: Vec<String>,
+    pub problems: Vec<Problem>,
     pub path: PathBuf,
 }
 
@@ -23,7 +23,7 @@ impl crate::common::changelog::Changelog for MultiFileChangelog {
         &self.path
     }
 
-    fn get_problems(&self) -> &[String] {
+    fn get_problems(&self) -> &[Problem] {
         &self.problems
     }
 
@@ -91,7 +91,7 @@ pub fn parse_changelog(
         .collect();
 
     // Gather all problems from the individual entries
-    let mut problems: Vec<String> = Vec::new();
+    let mut problems: Vec<Problem> = Vec::new();
     releases.iter().for_each(|r| {
         r.problems
             .iter()
@@ -110,7 +110,7 @@ pub fn parse_changelog(
 
     // NOTE: sorting entries here to ensure deterministic order
     // even with parallel handling of entries
-    problems.sort();
+    problems.sort_by_key(|p| (p.path.clone(), p.line));
 
     Ok(MultiFileChangelog {
         releases,
