@@ -1,4 +1,7 @@
-use crate::{common, config};
+use crate::{
+    common::{self, LintErrorType, ProblemDetail},
+    config,
+};
 use regex::Regex;
 
 /// Represents an individual entry in the changelog.
@@ -11,7 +14,7 @@ pub struct Entry {
     /// The PR number for the given change.
     pub pr_number: u64,
     /// The list of problems with the given line.
-    pub problems: Vec<String>,
+    pub problems: Vec<ProblemDetail>,
 }
 
 impl Entry {
@@ -59,7 +62,7 @@ pub fn parse(config: &config::Config, line: &str) -> eyre::Result<Entry> {
         matches.name("ws4").unwrap().as_str(),
     ];
 
-    let mut problems: Vec<String> = Vec::new();
+    let mut problems: Vec<ProblemDetail> = Vec::new();
 
     check_whitespace(spaces)
         .into_iter()
@@ -90,8 +93,8 @@ fn build_fixed(cat: &str, link: &str, desc: &str, pr: u64) -> String {
 }
 
 /// Checks the used whitespace in the entry.
-fn check_whitespace(spaces: [&str; 5]) -> Vec<String> {
-    let mut problems: Vec<String> = Vec::new();
+fn check_whitespace(spaces: [&str; 5]) -> Vec<ProblemDetail> {
+    let mut problems: Vec<ProblemDetail> = Vec::new();
 
     let expected_whitespace = ["", " ", " ", "", " "];
     let errors = [
@@ -108,7 +111,7 @@ fn check_whitespace(spaces: [&str; 5]) -> Vec<String> {
         .zip(errors)
         .for_each(|((got, expected), error)| {
             if (*got).ne(expected) {
-                problems.push(error.to_string())
+                problems.push(ProblemDetail::new(LintErrorType::Whitespace, error))
             }
         });
 
@@ -152,11 +155,17 @@ mod entry_tests {
         assert_eq!(
             entry.problems,
             vec![
-                concat!(
-                    r"PR link is not matching PR number 2: ",
-                    "'https://github.com/MalteHerrmann/changelog-utils/pull/1'"
+                ProblemDetail::new(
+                    LintErrorType::PullRequest,
+                    concat!(
+                        r"PR link is not matching PR number 2: ",
+                        "'https://github.com/MalteHerrmann/changelog-utils/pull/1'"
+                    )
                 ),
-                "PR description should end with a dot: 'Test'"
+                ProblemDetail::new(
+                    LintErrorType::Description,
+                    "PR description should end with a dot: 'Test'"
+                ),
             ]
         );
     }
@@ -182,8 +191,14 @@ mod entry_tests {
         assert_eq!(
             entry.problems,
             [
-                "There should be exactly one space between the category and the PR link",
-                "There should be no whitespace inside of the markdown link",
+                ProblemDetail::new(
+                    LintErrorType::Whitespace,
+                    "There should be exactly one space between the category and the PR link"
+                ),
+                ProblemDetail::new(
+                    LintErrorType::Whitespace,
+                    "There should be no whitespace inside of the markdown link"
+                ),
             ]
         );
     }
@@ -204,7 +219,10 @@ mod whitespace_tests {
         let example_spaces = [" ", " ", " ", "", " "];
         assert_eq!(
             check_whitespace(example_spaces),
-            ["There should be no leading whitespace before the dash"]
+            [ProblemDetail::new(
+                LintErrorType::Whitespace,
+                "There should be no leading whitespace before the dash"
+            )]
         );
     }
 
@@ -213,7 +231,10 @@ mod whitespace_tests {
         let example_spaces = ["", " ", "", "", " "];
         assert_eq!(
             check_whitespace(example_spaces),
-            ["There should be exactly one space between the category and the PR link"]
+            [ProblemDetail::new(
+                LintErrorType::Whitespace,
+                "There should be exactly one space between the category and the PR link"
+            )]
         );
     }
 
@@ -222,7 +243,10 @@ mod whitespace_tests {
         let example_spaces = ["", "", " ", "", " "];
         assert_eq!(
             check_whitespace(example_spaces),
-            ["There should be exactly one space between the leading dash and the category"]
+            [ProblemDetail::new(
+                LintErrorType::Whitespace,
+                "There should be exactly one space between the leading dash and the category"
+            )]
         );
     }
 
@@ -231,7 +255,10 @@ mod whitespace_tests {
         let example_spaces = ["", " ", " ", "", "  "];
         assert_eq!(
             check_whitespace(example_spaces),
-            ["There should be exactly one space between the PR link and the description"]
+            [ProblemDetail::new(
+                LintErrorType::Whitespace,
+                "There should be exactly one space between the PR link and the description"
+            )]
         );
     }
 
@@ -240,7 +267,10 @@ mod whitespace_tests {
         let example_spaces = ["", " ", " ", " ", " "];
         assert_eq!(
             check_whitespace(example_spaces),
-            ["There should be no whitespace inside of the markdown link"]
+            [ProblemDetail::new(
+                LintErrorType::Whitespace,
+                "There should be no whitespace inside of the markdown link"
+            )]
         );
     }
 }

@@ -1,4 +1,4 @@
-use crate::common::problem::Problem;
+use crate::common::problem::{Problem, ProblemDetail};
 use std::path::Path;
 
 /// Used for collecting the problem statements found in the changelog.
@@ -8,7 +8,7 @@ pub fn add_to_problems(
     problems: &mut Vec<Problem>,
     fp: &Path,
     line: Option<usize>,
-    problem: impl Into<String>,
+    detail: ProblemDetail,
 ) {
-    problems.push(Problem::new(fp, line, problem))
+    problems.push(Problem::new(fp, line, detail))
 }

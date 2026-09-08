@@ -1,12 +1,15 @@
 use super::entry::Entry;
-use crate::config;
+use crate::{
+    common::{LintErrorType, ProblemDetail},
+    config,
+};
 use regex::{Regex, RegexBuilder};
 
 #[derive(Clone, Debug)]
 pub struct ChangeType {
     pub name: String,
     pub fixed: String,
-    pub problems: Vec<String>,
+    pub problems: Vec<ProblemDetail>,
     pub entries: Vec<Entry>,
 }
 
@@ -44,7 +47,7 @@ pub fn parse(config: config::Config, line: &str) -> eyre::Result<ChangeType> {
     // NOTE: calling unwrap here is okay, because the match was checked above
     let name = captures.name("name").unwrap().as_str();
     let mut fixed_name = name.to_string();
-    let mut problems: Vec<String> = Vec::new();
+    let mut problems: Vec<ProblemDetail> = Vec::new();
 
     // Check the correctness of the current change type.
     if !config.change_types.iter().any(|ct| {
@@ -67,23 +70,27 @@ pub fn parse(config: config::Config, line: &str) -> eyre::Result<ChangeType> {
         }
 
         if name != ct.long {
-            problems.push(format!(
-                "'{}' should be used instead of '{}'",
-                ct.long, name
+            problems.push(ProblemDetail::new(
+                LintErrorType::ChangeType,
+                format!("'{}' should be used instead of '{}'", ct.long, name),
             ));
             fixed_name.clone_from(&ct.long);
         }
 
         true
     }) {
-        problems.push(format!("'{name}' is not a valid change type"))
+        problems.push(ProblemDetail::new(
+            LintErrorType::ChangeType,
+            format!("'{name}' is not a valid change type"),
+        ))
     };
 
     let fixed = format!("### {fixed_name}");
 
     if format!("### {name}").ne(line) {
-        problems.push(format!(
-            "Change type line is malformed; should be: '{fixed}'"
+        problems.push(ProblemDetail::new(
+            LintErrorType::ChangeType,
+            format!("Change type line is malformed; should be: '{fixed}'"),
         ));
     }
 
@@ -123,7 +130,10 @@ mod change_type_tests {
         assert_eq!(change_type.name, "Bug Fixes");
         assert_eq!(
             change_type.problems,
-            vec!["Change type line is malformed; should be: '### Bug Fixes'"]
+            vec![ProblemDetail::new(
+                LintErrorType::ChangeType,
+                "Change type line is malformed; should be: '### Bug Fixes'"
+            )]
         );
     }
 
@@ -143,7 +153,10 @@ mod change_type_tests {
         assert_eq!(change_type.name, "Bug Fixes");
         assert_eq!(
             change_type.problems,
-            vec!["'Bug Fixes' should be used instead of 'BugFixes'"]
+            vec![ProblemDetail::new(
+                LintErrorType::ChangeType,
+                "'Bug Fixes' should be used instead of 'BugFixes'"
+            )]
         );
     }
 
@@ -156,7 +169,10 @@ mod change_type_tests {
         assert_eq!(change_type.name, "invalid type");
         assert_eq!(
             change_type.problems,
-            vec!["'invalid type' is not a valid change type"]
+            vec![ProblemDetail::new(
+                LintErrorType::ChangeType,
+                "'invalid type' is not a valid change type"
+            )]
         );
     }
 }
