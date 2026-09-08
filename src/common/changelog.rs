@@ -1,4 +1,5 @@
 use crate::{
+    common::problem::Problem,
     config::{self, Config},
     multi_file, single_file,
 };
@@ -10,7 +11,7 @@ pub trait Changelog {
     fn get_path(&self) -> &Path;
 
     /// Returns the list of problems found in the changelog
-    fn get_problems(&self) -> &[String];
+    fn get_problems(&self) -> &[Problem];
 
     /// Returns all PR numbers found across all releases
     fn get_all_pr_numbers(&self) -> Vec<u64>;

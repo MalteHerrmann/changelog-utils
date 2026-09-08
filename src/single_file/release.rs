@@ -1,5 +1,9 @@
 use super::change_type::ChangeType;
-use crate::{config, utils::version};
+use crate::{
+    common::{LintErrorType, ProblemDetail},
+    config,
+    utils::version,
+};
 use eyre::WrapErr;
 use regex::RegexBuilder;
 
@@ -10,7 +14,7 @@ pub struct Release {
     pub fixed: String,
     pub version: String,
     pub change_types: Vec<ChangeType>,
-    pub problems: Vec<String>,
+    pub problems: Vec<ProblemDetail>,
 }
 
 impl Release {
@@ -84,7 +88,7 @@ pub fn new_empty_release() -> Release {
 /// Parses the contents of a release line in the changelog.
 pub fn parse(config: &config::Config, line: &str) -> eyre::Result<Release> {
     let change_types: Vec<ChangeType> = Vec::new();
-    let mut problems: Vec<String> = Vec::new();
+    let mut problems: Vec<ProblemDetail> = Vec::new();
 
     // Check unreleased pattern
     if let Some(r) = check_unreleased(line) {
@@ -136,12 +140,15 @@ fn check_unreleased(line: &str) -> Option<Release> {
         .is_match(line)
     {
         let fixed = "## Unreleased".to_string();
-        let mut problems: Vec<String> = Vec::new();
+        let mut problems: Vec<ProblemDetail> = Vec::new();
         let change_types: Vec<ChangeType> = Vec::new();
 
         if fixed.ne(line) {
-            problems.push(format!(
-                "Unreleased header is malformed; expected: '{fixed}'; got: '{line}'"
+            problems.push(ProblemDetail::new(
+                LintErrorType::Release,
+                format!(
+                    "Unreleased header is malformed; expected: '{fixed}'; got: '{line}'"
+                ),
             ))
         }
 
@@ -188,8 +195,11 @@ mod release_tests {
         assert_eq!(release.version, "Unreleased");
         assert_eq!(
             release.problems,
-            vec![format!(
-                "Unreleased header is malformed; expected: '{fixed}'; got: '{example}'"
+            vec![ProblemDetail::new(
+                LintErrorType::Release,
+                format!(
+                    "Unreleased header is malformed; expected: '{fixed}'; got: '{example}'"
+                )
             )]
         );
     }
@@ -208,7 +218,10 @@ mod release_tests {
         assert_eq!(release.version, "v0.1.0");
         assert_eq!(
             release.problems,
-            vec!["Release link is missing for version v0.1.0"]
+            vec![ProblemDetail::new(
+                LintErrorType::Release,
+                "Release link is missing for version v0.1.0"
+            )]
         );
     }
 
@@ -219,11 +232,15 @@ mod release_tests {
         let release = parse(&load_test_config(), example).expect("failed to parse release");
         assert_eq!(release.version, "v0.1.0");
         assert_eq!(release.fixed, fixed);
-        assert_eq!(release.problems,
-            vec![concat!(
-                "Release link should point to the GitHub release for v0.1.0; ",
-                "expected: 'https://github.com/MalteHerrmann/changelog-utils/releases/tag/v0.1.0'; ",
-                "got: 'https://github.com/MalteHerrmann/changelog-utils/releases/tag/v0.2.0'"
+        assert_eq!(
+            release.problems,
+            vec![ProblemDetail::new(
+                LintErrorType::Release,
+                concat!(
+                    "Release link should point to the GitHub release for v0.1.0; ",
+                    "expected: 'https://github.com/MalteHerrmann/changelog-utils/releases/tag/v0.1.0'; ",
+                    "got: 'https://github.com/MalteHerrmann/changelog-utils/releases/tag/v0.2.0'"
+                )
             )]
         );
     }
@@ -276,8 +293,8 @@ mod release_tests {
     }
 }
 
-fn check_link(config: &config::Config, link: &str, version: &str) -> (String, Vec<String>) {
-    let mut problems: Vec<String> = Vec::new();
+fn check_link(config: &config::Config, link: &str, version: &str) -> (String, Vec<ProblemDetail>) {
+    let mut problems: Vec<ProblemDetail> = Vec::new();
 
     let fixed_link = format!("{}/releases/tag/{}", &config.target_repo, version);
 
@@ -285,12 +302,18 @@ fn check_link(config: &config::Config, link: &str, version: &str) -> (String, Ve
         // NOTE: returning here because the following checks are not relevant without a link
         return (
             fixed_link,
-            vec![format!("Release link is missing for version {version}")],
+            vec![ProblemDetail::new(
+                LintErrorType::Release,
+                format!("Release link is missing for version {version}"),
+            )],
         );
     }
 
     if link != fixed_link {
-        problems.push(format!("Release link should point to the GitHub release for {version}; expected: '{fixed_link}'; got: '{link}'"))
+        problems.push(ProblemDetail::new(
+            LintErrorType::Release,
+            format!("Release link should point to the GitHub release for {version}; expected: '{fixed_link}'; got: '{link}'"),
+        ))
     }
 
     (fixed_link, problems)
@@ -321,7 +344,13 @@ mod link_tests {
             fixed,
             "https://github.com/MalteHerrmann/changelog-utils/releases/tag/v0.1.0"
         );
-        assert_eq!(problems, vec!["Release link is missing for version v0.1.0"]);
+        assert_eq!(
+            problems,
+            vec![ProblemDetail::new(
+                LintErrorType::Release,
+                "Release link is missing for version v0.1.0"
+            )]
+        );
     }
 
     #[test]
@@ -329,9 +358,13 @@ mod link_tests {
         let example = "https://github.com/MalteHerrmann/changelg-utils/releases/tag/v0.1.0";
         let (fixed, problems) = check_link(&load_test_config(), example, "v0.1.0");
         assert_eq!(fixed, example.replace("changelg", "changelog"));
-        assert_eq!(problems, vec![
-            format!("Release link should point to the GitHub release for v0.1.0; expected: '{fixed}'; got: '{example}'")
-        ]);
+        assert_eq!(
+            problems,
+            vec![ProblemDetail::new(
+                LintErrorType::Release,
+                format!("Release link should point to the GitHub release for v0.1.0; expected: '{fixed}'; got: '{example}'")
+            )]
+        );
     }
 
     #[test]
@@ -339,9 +372,13 @@ mod link_tests {
         let example = "https://github.com/MalteHerrmann/changelog-utils/releases/tag/v0.2.0";
         let (fixed, problems) = check_link(&load_test_config(), example, "v0.1.0");
         assert_eq!(fixed, example.replace("2", "1"));
-        assert_eq!(problems, vec![
-            format!("Release link should point to the GitHub release for v0.1.0; expected: '{fixed}'; got: '{example}'")
-        ]);
+        assert_eq!(
+            problems,
+            vec![ProblemDetail::new(
+                LintErrorType::Release,
+                format!("Release link should point to the GitHub release for v0.1.0; expected: '{fixed}'; got: '{example}'")
+            )]
+        );
     }
 
     #[test]
@@ -350,8 +387,12 @@ mod link_tests {
             "https://github.com/MalteHerrmann/changelog-utils/releases/tag/otherElement/v0.1.0";
         let (fixed, problems) = check_link(&load_test_config(), example, "v0.1.0");
         assert_eq!(fixed, example.replace("otherElement/", ""));
-        assert_eq!(problems, vec![
-            format!("Release link should point to the GitHub release for v0.1.0; expected: '{fixed}'; got: '{example}'")
-        ]);
+        assert_eq!(
+            problems,
+            vec![ProblemDetail::new(
+                LintErrorType::Release,
+                format!("Release link should point to the GitHub release for v0.1.0; expected: '{fixed}'; got: '{example}'")
+            )]
+        );
     }
 }
