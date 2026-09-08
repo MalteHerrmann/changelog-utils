@@ -95,15 +95,15 @@ pub fn parse_changelog(
     releases.iter().for_each(|r| {
         r.problems
             .iter()
-            .for_each(|p| add_to_problems(&mut problems, &r.path, None, p));
+            .for_each(|p| add_to_problems(&mut problems, &r.path, None, p.clone()));
         r.change_types.iter().for_each(|ct| {
             ct.problems
                 .iter()
-                .for_each(|p| add_to_problems(&mut problems, &ct.path, None, p));
+                .for_each(|p| add_to_problems(&mut problems, &ct.path, None, p.clone()));
             ct.entries.iter().for_each(|e| {
                 e.problems
                     .iter()
-                    .for_each(|p| add_to_problems(&mut problems, &e.path, Some(0), p))
+                    .for_each(|p| add_to_problems(&mut problems, &e.path, Some(0), p.clone()))
             });
         })
     });

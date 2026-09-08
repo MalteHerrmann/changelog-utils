@@ -1,31 +1,43 @@
-use crate::config;
+use crate::{
+    common::{LintErrorType, ProblemDetail},
+    config,
+};
 use eyre::{bail, WrapErr};
 use regex::{Regex, RegexBuilder};
 
 /// Check if the category is valid and return a fixed version that addresses
 /// well-known problems.
-pub fn check_category(config: &config::Config, category: &str) -> (String, Vec<String>) {
-    let mut problems: Vec<String> = Vec::new();
+pub fn check_category(config: &config::Config, category: &str) -> (String, Vec<ProblemDetail>) {
+    let mut problems: Vec<ProblemDetail> = Vec::new();
     let fixed = category.to_lowercase();
     if category.to_lowercase() != category {
-        problems.push(format!("category should be lowercase: ({})", category));
+        problems.push(ProblemDetail::new(
+            LintErrorType::Category,
+            format!("category should be lowercase: ({})", category),
+        ));
     }
 
     if !config.categories.contains(&fixed) {
-        problems.push(format!("invalid change category: ({})", category));
+        problems.push(ProblemDetail::new(
+            LintErrorType::Category,
+            format!("invalid change category: ({})", category),
+        ));
     }
 
     (fixed, problems)
 }
 
 /// Check if the link is valid
-pub fn check_link(config: &config::Config, link: &str, pr_number: u64) -> (String, Vec<String>) {
-    let mut problems: Vec<String> = Vec::new();
+pub fn check_link(config: &config::Config, link: &str, pr_number: u64) -> (String, Vec<ProblemDetail>) {
+    let mut problems: Vec<ProblemDetail> = Vec::new();
 
     let fixed = format!("{}/pull/{}", config.target_repo, pr_number);
 
     if !link.starts_with(&config.target_repo) {
-        problems.push(format!("PR link points to wrong repository: {}", link))
+        problems.push(ProblemDetail::new(
+            LintErrorType::PullRequest,
+            format!("PR link points to wrong repository: {}", link),
+        ))
     }
 
     let split_link: Vec<&str> = link.split('/').collect();
@@ -36,25 +48,31 @@ pub fn check_link(config: &config::Config, link: &str, pr_number: u64) -> (Strin
         .expect("this should always be a u64");
 
     if contained_pr_number != pr_number {
-        problems.push(format!(
-            "PR link is not matching PR number {}: '{}'",
-            pr_number, link
+        problems.push(ProblemDetail::new(
+            LintErrorType::PullRequest,
+            format!(
+                "PR link is not matching PR number {}: '{}'",
+                pr_number, link
+            ),
         ));
     }
 
     (fixed, problems)
 }
 
-pub fn check_description(config: &config::Config, desc: &str) -> (String, Vec<String>) {
+pub fn check_description(config: &config::Config, desc: &str) -> (String, Vec<ProblemDetail>) {
     let mut fixed = desc.to_string();
-    let mut problems: Vec<String> = Vec::new();
+    let mut problems: Vec<ProblemDetail> = Vec::new();
 
     let first_letter = desc.chars().next().expect("no character in description");
     if first_letter.is_alphabetic() && !first_letter.is_uppercase() {
         fixed = first_letter.to_ascii_uppercase().to_string() + desc.to_owned()[1..].as_ref();
-        problems.push(format!(
-            "PR description should start with capital letter: '{}'",
-            desc
+        problems.push(ProblemDetail::new(
+            LintErrorType::Description,
+            format!(
+                "PR description should start with capital letter: '{}'",
+                desc
+            ),
         ))
     }
 
@@ -64,7 +82,10 @@ pub fn check_description(config: &config::Config, desc: &str) -> (String, Vec<St
         .expect("no characters found in description");
     if last_letter.to_string() != '.'.to_string() {
         fixed = fixed.to_string() + ".";
-        problems.push(format!("PR description should end with a dot: '{}'", desc))
+        problems.push(ProblemDetail::new(
+            LintErrorType::Description,
+            format!("PR description should end with a dot: '{}'", desc),
+        ))
     }
 
     let (fixed, spelling_problems) = check_spelling(config, &fixed);
@@ -74,9 +95,9 @@ pub fn check_description(config: &config::Config, desc: &str) -> (String, Vec<St
 }
 
 /// Checks the spelling of entries according to the given configuration.
-fn check_spelling(config: &config::Config, text: &str) -> (String, Vec<String>) {
+fn check_spelling(config: &config::Config, text: &str) -> (String, Vec<ProblemDetail>) {
     let mut fixed = text.to_string();
-    let mut problems: Vec<String> = Vec::new();
+    let mut problems: Vec<ProblemDetail> = Vec::new();
 
     for (correct_spelling, pattern) in config.expected_spellings.iter() {
         match get_spelling_match(pattern, text) {
@@ -95,8 +116,9 @@ fn check_spelling(config: &config::Config, text: &str) -> (String, Vec<String>) 
                     .replace(&fixed, correct_spelling)
                     .to_string();
 
-                problems.push(format!(
-                    "'{correct_spelling}' should be used instead of '{m}'",
+                problems.push(ProblemDetail::new(
+                    LintErrorType::Description,
+                    format!("'{correct_spelling}' should be used instead of '{m}'"),
                 ))
             }
             Err(_) => continue,
@@ -165,14 +187,26 @@ mod category_tests {
     fn test_fail_invalid_category() {
         let (fixed, problems) = check_category(&load_test_config(), "invalid");
         assert_eq!(fixed, "invalid");
-        assert_eq!(problems, ["invalid change category: (invalid)"]);
+        assert_eq!(
+            problems,
+            [ProblemDetail::new(
+                LintErrorType::Category,
+                "invalid change category: (invalid)"
+            )]
+        );
     }
 
     #[test]
     fn test_fail_non_lower_category() {
         let (fixed, problems) = check_category(&load_test_config(), "cLi");
         assert_eq!(fixed, "cli");
-        assert_eq!(problems, ["category should be lowercase: (cLi)"]);
+        assert_eq!(
+            problems,
+            [ProblemDetail::new(
+                LintErrorType::Category,
+                "category should be lowercase: (cLi)"
+            )]
+        );
     }
 }
 
@@ -200,7 +234,10 @@ mod link_tests {
         assert_eq!(fixed, example.replace("changelg", "changelog"));
         assert_eq!(
             problems,
-            vec![format!("PR link points to wrong repository: {}", example)]
+            vec![ProblemDetail::new(
+                LintErrorType::PullRequest,
+                format!("PR link points to wrong repository: {}", example)
+            )]
         );
     }
 
@@ -211,9 +248,12 @@ mod link_tests {
         assert_eq!(fixed, example.replace("2", "1"));
         assert_eq!(
             problems,
-            vec![format!(
-                "PR link is not matching PR number {}: '{}'",
-                1, example
+            vec![ProblemDetail::new(
+                LintErrorType::PullRequest,
+                format!(
+                    "PR link is not matching PR number {}: '{}'",
+                    1, example
+                )
             )]
         );
     }
@@ -246,9 +286,12 @@ mod description_tests {
         assert_eq!(fixed, "Add Python implementation.");
         assert_eq!(
             problems,
-            vec![format!(
-                "PR description should start with capital letter: '{}'",
-                example
+            vec![ProblemDetail::new(
+                LintErrorType::Description,
+                format!(
+                    "PR description should start with capital letter: '{}'",
+                    example
+                )
             )]
         );
     }
@@ -260,9 +303,9 @@ mod description_tests {
         assert_eq!(fixed, example.to_string() + ".");
         assert_eq!(
             problems,
-            vec![format!(
-                "PR description should end with a dot: '{}'",
-                example
+            vec![ProblemDetail::new(
+                LintErrorType::Description,
+                format!("PR description should end with a dot: '{}'", example)
             )]
         );
     }
@@ -302,7 +345,13 @@ mod spelling_tests {
         let example = "Fix web--SdK.";
         let (fixed, problems) = check_spelling(&test_conf, example);
         assert_eq!(fixed, "Fix Web-SDK.");
-        assert_eq!(problems, ["'Web-SDK' should be used instead of 'web--SdK'"])
+        assert_eq!(
+            problems,
+            [ProblemDetail::new(
+                LintErrorType::Description,
+                "'Web-SDK' should be used instead of 'web--SdK'"
+            )]
+        )
     }
 
     #[test]
@@ -316,8 +365,14 @@ mod spelling_tests {
         let (fixed, problems) = check_spelling(&test_config, example);
         assert_eq!(fixed, "Fix API and CLI.");
         assert_eq!(problems.len(), 2);
-        assert_eq!(problems[0], "'API' should be used instead of 'aPi'");
-        assert_eq!(problems[1], "'CLI' should be used instead of 'ClI'");
+        assert_eq!(
+            problems[0],
+            ProblemDetail::new(LintErrorType::Description, "'API' should be used instead of 'aPi'")
+        );
+        assert_eq!(
+            problems[1],
+            ProblemDetail::new(LintErrorType::Description, "'CLI' should be used instead of 'ClI'")
+        );
     }
 
     #[test]
@@ -351,7 +406,13 @@ mod spelling_tests {
 
         let example = "- Integrate our custom Dollar module, that enables the issuance of Noble's stablecoin $UsDN. ([#448](https://github.com/noble-assets/noble/pull/448))";
         let (_, problems) = check_spelling(&test_config, example);
-        assert_eq!(problems, vec!["'$USDN' should be used instead of '$UsDN'"]);
+        assert_eq!(
+            problems,
+            vec![ProblemDetail::new(
+                LintErrorType::Description,
+                "'$USDN' should be used instead of '$UsDN'"
+            )]
+        );
     }
 }
 
