@@ -278,51 +278,63 @@ pub async fn branch_exists_on_remote(client: &Octocrab, git_info: &GitInfo) -> e
 /// Returns the open PR from the current local branch in the configured target
 /// repository, or `None` if the repository is accessible but has no such PR.
 ///
+/// Searches every page by branch name, regardless of the head repository owner,
+/// so pull requests opened from forks are included.
+///
 /// Failures to reach or read the repository are returned as errors instead of
 /// being reported as "no open PR", which used to hide missing permissions on
 /// private repositories.
-pub async fn find_open_pr(git_info: &GitInfo) -> eyre::Result<Option<PullRequest>> {
-    let octocrab = get_github_client()?;
+pub async fn find_open_pr(
+    client: &Octocrab,
+    git_info: &GitInfo,
+) -> eyre::Result<Option<PullRequest>> {
+    let mut page = 1u32;
 
-    let pulls = match octocrab
-        .pulls(git_info.owner.to_owned(), git_info.repo.to_owned())
-        .list()
-        .head(format!("{}:{}", git_info.owner, git_info.branch))
-        .send()
-        .await
-    {
-        Ok(page) => page.items,
-        Err(e) => {
-            return Err(explain_api_error(
-                &octocrab,
-                e,
-                &git_info.owner,
-                &git_info.repo,
-                "fetch pull requests",
-            )
-            .await)
+    loop {
+        let pulls = match client
+            .pulls(&git_info.owner, &git_info.repo)
+            .list()
+            .per_page(100)
+            .page(page)
+            .send()
+            .await
+        {
+            Ok(page) => page.items,
+            Err(e) => {
+                return Err(explain_api_error(
+                    client,
+                    e,
+                    &git_info.owner,
+                    &git_info.repo,
+                    "fetch pull requests",
+                )
+                .await)
+            }
+        };
+
+        if pulls.is_empty() {
+            return Ok(None);
         }
-    };
 
-    Ok(pulls
-        .iter()
-        .find(|pr| {
-            pr.head.label.as_ref().is_some_and(|l| {
-                let branch_parts: Vec<&str> = l.split(':').collect();
-                let got_branch = branch_parts
-                    .get(1..)
-                    .expect("unexpected branch identifier format")
-                    .join("/");
-                got_branch.eq(git_info.branch.as_str())
+        if let Some(pr) = pulls.into_iter().find(|pr| {
+            pr.head.label.as_ref().is_some_and(|label| {
+                label
+                    .split_once(':')
+                    .is_some_and(|(_, branch)| branch == git_info.branch)
             })
-        })
-        .cloned())
+        }) {
+            return Ok(Some(pr));
+        }
+
+        page += 1;
+    }
 }
 
 /// Returns the open PR from the current local branch in the configured target
 /// repository and fails if there is none.
 pub async fn get_open_pr(git_info: &GitInfo) -> eyre::Result<PullRequest> {
-    find_open_pr(git_info).await?.ok_or_else(|| {
+    let client = get_github_client()?;
+    find_open_pr(&client, git_info).await?.ok_or_else(|| {
         eyre::eyre!(
             "No open pull request found for branch '{}' in repository {}/{}",
             git_info.branch,
@@ -369,7 +381,8 @@ pub async fn get_pr_info(
     }
 
     // If no PR number was provided, try to get open PR for current branch
-    match find_open_pr(git_info).await? {
+    let client = get_github_client()?;
+    match find_open_pr(&client, git_info).await? {
         Some(pr) => extract_pr_info(config, &pr)
             .wrap_err("Failed to extract PR information from pull request"),
         None => Ok(PRInfo::default()),
@@ -440,12 +453,118 @@ pub async fn get_merged_pr_numbers(git_info: &GitInfo) -> eyre::Result<Vec<u64>>
 }
 
 #[cfg(test)]
-mod access_hint_tests {
+mod tests {
     use super::*;
+    use serde_json::json;
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::net::TcpListener;
+    use tokio::time::{timeout, Duration};
 
     const OWNER: &str = "MalteHerrmann";
     const REPO: &str = "changelog-utils";
     const ORIGIN: &str = "https://github.com/MalteHerrmann/changelog-utils";
+
+    #[tokio::test]
+    async fn test_find_open_pr_pagination() {
+        // Page one can succeed even if page two fails; a fork match on page
+        // three must not be confused with either a missing PR or an API error.
+        for (branch, fail_second_page, expected) in [
+            ("first", true, Some(11)),
+            ("feature/fork", false, Some(37)),
+            ("absent", false, None),
+            ("feature/fork", true, None),
+        ] {
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let base_uri = format!("http://{}", listener.local_addr().unwrap());
+            let client = Octocrab::builder()
+                .base_uri(&base_uri)
+                .unwrap()
+                .build()
+                .unwrap();
+            let server = tokio::spawn(async move {
+                loop {
+                    let (stream, _) = listener.accept().await.unwrap();
+                    let mut stream = BufReader::new(stream);
+                    let mut line = String::new();
+                    stream.read_line(&mut line).await.unwrap();
+                    let url = url::Url::parse(&format!(
+                        "http://localhost{}",
+                        line.split_whitespace().nth(1).unwrap()
+                    ))
+                    .unwrap();
+                    loop {
+                        line.clear();
+                        stream.read_line(&mut line).await.unwrap();
+                        if line == "\r\n" {
+                            break;
+                        }
+                    }
+                    let params = url
+                        .query_pairs()
+                        .collect::<std::collections::HashMap<_, _>>();
+                    let page = params.get("page").map(|p| p.as_ref()).unwrap_or("1");
+                    let (status, body) = if fail_second_page && page == "2" {
+                        (
+                            "422 Unprocessable Entity",
+                            json!({"message": "page unavailable"}),
+                        )
+                    } else {
+                        let mut pulls = match page {
+                            "1" => vec![json!({
+                                "url": "https://api.github.com/repos/upstream/project/pulls/11",
+                                "id": 11, "number": 11,
+                                "head": {"label": "upstream:first", "ref": "first", "sha": "a"},
+                                "base": {"ref": "main", "sha": "b"}
+                            })],
+                            "2" => vec![json!({
+                                "url": "https://api.github.com/repos/upstream/project/pulls/23",
+                                "id": 23, "number": 23,
+                                "head": {"label": "contributor:feature/fork-other", "ref": "feature/fork-other", "sha": "c"},
+                                "base": {"ref": "main", "sha": "b"}
+                            })],
+                            "3" => vec![json!({
+                                "url": "https://api.github.com/repos/upstream/project/pulls/37",
+                                "id": 37, "number": 37,
+                                "head": {"label": "contributor:feature/fork", "ref": "feature/fork", "sha": "d"},
+                                "base": {"ref": "main", "sha": "b"}
+                            })],
+                            _ => vec![],
+                        };
+                        // Model GitHub's owner-qualified head filter so the
+                        // original regression cannot pass this test.
+                        if let Some(head) = params.get("head") {
+                            pulls.retain(|pr| pr["head"]["label"].as_str() == Some(head.as_ref()));
+                        }
+                        ("200 OK", json!(pulls))
+                    };
+                    let body = body.to_string();
+                    let response = format!(
+                        "HTTP/1.1 {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                        status, body.len(), body
+                    );
+                    stream
+                        .get_mut()
+                        .write_all(response.as_bytes())
+                        .await
+                        .unwrap();
+                }
+            });
+            let git_info = GitInfo {
+                owner: "upstream".into(),
+                repo: "project".into(),
+                branch: branch.into(),
+            };
+            let result = timeout(Duration::from_secs(5), find_open_pr(&client, &git_info)).await;
+            server.abort();
+            let result = result.expect("PR lookup did not terminate");
+            if fail_second_page && branch != "first" {
+                let error = format!("{:#}", result.unwrap_err());
+                assert!(error.contains("page unavailable"), "{error}");
+            } else {
+                assert_eq!(result.unwrap().map(|pr| pr.number), expected, "{branch}");
+            }
+        }
+    }
 
     #[test]
     fn test_hint_without_token() {
