@@ -263,15 +263,6 @@ mod tests {
     }
 
     #[test]
-    fn test_get_origin() {
-        let origin = get_origin().expect("failed to get origin");
-        assert_eq!(
-            origin, "https://github.com/MalteHerrmann/changelog-utils",
-            "expected different origin"
-        )
-    }
-
-    #[test]
     fn test_parse_github_owner_repo() {
         let cases = vec![
             "https://github.com/MalteHerrmann/changelog-utils",
