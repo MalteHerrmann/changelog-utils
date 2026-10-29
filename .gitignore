@@ -3,3 +3,6 @@
 
 # JetBrains IDE files
 .idea/
+
+# Amp portal metadata
+/.amp/portals/

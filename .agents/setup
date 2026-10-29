@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+echo "Checking native build prerequisites"
+missing_packages=()
+for package in build-essential ca-certificates curl git pkg-config tar gzip; do
+    if [[ "$(dpkg-query -W -f='${Status}' "$package" 2>/dev/null || true)" != "install ok installed" ]]; then
+        missing_packages+=("$package")
+    fi
+done
+if (( ${#missing_packages[@]} )); then
+    apt_get=(apt-get)
+    if (( EUID != 0 )); then
+        apt_get=(sudo apt-get)
+    fi
+    time "${apt_get[@]}" update
+    time "${apt_get[@]}" install -y --no-install-recommends "${missing_packages[@]}"
+fi
+
+echo "Preparing stable Rust with Clippy and rustfmt (matching CI)"
+if [[ ! -x "$HOME/.cargo/bin/rustup" ]]; then
+    time curl --proto '=https' --tlsv1.2 -fsS https://sh.rustup.rs |
+        sh -s -- -y --profile minimal --default-toolchain stable --component clippy,rustfmt
+fi
+source "$HOME/.cargo/env"
+if ! rustup run stable rustc --version >/dev/null 2>&1; then
+    time rustup toolchain install stable --profile minimal
+fi
+rustup default stable
+time rustup component add --toolchain stable clippy rustfmt
+
+echo "Preparing cargo-nextest 0.9.105 (matching CI)"
+if [[ "$(cargo nextest --version 2>/dev/null || true)" != "cargo-nextest 0.9.105 "* ]]; then
+    time curl --proto '=https' --tlsv1.2 -fsSL https://get.nexte.st/0.9.105/linux |
+        tar xzf - -C "$HOME/.cargo/bin"
+fi
+
+echo "Fetching locked Rust dependencies"
+time cargo fetch --locked
+
+echo "Orb setup ready: cargo build --locked; make test-ci; cargo clippy"
