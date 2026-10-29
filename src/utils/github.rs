@@ -64,16 +64,25 @@ fn extract_pr_info(config: &Config, pr: &PullRequest) -> eyre::Result<PRInfo> {
 /// to inject it (e.g. `GITHUB_TOKEN=$(op read ...)`) can leave a trailing
 /// newline or spaces that would otherwise corrupt the `Authorization` header
 /// and make GitHub respond with a misleading `404 Not Found` on private repos.
-fn read_github_token() -> Option<String> {
+fn read_github_token() -> eyre::Result<Option<String>> {
     match std::env::var("GITHUB_TOKEN") {
-        Ok(token) if !token.trim().is_empty() => Some(token.trim().to_string()),
-        _ => None,
+        Ok(token) if !token.trim().is_empty() => {
+            let token = token.trim();
+            // Octocrab unwraps header parsing, so reject invalid input before
+            // building either client. Never include the token in the error.
+            eyre::ensure!(
+                !token.chars().any(char::is_control),
+                "GITHUB_TOKEN contains control characters - provide a single-line token"
+            );
+            Ok(Some(token.to_string()))
+        }
+        _ => Ok(None),
     }
 }
 
 /// Returns an authenticated Octocrab instance, requiring a GITHUB_TOKEN.
 pub fn get_authenticated_github_client() -> eyre::Result<Octocrab> {
-    let token = read_github_token().ok_or_else(|| {
+    let token = read_github_token()?.ok_or_else(|| {
         eyre::eyre!(
             "GITHUB_TOKEN environment variable not found or empty - set it with: export GITHUB_TOKEN=your_token"
         )
@@ -93,7 +102,7 @@ pub fn get_authenticated_github_client() -> eyre::Result<Octocrab> {
 /// Note: Unauthenticated clients have lower rate limits and cannot access
 /// private repositories.
 pub fn get_github_client() -> eyre::Result<Octocrab> {
-    match read_github_token() {
+    match read_github_token()? {
         Some(token) => octocrab::OctocrabBuilder::new()
             .personal_token(token)
             .build()
@@ -169,7 +178,7 @@ fn current_access_hint(owner: &str, repo: &str) -> String {
     access_hint(
         owner,
         repo,
-        read_github_token().is_some(),
+        read_github_token().ok().flatten().is_some(),
         origin.as_deref(),
     )
 }

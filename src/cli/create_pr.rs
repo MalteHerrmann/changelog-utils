@@ -17,7 +17,7 @@ pub async fn run() -> eyre::Result<()> {
     let client = github::get_authenticated_github_client()
         .wrap_err("Failed to get authenticated GitHub client")?;
 
-    if let Ok(pr_info) = github::get_open_pr(&git_info).await {
+    if let Some(pr_info) = github::find_open_pr(&client, &git_info).await? {
         bail!("An open PR already exists for this branch: #{}", pr_info.number);
     }
 
