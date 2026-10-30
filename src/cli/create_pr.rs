@@ -17,11 +17,11 @@ pub async fn run() -> eyre::Result<()> {
     let client = github::get_authenticated_github_client()
         .wrap_err("Failed to get authenticated GitHub client")?;
 
-    if let Ok(pr_info) = github::get_open_pr(&git_info).await {
+    if let Some(pr_info) = github::find_open_pr(&client, &git_info).await? {
         bail!("An open PR already exists for this branch: #{}", pr_info.number);
     }
 
-    if !github::branch_exists_on_remote(&client, &git_info).await {
+    if !github::branch_exists_on_remote(&client, &git_info).await? {
         if !inputs::get_permission_to_push(git_info.branch.as_str())? {
             bail!("Branch '{}' not found on remote and permission to push was denied", git_info.branch);
         };
@@ -29,7 +29,7 @@ pub async fn run() -> eyre::Result<()> {
         git::push_to_origin(git_info.branch.as_str())
             .wrap_err_with(|| format!("Failed to push branch '{}' to origin", git_info.branch))?;
 
-        if !github::branch_exists_on_remote(&client, &git_info).await {
+        if !github::branch_exists_on_remote(&client, &git_info).await? {
             bail!("Branch '{}' still not found on remote after pushing", git_info.branch);
         }
     };
