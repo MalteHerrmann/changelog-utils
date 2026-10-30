@@ -1,5 +1,6 @@
 use super::change_type::{self, ChangeType};
 use crate::{
+    common::{LintErrorType, ProblemDetail},
     config::Config,
     utils::version,
 };
@@ -17,7 +18,7 @@ use std::{
 pub struct Release {
     pub change_types: Vec<ChangeType>,
     pub path: PathBuf,
-    pub problems: Vec<String>,
+    pub problems: Vec<ProblemDetail>,
     pub summary: Option<String>,
     pub version: String,
 }
@@ -88,7 +89,7 @@ pub fn parse(config: &Config, dir: &Path) -> eyre::Result<Release> {
         .ok_or_else(|| eyre::eyre!("Failed to convert base name to string for path {}", dir.display()))?;
 
     let version = base_name.to_string();
-    let mut problems: Vec<String> = Vec::new();
+    let mut problems: Vec<ProblemDetail> = Vec::new();
 
     if !is_unreleased(base_name)
         && !RegexBuilder::new(r#"v\d+\.\d+\.\d+(-rc\d+)?"#)
@@ -96,7 +97,10 @@ pub fn parse(config: &Config, dir: &Path) -> eyre::Result<Release> {
             .wrap_err("Failed to compile version validation regex")?
             .is_match(&version)
     {
-        problems.push(format!("invalid version string: {version}"));
+        problems.push(ProblemDetail::new(
+            LintErrorType::Release,
+            format!("invalid version string: {version}"),
+        ));
     };
 
     // // TODO: I guess this whole thing rather applies to the Summary.md which should contain the link etc.
@@ -147,8 +151,8 @@ fn is_unreleased(dir_name: &str) -> bool {
 }
 
 // TODO: remove? or use in Summary?
-fn check_link(config: &Config, link: &str, version: &str) -> (String, Vec<String>) {
-    let mut problems: Vec<String> = Vec::new();
+fn check_link(config: &Config, link: &str, version: &str) -> (String, Vec<ProblemDetail>) {
+    let mut problems: Vec<ProblemDetail> = Vec::new();
 
     let fixed_link = format!("{}/releases/tag/{}", &config.target_repo, version);
 
@@ -156,12 +160,18 @@ fn check_link(config: &Config, link: &str, version: &str) -> (String, Vec<String
         // NOTE: returning here because the following checks are not relevant without a link
         return (
             fixed_link,
-            vec![format!("Release link is missing for version {version}")],
+            vec![ProblemDetail::new(
+                LintErrorType::Release,
+                format!("Release link is missing for version {version}"),
+            )],
         );
     }
 
     if link != fixed_link {
-        problems.push(format!("Release link should point to the GitHub release for {version}; expected: '{fixed_link}'; got: '{link}'"))
+        problems.push(ProblemDetail::new(
+            LintErrorType::Release,
+            format!("Release link should point to the GitHub release for {version}; expected: '{fixed_link}'; got: '{link}'"),
+        ))
     }
 
     (fixed_link, problems)

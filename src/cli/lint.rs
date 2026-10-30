@@ -27,11 +27,32 @@ pub fn run(fix: bool) -> eyre::Result<()> {
         return Ok(());
     }
 
-    println!("found problems in changelog:");
-    changelog
-        .get_problems()
-        .iter()
-        .for_each(|p| println!("{}", p));
+    let problems = changelog.get_problems();
 
-    bail!("Changelog contains {} problems", changelog.get_problems().len())
+    println!("found problems in changelog:");
+    problems.iter().for_each(|p| println!("{}", p));
+
+    println!("\nproblems by type:");
+    count_by_type(problems)
+        .iter()
+        .for_each(|(error_type, count)| println!("  {}: {}", error_type, count));
+
+    bail!("Changelog contains {} problems", problems.len())
+}
+
+/// Returns the number of occurrences per type of lint error,
+/// sorted by descending amount of occurrences.
+fn count_by_type(problems: &[common::Problem]) -> Vec<(common::LintErrorType, usize)> {
+    let mut counts: Vec<(common::LintErrorType, usize)> = Vec::new();
+
+    problems.iter().for_each(|p| {
+        match counts.iter_mut().find(|(t, _)| *t == p.error_type) {
+            Some((_, count)) => *count += 1,
+            None => counts.push((p.error_type, 1)),
+        };
+    });
+
+    counts.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.to_string().cmp(&b.0.to_string())));
+
+    counts
 }

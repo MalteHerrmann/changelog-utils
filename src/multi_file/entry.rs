@@ -1,4 +1,7 @@
-use crate::{common, config::Config};
+use crate::{
+    common::{self, LintErrorType, ProblemDetail},
+    config::Config,
+};
 use eyre::WrapErr;
 use regex::Regex;
 use std::path::{Path, PathBuf};
@@ -9,7 +12,7 @@ pub struct MultiFileEntry {
     pub fixed: String,
     pub path: PathBuf,
     pub pr_number: u64,
-    pub problems: Vec<String>,
+    pub problems: Vec<ProblemDetail>,
 }
 
 pub fn parse(config: &Config, path: &Path) -> eyre::Result<MultiFileEntry> {
@@ -53,7 +56,7 @@ pub fn parse(config: &Config, path: &Path) -> eyre::Result<MultiFileEntry> {
         spaces[1] = " ";
     }
 
-    let mut problems: Vec<String> = Vec::new();
+    let mut problems: Vec<ProblemDetail> = Vec::new();
 
     if !path
         .file_name()
@@ -62,7 +65,10 @@ pub fn parse(config: &Config, path: &Path) -> eyre::Result<MultiFileEntry> {
         .expect("failed to convert base name to string")
         .contains(&format!("{}", pr_number))
     {
-        problems.push("The filename should be prefixed with the PR number".to_string());
+        problems.push(ProblemDetail::new(
+            LintErrorType::File,
+            "The filename should be prefixed with the PR number",
+        ));
     };
 
     let mut fixed_category: Option<String> = None;
@@ -102,8 +108,8 @@ fn build_fixed(cat: Option<String>, link: &str, desc: &str, pr: u64) -> String {
 }
 
 /// Checks the used whitespace in the entry.
-fn check_whitespace(spaces: [&str; 5]) -> Vec<String> {
-    let mut problems: Vec<String> = Vec::new();
+fn check_whitespace(spaces: [&str; 5]) -> Vec<ProblemDetail> {
+    let mut problems: Vec<ProblemDetail> = Vec::new();
 
     let expected_whitespace = ["", " ", " ", " ", ""];
     let errors = [
@@ -120,7 +126,7 @@ fn check_whitespace(spaces: [&str; 5]) -> Vec<String> {
         .zip(errors)
         .for_each(|((got, expected), error)| {
             if (*got).ne(expected) {
-                problems.push(error.to_string())
+                problems.push(ProblemDetail::new(LintErrorType::Whitespace, error))
             }
         });
 
@@ -187,7 +193,7 @@ mod tests {
         assert!(res.is_ok());
 
         let entry = res.unwrap();
-        let empty_problems: Vec<String> = Vec::new();
+        let empty_problems: Vec<ProblemDetail> = Vec::new();
         assert_eq!(entry.pr_number, 448);
         assert_eq!(entry.category, None);
         assert_eq!(entry.problems, empty_problems);
@@ -206,7 +212,10 @@ mod tests {
         assert!(res.is_ok());
 
         let entry = res.unwrap();
-        let expected = vec!["'$USDN' should be used instead of '$UsDN'"];
+        let expected = vec![ProblemDetail::new(
+            LintErrorType::Description,
+            "'$USDN' should be used instead of '$UsDN'",
+        )];
         assert_eq!(entry.problems, expected);
     }
 
@@ -238,7 +247,7 @@ mod tests {
         assert_eq!(entry.pr_number, 123);
         assert_eq!(entry.category, None);
 
-        let exp: Vec<String> = Vec::new();
+        let exp: Vec<ProblemDetail> = Vec::new();
         assert_eq!(entry.problems, exp);
     }
 
@@ -252,10 +261,10 @@ mod tests {
 
         let entry = result.unwrap();
         assert_eq!(entry.pr_number, 456);
-        assert!(entry
-            .problems
-            .iter()
-            .any(|p| p.contains("The filename should be prefixed with the PR number")));
+        assert!(entry.problems.iter().any(|p| {
+            p.error_type == LintErrorType::File
+                && p.message.contains("The filename should be prefixed with the PR number")
+        }));
     }
 
     #[test]
@@ -279,9 +288,10 @@ mod tests {
         assert!(result.is_ok());
 
         let entry = result.unwrap();
-        assert!(entry
-            .problems
-            .contains(&"There should be no leading whitespace before the dash".to_string()));
+        assert!(entry.problems.contains(&ProblemDetail::new(
+            LintErrorType::Whitespace,
+            "There should be no leading whitespace before the dash"
+        )));
     }
 
     #[test]
@@ -323,9 +333,10 @@ mod tests {
     fn test_check_whitespace_leading_space() {
         let spaces = [" ", " ", " ", " ", ""];
         let problems = check_whitespace(spaces);
-        assert!(
-            problems.contains(&"There should be no leading whitespace before the dash".to_string())
-        );
+        assert!(problems.contains(&ProblemDetail::new(
+            LintErrorType::Whitespace,
+            "There should be no leading whitespace before the dash"
+        )));
     }
 
     #[test]
@@ -333,15 +344,22 @@ mod tests {
         let spaces = ["  ", "  ", "", " ", " "];
         let problems = check_whitespace(spaces);
         assert_eq!(problems.len(), 4);
-        assert!(
-            problems.contains(&"There should be no leading whitespace before the dash".to_string())
-        );
-        assert!(problems
-            .contains(&"There should be exactly one space after the leading dash".to_string()));
-        assert!(problems
-            .contains(&"There should be exactly one space before the description".to_string()));
-        assert!(problems
-            .contains(&"There should be no whitespace inside of the markdown link".to_string()));
+        assert!(problems.contains(&ProblemDetail::new(
+            LintErrorType::Whitespace,
+            "There should be no leading whitespace before the dash"
+        )));
+        assert!(problems.contains(&ProblemDetail::new(
+            LintErrorType::Whitespace,
+            "There should be exactly one space after the leading dash"
+        )));
+        assert!(problems.contains(&ProblemDetail::new(
+            LintErrorType::Whitespace,
+            "There should be exactly one space before the description"
+        )));
+        assert!(problems.contains(&ProblemDetail::new(
+            LintErrorType::Whitespace,
+            "There should be no whitespace inside of the markdown link"
+        )));
     }
 
     #[test]

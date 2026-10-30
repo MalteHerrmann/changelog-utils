@@ -1,5 +1,57 @@
-use clu::{common::Changelog, config, multi_file, single_file::changelog};
+use clu::{
+    common::{Changelog, Problem},
+    config, multi_file,
+    single_file::changelog,
+};
 use std::{fs, path::Path};
+
+#[cfg(test)]
+fn format_problems(problems: &[Problem]) -> Vec<String> {
+    problems.iter().map(|p| p.to_string()).collect()
+}
+
+#[test]
+fn lint_reports_explicit_types_and_summary_despite_keywords_in_entry_text() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(
+        dir.path().join(".clconfig.json"),
+        include_str!("testdata/single_file/evmos_config.json"),
+    )
+    .unwrap();
+    fs::write(
+        dir.path().join("CHANGELOG.md"),
+        concat!(
+            "# Changelog\n\n## Unreleased\n\n### BugFixes\n\n",
+            "- (app) [#1](https://github.com/evmos/evmos/pull/1) Move directory handling\n",
+            "- (app) [#2](https://github.com/evmos/evmos/pull/3) Add category filters\n",
+            "- malformed filename entry\n",
+        ),
+    )
+    .unwrap();
+
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_clu"))
+        .current_dir(dir.path())
+        .arg("lint")
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    for expected in [
+        "CHANGELOG.md:5 [change type]: 'Bug Fixes' should be used instead of 'BugFixes'",
+        "CHANGELOG.md:7 [description]: PR description should end with a dot: 'Move directory handling'",
+        "CHANGELOG.md:8 [description]: PR description should end with a dot: 'Add category filters'",
+        "CHANGELOG.md:8 [pr]: PR link is not matching PR number 2:",
+        "CHANGELOG.md:9 [description]: malformed entry: '- malformed filename entry'",
+    ] {
+        assert!(stdout.contains(expected), "missing {expected:?} in {stdout}");
+    }
+    assert!(
+        stdout.ends_with("\nproblems by type:\n  description: 3\n  change type: 1\n  pr: 1\n"),
+        "unexpected summary: {stdout}"
+    );
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("Changelog contains 5 problems"), "{stderr}");
+}
 
 #[cfg(test)]
 fn load_test_config() -> config::Config {
@@ -27,16 +79,16 @@ fn it_should_pass_for_incorrect_changelogs_that_has_no_critical_flaws() {
         .expect("failed to parse incorrect changelog");
     assert_eq!(changelog.releases.len(), 3);
     assert_eq!(
-        changelog.problems,
+        format_problems(&changelog.problems),
         vec![
-            "tests/testdata/single_file/changelog_fail.md:11: PR link is not matching PR number 1948: 'https://github.com/evmos/evmos/pull/1949'",
-            "tests/testdata/single_file/changelog_fail.md:21: 'ABI' should be used instead of 'ABi'",
-            "tests/testdata/single_file/changelog_fail.md:25: PR description should end with a dot: 'Fixed the problem `gas_used` is 0'",
-            "tests/testdata/single_file/changelog_fail.md:27: 'Invalid Category' is not a valid change type",
-            "tests/testdata/single_file/changelog_fail.md:31: duplicate change type in release Unreleased: Bug Fixes",
-            "tests/testdata/single_file/changelog_fail.md:43: duplicate release: v15.0.0",
-            "tests/testdata/single_file/changelog_fail.md:47: duplicate PR: #1862",
-            "tests/testdata/single_file/changelog_fail.md:50: malformed entry: '- another malformed entry in changelog'",
+            "tests/testdata/single_file/changelog_fail.md:11 [pr]: PR link is not matching PR number 1948: 'https://github.com/evmos/evmos/pull/1949'",
+            "tests/testdata/single_file/changelog_fail.md:21 [description]: 'ABI' should be used instead of 'ABi'",
+            "tests/testdata/single_file/changelog_fail.md:25 [description]: PR description should end with a dot: 'Fixed the problem `gas_used` is 0'",
+            "tests/testdata/single_file/changelog_fail.md:27 [change type]: 'Invalid Category' is not a valid change type",
+            "tests/testdata/single_file/changelog_fail.md:31 [duplicate]: duplicate change type in release Unreleased: Bug Fixes",
+            "tests/testdata/single_file/changelog_fail.md:43 [duplicate]: duplicate release: v15.0.0",
+            "tests/testdata/single_file/changelog_fail.md:47 [duplicate]: duplicate PR: #1862",
+            "tests/testdata/single_file/changelog_fail.md:50 [description]: malformed entry: '- another malformed entry in changelog'",
         ]
     );
 }
@@ -76,8 +128,7 @@ fn it_should_pass_for_correct_multi_file_changelogs() {
         .expect("failed to parse correct changelog");
     assert_eq!(changelog.releases.len(), 2);
 
-    let expected: Vec<String> = Vec::new();
-    assert_eq!(changelog.problems, expected);
+    assert!(changelog.problems.is_empty());
 }
 
 #[test]
@@ -87,9 +138,9 @@ fn it_should_pass_for_incorrect_multi_file_changelogs_that_has_no_critical_flaws
         .expect("failed to parse incorrect changelog");
 
     assert_eq!(changelog.releases.len(), 2);
-    assert_eq!(changelog.problems, vec![
-        "tests/testdata/multi_file/fail/.changelog/v8.0.5/dependencies/466-bump-comet.md:1: PR link is not matching PR number 466: 'https://github.com/noble-assets/noble/pull/467'",
-        "tests/testdata/multi_file/fail/.changelog/v9.0.0/dependencies/495-bump-sdk.md:1: PR description should end with a dot: 'Bump Cosmos SDK to [`v0.50.12`](https://github.com/cosmos/cosmos-sdk/releases/tag/v0.50.12)'",
-        "tests/testdata/multi_file/fail/.changelog/v9.0.0/features/448-integrate-dollar.md:1: '$USDN' should be used instead of '$UsDN'",
+    assert_eq!(format_problems(&changelog.problems), vec![
+        "tests/testdata/multi_file/fail/.changelog/v8.0.5/dependencies/466-bump-comet.md:1 [pr]: PR link is not matching PR number 466: 'https://github.com/noble-assets/noble/pull/467'",
+        "tests/testdata/multi_file/fail/.changelog/v9.0.0/dependencies/495-bump-sdk.md:1 [description]: PR description should end with a dot: 'Bump Cosmos SDK to [`v0.50.12`](https://github.com/cosmos/cosmos-sdk/releases/tag/v0.50.12)'",
+        "tests/testdata/multi_file/fail/.changelog/v9.0.0/features/448-integrate-dollar.md:1 [description]: '$USDN' should be used instead of '$UsDN'",
     ]);
 }

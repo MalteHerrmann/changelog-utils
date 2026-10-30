@@ -4,6 +4,7 @@ use std::{
 };
 
 use crate::{
+    common::{LintErrorType, ProblemDetail},
     config::config,
 };
 
@@ -15,7 +16,7 @@ pub struct ChangeType {
     pub name: String,
     pub fixed: String,
     pub path: PathBuf,
-    pub problems: Vec<String>,
+    pub problems: Vec<ProblemDetail>,
     pub entries: Vec<MultiFileEntry>,
 }
 
@@ -42,14 +43,17 @@ pub fn parse(config: &config::Config, dir: &Path) -> eyre::Result<ChangeType> {
         .to_str()
         .ok_or_else(|| eyre::eyre!("Failed to convert base name to string for path {}", dir.display()))?;
 
-    let mut problems: Vec<String> = Vec::new();
+    let mut problems: Vec<ProblemDetail> = Vec::new();
 
     if !config
         .change_types
         .iter()
         .any(|ct| ct.long.to_ascii_lowercase().replace(" ", "-").eq(base_name))
     {
-        problems.push(format!("invalid change type: {}", base_name));
+        problems.push(ProblemDetail::new(
+            LintErrorType::ChangeType,
+            format!("invalid change type: {}", base_name),
+        ));
     }
 
     let entries: Vec<MultiFileEntry> = fs::read_dir(dir)
@@ -60,7 +64,10 @@ pub fn parse(config: &config::Config, dir: &Path) -> eyre::Result<ChangeType> {
         .filter_map(|p| match entry::parse(config, p.as_path()) {
             Ok(entry) => Some(entry),
             Err(_) => {
-                problems.push(format!("invalid entry found in file: {}", p.display()));
+                problems.push(ProblemDetail::new(
+                    LintErrorType::File,
+                    format!("invalid entry found in file: {}", p.display()),
+                ));
                 None
             }
         })

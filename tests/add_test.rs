@@ -113,9 +113,8 @@ fn test_pass_add_new_with_auto_fix() {
         .unwrap();
 
     // NOTE: we're expecting to have the first letter capitalized and the dot at the end added
-    let expected: Vec<String> = vec![];
-    assert_eq!(
-        added_entry.problems, expected,
+    assert!(
+        added_entry.problems.is_empty(),
         "expected line to have been corrected before writing to changelog."
     );
 }
