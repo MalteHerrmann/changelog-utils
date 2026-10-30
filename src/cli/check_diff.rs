@@ -21,18 +21,9 @@ pub async fn run() -> eyre::Result<()> {
     let diff = git::get_diff(&git_info.branch, &target_branch)
         .wrap_err_with(|| format!("Failed to get diff between {} and {}", git_info.branch, target_branch))?;
 
-    // For now, check_diff only works with single-file mode
-    // Load the single file changelog directly to access release structure
-    match config.mode {
-        config::Mode::Single => {
-            let changelog = changelog::load(&config)
-                .wrap_err("Failed to load changelog")?;
-            check_diff(&changelog, &diff, pr_info.number)?;
-        }
-        config::Mode::Multi => {
-            bail!("check_diff is not yet implemented for multi-file mode");
-        }
-    }
+    let changelog = changelog::load(&config)
+        .wrap_err("Failed to load changelog")?;
+    check_diff(&changelog, &diff, pr_info.number)?;
 
     println!("changelog contains expected entry");
     Ok(())

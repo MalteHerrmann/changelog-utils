@@ -3,6 +3,5 @@ pub mod cli;
 pub mod common;
 pub mod config;
 mod escapes;
-pub mod multi_file;
 pub mod single_file;
 pub mod utils;

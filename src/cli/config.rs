@@ -1,8 +1,8 @@
 use super::commands::{
     CategoryOperation, ChangeTypeConfigOperation,
     ConfigSubcommands::{
-        self, Category, ChangeType, ChangelogDir, LegacyVersion, Migrate, Mode, Show, Spelling,
-        TargetRepo, UseCategories,
+        self, Category, ChangeType, LegacyVersion, Migrate, Show, Spelling, TargetRepo,
+        UseCategories,
     },
     KeyValueOperation, OptionalOperation,
 };
@@ -97,27 +97,6 @@ pub fn adjust_config(config_subcommand: ConfigSubcommands) -> eyre::Result<()> {
             let value_copy = args.value.clone();
             config::set_target_repo(&mut configuration, args.value)
                 .wrap_err_with(|| format!("Failed to set target repo to '{}'", value_copy))?;
-            configuration.export(Path::new(".clconfig.json"))
-                .wrap_err("Failed to save configuration")?;
-            Ok(())
-        }
-        ChangelogDir(args) => {
-            let mut configuration = config::load()
-                .wrap_err("Failed to load configuration")?;
-            match args.command {
-                OptionalOperation::Set { value } => configuration.set_changelog_dir(Some(value)),
-                OptionalOperation::Unset => configuration.set_changelog_dir(None),
-            }
-            configuration.export(Path::new(".clconfig.json"))
-                .wrap_err("Failed to save configuration")?;
-            Ok(())
-        }
-        Mode(args) => {
-            let mut configuration = config::load()
-                .wrap_err("Failed to load configuration")?;
-            let mode = args.value.parse::<config::Mode>()
-                .map_err(|e| eyre::eyre!("Invalid mode value '{}': {}", args.value, e))?;
-            configuration.set_mode(mode);
             configuration.export(Path::new(".clconfig.json"))
                 .wrap_err("Failed to save configuration")?;
             Ok(())

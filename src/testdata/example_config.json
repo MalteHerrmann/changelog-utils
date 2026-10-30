@@ -1,5 +1,5 @@
 {
-  "config_version": 1,
+  "config_version": 2,
   "categories": ["cli", "test"],
   "change_types": [
     {
@@ -23,7 +23,6 @@
     "Web-SDK": "web[-\\s]*sdk"
   },
   "legacy_version": "v2.1.0",
-  "mode": "single",
   "target_repo": "https://github.com/MalteHerrmann/changelog-utils",
   "use_categories": true
 }

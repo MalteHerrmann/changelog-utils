@@ -30,7 +30,7 @@ fn any_non_interactive_flags_set(args: &AddArgs) -> bool {
 ///
 /// Returns `Ok(None)` if none of the non-interactive flags were passed, so the caller can
 /// fall back to the regular interactive flow. Returns an error if only some of the required
-/// flags were passed, if the changelog is not in single-file mode, or if a given value does
+/// flags were passed or if a given value does
 /// not match the configuration.
 fn resolve_non_interactive_inputs(
     config: &config::Config,
@@ -39,12 +39,6 @@ fn resolve_non_interactive_inputs(
     if !any_non_interactive_flags_set(args) {
         return Ok(None);
     }
-
-    ensure!(
-        matches!(config.mode, config::Mode::Single),
-        "Non-interactive mode (--change-type, --category, --description) is not supported for \
-         multi-file changelogs yet; run 'clu config mode single' or use the interactive flow instead"
-    );
 
     ensure!(
         args.number.is_some()
@@ -360,7 +354,6 @@ async fn run_batch(
 /// of the changelog.
 pub fn add_entry(
     config: &config::Config,
-    // TODO: implement support for multi file changelog
     changelog: &mut changelog::SingleFileChangelog,
     change_type: &str,
     cat: &str,
@@ -446,22 +439,6 @@ mod non_interactive_tests {
         };
         let err = resolve_non_interactive_inputs(&config, &args).unwrap_err();
         assert!(err.to_string().contains("requires all of"));
-    }
-
-    #[test]
-    fn test_error_on_multi_mode() {
-        let mut config = load_test_config();
-        config.set_mode(config::Mode::Multi);
-
-        let args = AddArgs {
-            number: Some(1),
-            change_type: Some("Bug Fixes".to_string()),
-            category: Some("go".to_string()),
-            description: Some("Fixed a bug.".to_string()),
-            ..base_args()
-        };
-        let err = resolve_non_interactive_inputs(&config, &args).unwrap_err();
-        assert!(err.to_string().contains("multi-file changelogs"));
     }
 
     #[test]

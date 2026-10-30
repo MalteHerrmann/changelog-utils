@@ -1,1 +1,0 @@
-- Enable Swagger documentation in API endpoint. ([#470](https://github.com/noble-assets/noble/pull/470))

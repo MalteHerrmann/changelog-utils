@@ -14,14 +14,18 @@ struct Migration {
 /// Registry of all available migrations
 fn get_migrations() -> Vec<Migration> {
     vec![
-        // Future migrations would be added here
-        // Example:
-        // Migration {
-        //     from_version: 1,
-        //     to_version: 2,
-        //     migrate: migrate_1_to_2,
-        // },
+        Migration {
+            from_version: 1,
+            to_version: 2,
+            migrate: migrate_1_to_2,
+        },
     ]
+}
+
+/// Removes the retired multi-file configuration fields when the config is re-exported.
+/// Serde ignores those former fields while loading version 1 configurations.
+fn migrate_1_to_2(_config: &mut Config) -> eyre::Result<()> {
+    Ok(())
 }
 
 /// Applies all necessary migrations to bring a config to the current version
@@ -83,7 +87,26 @@ pub fn get_migration_info(config: &Config) -> String {
     }
 
     format!(
-        "Configuration will be migrated from version {} to version {}.\nNew fields will be added with default values.",
+        "Configuration will be migrated from version {} to version {}.\nRetired multi-file settings will be removed.",
         from, to
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::unpack_config;
+
+    #[test]
+    fn migrates_v1_config_without_retired_multi_file_settings() {
+        let legacy_config = include_str!("../testdata/example_config.json")
+            .replace("\"config_version\": 2", "\"config_version\": 1,\n  \"mode\": \"multi\",\n  \"changelog_dir\": \".changelog\"");
+        let mut config = unpack_config(&legacy_config).expect("failed to load version 1 config");
+
+        migrate_to_current(&mut config).expect("failed to migrate configuration");
+
+        assert_eq!(config.config_version, CURRENT_CONFIG_VERSION);
+        assert!(!config.to_string().contains("\"mode\""));
+        assert!(!config.to_string().contains("\"changelog_dir\""));
+    }
 }

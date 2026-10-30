@@ -61,7 +61,7 @@ in existing projects. In that case, it will only create the default configuratio
 The `add` command is interactive by default, prompting for the change type, category and
 description. This doesn't work for agentic/CI workflows that can't respond to prompts.
 
-For single-file changelogs (the default mode), you can instead pass all required information
+For changelogs, you can instead pass all required information
 as flags. When `--change-type`, `--category` and `--description` are all provided (together with
 the PR number), `clu` skips every prompt and GitHub lookup, validates the given values against
 `.clconfig.json`, and applies the entry directly:
@@ -75,18 +75,14 @@ clu add 42 \
 ```
 
 `--commit-message` is optional and defaults to the configured commit message.
-Non-interactive mode is not yet supported for multi-file changelogs; running it with
-`clu config mode multi` set returns an error instead of guessing.
 
 ## Configuration
 
 You can add or remove configurations as you like with the
 corresponding subcommands of `clu config`.
-The tool supports a single-file changelog (default) or a multi-file changelog; use `clu config mode` to switch.
-While the traditional single-file changelogs are enabled by default,
-multi-file implementations can be of advantage in settings where lots of concurrent work is done
-(either by many engineers or autonomous agents running in parallel)
-to avoid merge conflicts.
+The tool supports single-file changelogs. Configurations created by an older version that contain
+the retired `mode` or `changelog_dir` fields continue to use the single-file workflow; run
+`clu config migrate` to remove those fields and update the configuration version.
 
 ```yaml
 Usage: clu config <COMMAND>
@@ -94,10 +90,8 @@ Usage: clu config <COMMAND>
 Commands:
   category        Adjust the allowed categories for changelog entries
   change-type     Adjust the allowed change types within releases (like 'Bug Fixes', 'Features', etc.)
-  changelog-dir   Set or unset the changelog directory for multi-mode
   legacy-version  Set or unset the optional legacy version
   migrate         Migrates the configuration to the current version
-  mode            Set the changelog mode (single or multi)
   show            Shows the current configuration
   spelling        Adjust the expected spellings that should be enforced in the changelog
   target-repo     Sets the target repository for the changelog entries
@@ -138,4 +132,3 @@ and creating new ones.
 
 There is a corresponding GitHub action available at [MalteHerrmann/changelog-lint-action](https://github.com/MalteHerrmann/changelog-lint-action),
 which can be used to lint your project's changelog as part of the CI workflow.
-

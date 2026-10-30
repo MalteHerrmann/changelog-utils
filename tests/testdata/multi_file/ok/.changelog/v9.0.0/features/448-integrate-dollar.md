@@ -1,1 +1,0 @@
-- Integrate our custom Dollar module, that enables the issuance of Noble's stablecoin $USDN. ([#448](https://github.com/noble-assets/noble/pull/448))

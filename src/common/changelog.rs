@@ -1,11 +1,11 @@
 use crate::{
     common::problem::Problem,
-    config::{self, Config},
-    multi_file, single_file,
+    config::Config,
+    single_file,
 };
 use std::path::{Path, PathBuf};
 
-/// Common trait for changelog operations, implemented by both single-file and multi-file changelogs
+/// Common trait for changelog operations.
 pub trait Changelog {
     /// Returns the path to the changelog (file or directory)
     fn get_path(&self) -> &Path;
@@ -28,10 +28,7 @@ pub trait Changelog {
     }
 }
 
-/// Loads the changelog based on the mode specified in the configuration
+/// Loads the configured single-file changelog.
 pub fn load(config: &Config) -> eyre::Result<Box<dyn Changelog>> {
-    match config.mode {
-        config::Mode::Single => Ok(Box::new(single_file::load(config)?)),
-        config::Mode::Multi => Ok(Box::new(multi_file::load(config)?)),
-    }
+    Ok(Box::new(single_file::load(config)?))
 }

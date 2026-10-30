@@ -7,7 +7,7 @@ pub fn run(fix: bool) -> eyre::Result<()> {
     let used_config = config::load()
         .wrap_err("Failed to load configuration")?;
 
-    // Load changelog using the common interface (dispatches based on mode)
+    // Load the configured changelog through the common interface.
     let changelog = common::load(&used_config)
         .wrap_err("Failed to load changelog")?;
 
@@ -17,7 +17,6 @@ pub fn run(fix: bool) -> eyre::Result<()> {
     }
 
     if fix {
-        // Check if fix is supported for the current mode
         changelog.write(&used_config, changelog.get_path())
             .wrap_err("Failed to write fixed changelog")?;
         println!(
