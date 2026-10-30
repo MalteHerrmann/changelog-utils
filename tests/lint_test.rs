@@ -10,6 +10,49 @@ fn format_problems(problems: &[Problem]) -> Vec<String> {
     problems.iter().map(|p| p.to_string()).collect()
 }
 
+#[test]
+fn lint_reports_explicit_types_and_summary_despite_keywords_in_entry_text() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(
+        dir.path().join(".clconfig.json"),
+        include_str!("testdata/single_file/evmos_config.json"),
+    )
+    .unwrap();
+    fs::write(
+        dir.path().join("CHANGELOG.md"),
+        concat!(
+            "# Changelog\n\n## Unreleased\n\n### BugFixes\n\n",
+            "- (app) [#1](https://github.com/evmos/evmos/pull/1) Move directory handling\n",
+            "- (app) [#2](https://github.com/evmos/evmos/pull/3) Add category filters\n",
+            "- malformed filename entry\n",
+        ),
+    )
+    .unwrap();
+
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_clu"))
+        .current_dir(dir.path())
+        .arg("lint")
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    for expected in [
+        "CHANGELOG.md:5 [change type]: 'Bug Fixes' should be used instead of 'BugFixes'",
+        "CHANGELOG.md:7 [description]: PR description should end with a dot: 'Move directory handling'",
+        "CHANGELOG.md:8 [description]: PR description should end with a dot: 'Add category filters'",
+        "CHANGELOG.md:8 [pr]: PR link is not matching PR number 2:",
+        "CHANGELOG.md:9 [description]: malformed entry: '- malformed filename entry'",
+    ] {
+        assert!(stdout.contains(expected), "missing {expected:?} in {stdout}");
+    }
+    assert!(
+        stdout.ends_with("\nproblems by type:\n  description: 3\n  change type: 1\n  pr: 1\n"),
+        "unexpected summary: {stdout}"
+    );
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("Changelog contains 5 problems"), "{stderr}");
+}
+
 #[cfg(test)]
 fn load_test_config() -> config::Config {
     config::unpack_config(include_str!("testdata/single_file/evmos_config.json"))
