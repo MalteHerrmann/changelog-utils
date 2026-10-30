@@ -5,52 +5,6 @@ use clu::{
 };
 use predicates::prelude::*;
 use std::fs;
-use std::process::Command;
-
-#[test]
-fn test_init_normalizes_origin() {
-    for (origin, expected) in [
-        (
-            "https://github.com/example/my.repo.git",
-            "https://github.com/example/my.repo",
-        ),
-        (
-            "git@github.com:Example/my.repo.git",
-            "https://github.com/Example/my.repo",
-        ),
-        (
-            "ssh://git@github.com/AnotherOwner/other-repo.git",
-            "https://github.com/AnotherOwner/other-repo",
-        ),
-    ] {
-        let temp_dir = TempDir::new().unwrap();
-        for args in [
-            vec!["init", "--quiet"],
-            vec!["remote", "add", "origin", origin],
-        ] {
-            let output = Command::new("git")
-                .current_dir(temp_dir.path())
-                .args(args)
-                .output()
-                .unwrap();
-            assert!(output.status.success(), "{:?}", output);
-        }
-
-        // Use a child process to avoid changing other tests' working directory.
-        let output = Command::new(env!("CARGO_BIN_EXE_clu"))
-            .current_dir(temp_dir.path())
-            .arg("init")
-            .output()
-            .unwrap();
-        assert!(output.status.success(), "{:?}", output);
-
-        // Inspect the saved JSON directly: loading Config also normalizes URLs.
-        let saved: serde_json::Value =
-            serde_json::from_str(&fs::read_to_string(temp_dir.child(".clconfig.json")).unwrap())
-                .unwrap();
-        assert_eq!(saved["target_repo"], expected, "origin: {origin}");
-    }
-}
 
 #[test]
 fn test_init_empty_folder() {
@@ -164,7 +118,5 @@ fn test_init_changelog_and_config_exists() {
         "expected failure trying to initialize with config already existing"
     );
     let err = res.unwrap_err();
-    assert!(err
-        .to_string()
-        .contains("Configuration file already exists"));
+    assert!(err.to_string().contains("Configuration file already exists"));
 }

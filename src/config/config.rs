@@ -1,9 +1,9 @@
 use super::{change_type::ChangeTypeConfig, mode::Mode};
-use crate::utils::git::parse_github_owner_repo;
 use eyre::{ensure, WrapErr};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::{collections::BTreeMap, fmt, fs, path::Path};
+use url::Url;
 
 /// Current version of the configuration format
 pub const CURRENT_CONFIG_VERSION: u16 = 1;
@@ -224,16 +224,8 @@ impl Default for Config {
 
 // Unpacks the configuration from a given raw string.
 pub fn unpack_config(contents: &str) -> eyre::Result<Config> {
-    let mut config: Config = serde_json::from_str(contents)
-        .wrap_err("Failed to parse configuration JSON - file may be corrupted or have invalid syntax")?;
-
-    // Normalize supported GitHub remotes for every link consumer, while
-    // preserving the ability to load unset or otherwise unsupported targets.
-    if let Ok((owner, repo)) = parse_github_owner_repo(&config.target_repo) {
-        config.target_repo = format!("https://github.com/{}/{}", owner, repo);
-    }
-
-    Ok(config)
+    serde_json::from_str(contents)
+        .wrap_err("Failed to parse configuration JSON - file may be corrupted or have invalid syntax")
 }
 
 // Tries to open the configuration file in the expected location
@@ -258,37 +250,29 @@ pub fn load() -> eyre::Result<Config> {
 // Checks if the given value is a valid GitHub URL and sets the target
 // repository field if it is the case.
 pub fn set_target_repo(config: &mut Config, value: String) -> eyre::Result<()> {
-    let (owner, repo) = parse_github_owner_repo(&value)?;
-    config.target_repo = format!("https://github.com/{}/{}", owner, repo);
+    let url = Url::parse(&value)
+        .wrap_err_with(|| format!("Failed to parse '{}' as a valid URL", value))?;
+
+    let domain = url.domain().ok_or_else(|| {
+        eyre::eyre!(
+            "URL '{}' does not have a valid domain - expected a GitHub repository URL",
+            value
+        )
+    })?;
+
+    ensure!(
+        domain == "github.com",
+        "Repository URL must be a GitHub URL (github.com), got: {}",
+        domain
+    );
+
+    config.target_repo = value;
     Ok(())
 }
 
 #[cfg(test)]
 mod config_tests {
     use super::*;
-
-    #[test]
-    fn test_github_remote_targets_generate_https_links() {
-        for target in [
-            "git@github.com:owner/my.repo.git",
-            "ssh://git@github.com/owner/my.repo.git",
-            "https://github.com/owner/my.repo.git/",
-        ] {
-            let original = Config {
-                target_repo: target.into(),
-                ..Config::default()
-            };
-            let loaded = unpack_config(&original.to_string()).unwrap();
-            let mut configured = Config::default();
-            set_target_repo(&mut configured, target.into()).unwrap();
-
-            for config in [loaded, configured] {
-                assert_eq!(config.target_repo, "https://github.com/owner/my.repo");
-                let entry = crate::single_file::entry::Entry::new(&config, "", "Fix links.", 42);
-                assert!(entry.fixed.contains("https://github.com/owner/my.repo/pull/42"));
-            }
-        }
-    }
 
     #[test]
     fn test_load_config() {
