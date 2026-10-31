@@ -1,1 +1,0 @@
-- Integrate our custom Wormhole module, that enables Wormhole messaging on Noble via IBC. ([#444](https://github.com/noble-assets/noble/pull/444))

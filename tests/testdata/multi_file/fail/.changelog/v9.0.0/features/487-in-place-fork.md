@@ -1,1 +1,0 @@
-- Enable functionality for in-place forking a synced testnet or mainnet node. ([#487](https://github.com/noble-assets/noble/pull/487))

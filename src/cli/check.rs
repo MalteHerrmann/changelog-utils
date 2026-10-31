@@ -59,18 +59,6 @@ async fn check() -> eyre::Result<()> {
         has_critical_error = true;
     }
 
-    // Check multi-file changelog directory if configured
-    if let Some(cd) = &config.changelog_dir {
-        if fs::exists(cd)
-            .wrap_err_with(|| format!("Failed to check if changelog directory exists at {}", cd))?
-        {
-            println!(" ✅ multi-file changelog directory exists");
-        } else {
-            println!(" ❌ multi-file changelog directory not found at: {}", cd);
-            has_critical_error = true;
-        }
-    }
-
     // Check LLM availability (non-critical)
     match parrot::llm::get_available_models() {
         Ok(models) => {

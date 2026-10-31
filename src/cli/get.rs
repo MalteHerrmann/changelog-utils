@@ -1,5 +1,5 @@
 use super::commands::GetArgs;
-use crate::{config, multi_file, single_file};
+use crate::{config, single_file};
 use eyre::{bail, WrapErr};
 
 /// Executes the get command to display a specific version's release notes.
@@ -7,18 +7,9 @@ pub fn run(args: GetArgs) -> eyre::Result<()> {
     let config = config::load()
         .wrap_err("Failed to load configuration")?;
 
-    match config.mode {
-        config::Mode::Single => {
-            let changelog = single_file::changelog::load(&config)
-                .wrap_err("Failed to load single-file changelog")?;
-            get_single(&config, &changelog, &args)?;
-        }
-        config::Mode::Multi => {
-            let changelog = multi_file::changelog::load(&config)
-                .wrap_err("Failed to load multi-file changelog")?;
-            get_multi(&config, &changelog, &args)?;
-        }
-    }
+    let changelog = single_file::changelog::load(&config)
+        .wrap_err("Failed to load changelog")?;
+    get_single(&config, &changelog, &args)?;
 
     Ok(())
 }
@@ -30,23 +21,6 @@ pub fn run(args: GetArgs) -> eyre::Result<()> {
 fn get_single(
     config: &config::Config,
     changelog: &single_file::changelog::SingleFileChangelog,
-    args: &GetArgs,
-) -> eyre::Result<()> {
-    if let Some(release) = changelog
-        .releases
-        .iter()
-        .find(|&r| r.version == args.version)
-    {
-        println!("{}", release.get_fixed_contents(config));
-        return Ok(());
-    }
-
-    bail!("Version '{}' not found in changelog", args.version)
-}
-
-fn get_multi(
-    config: &config::Config,
-    changelog: &multi_file::changelog::MultiFileChangelog,
     args: &GetArgs,
 ) -> eyre::Result<()> {
     if let Some(release) = changelog

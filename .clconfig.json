@@ -1,5 +1,5 @@
 {
-  "config_version": 1,
+  "config_version": 2,
   "categories": [
     "all",
     "ci",
@@ -30,13 +30,11 @@
     }
   ],
   "changelog_path": "CHANGELOG.md",
-  "changelog_dir": null,
   "commit_message": "add changelog entry",
   "expected_spellings": {
     "CLI": "cli"
   },
   "legacy_version": null,
-  "mode": "single",
   "target_repo": "https://github.com/MalteHerrmann/changelog-utils",
   "use_categories": true
 }

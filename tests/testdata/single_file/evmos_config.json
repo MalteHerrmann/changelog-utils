@@ -1,5 +1,5 @@
 {
-  "config_version": 1,
+  "config_version": 2,
   "categories": [
     "p256-precompile",
     "distribution-precompile",
@@ -23,14 +23,12 @@
     { "long": "Bug Fixes", "short": "fix" }
   ],
   "changelog_path": "CHANGELOG.md",
-  "changelog_dir": null,
   "commit_message": "add changelog entry",
   "expected_spellings": {
     "ABI": "abi",
     "EIP-712": "eip[-\\s]*712"
   },
   "legacy_version": "v2.0.0",
-  "mode": "single",
   "target_repo": "https://github.com/evmos/evmos",
   "use_categories": true
 }

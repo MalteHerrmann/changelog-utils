@@ -1,4 +1,4 @@
-use super::{change_type::ChangeTypeConfig, mode::Mode};
+use super::change_type::ChangeTypeConfig;
 use crate::utils::git::parse_github_owner_repo;
 use eyre::{ensure, WrapErr};
 use serde::{Deserialize, Serialize};
@@ -6,7 +6,7 @@ use serde_json;
 use std::{collections::BTreeMap, fmt, fs, path::Path};
 
 /// Current version of the configuration format
-pub const CURRENT_CONFIG_VERSION: u16 = 1;
+pub const CURRENT_CONFIG_VERSION: u16 = 2;
 
 /// Holds the configuration of the application
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -23,8 +23,6 @@ pub struct Config {
     pub commit_message: String,
     /// The relative path of the changelog file.
     pub changelog_path: String,
-    /// In multi mode, this defines the directory where entries are created.
-    pub changelog_dir: Option<String>,
     /// The map of expected spellings.
     ///
     /// Note: The key is the correct spelling and the value
@@ -37,8 +35,6 @@ pub struct Config {
     ///
     /// TODO: use Version type directly instead
     pub legacy_version: Option<String>,
-    /// Controls whether a single or multi file changelog is used.
-    pub mode: Mode,
     /// The target repository, that represents the base url
     /// enforced to occur in PR links.
     pub target_repo: String,
@@ -149,14 +145,6 @@ impl Config {
         Ok(())
     }
 
-    pub fn set_changelog_dir(&mut self, value: Option<String>) {
-        self.changelog_dir = value;
-    }
-
-    pub fn set_mode(&mut self, mode: Mode) {
-        self.mode = mode;
-    }
-
     pub fn set_use_categories(&mut self, value: bool) {
         self.use_categories = value;
     }
@@ -209,12 +197,8 @@ impl Default for Config {
             change_types: default_change_types,
             commit_message,
             changelog_path,
-            // TODO: add config method to set this.
-            changelog_dir: None,
             expected_spellings: BTreeMap::default(),
             legacy_version: None,
-            // TODO: add config method to set this.
-            mode: Mode::Single,
             target_repo: String::default(),
             // TODO: add config method to set this.
             use_categories: true,

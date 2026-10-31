@@ -19,6 +19,10 @@ This changelog was created using the `clu` binary
 
 - (cli) [#123](https://github.com/MalteHerrmann/changelog-utils/pull/123) Support SSH remotes and reliable auth for private repos.
 
+### Chores
+
+- (config) [#131](https://github.com/MalteHerrmann/changelog-utils/pull/131) Remove experimental multi-file changelog support.
+
 ## [v1.6.1](https://github.com/MalteHerrmann/changelog-utils/releases/tag/v1.6.1) - 2026-03-14
 
 ### Improvements

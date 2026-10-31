@@ -93,10 +93,6 @@ pub enum ConfigSubcommands {
     Spelling(KeyValueArgs),
     #[command(about = "Sets the target repository for the changelog entries")]
     TargetRepo(StringValue),
-    #[command(about = "Sets the changelog directory for multi-mode")]
-    ChangelogDir(ConditionalArgs),
-    #[command(about = "Sets the changelog mode (single or multi)")]
-    Mode(StringValue),
     #[command(about = "Sets whether categories are enforced in entries")]
     UseCategories(ConditionalArgs),
     #[command(about = "Migrates the configuration to the current version")]
