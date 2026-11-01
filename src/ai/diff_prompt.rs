@@ -12,7 +12,11 @@ pub async fn get_suggestions(config: &Config, diff: &str) -> eyre::Result<Sugges
     let response = prompt(config, diff)
         .await
         .wrap_err("Failed to get LLM response for diff")?;
-    parse_suggestions(response.as_str())
+    let mut suggestions = parse_suggestions(response.as_str())?;
+    if !config.use_categories {
+        suggestions.category.clear();
+    }
+    Ok(suggestions)
 }
 
 fn parse_suggestions(llm_response: &str) -> eyre::Result<Suggestions> {
@@ -44,6 +48,7 @@ async fn prompt(config: &Config, diff: &str) -> eyre::Result<String> {
 
 #[derive(Debug, Default, Deserialize)]
 pub struct Suggestions {
+    #[serde(default)]
     pub category: String,
     pub change_type: String,
     pub title: String,
@@ -92,5 +97,17 @@ mod tests {
         assert_eq!(suggestions.pr_description, "This PR adds unit tests for the diff prompt functionality. \n\nChanges include:\n- Added a test module in src/diff_prompt.rs\n- Created a basic test case that verifies prompt behavior using a fixture file\n\nThis helps ensure the prompt functionality works correctly and provides a foundation for future testing.");
         assert_eq!(suggestions.category, "");
         assert_eq!(suggestions.change_type, "Improvements");
+    }
+
+    #[test]
+    fn test_parse_suggestions_without_category() {
+        let suggestions = parse_suggestions(
+            r#"{"change_type":"Features","title":"Add command","pr_description":"Add a command."}"#,
+        )
+        .unwrap();
+        assert_eq!(suggestions.category, "");
+        assert_eq!(suggestions.change_type, "Features");
+        assert_eq!(suggestions.title, "Add command");
+        assert_eq!(suggestions.pr_description, "Add a command.");
     }
 }

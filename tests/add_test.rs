@@ -2,6 +2,121 @@ use assert_fs::NamedTempFile;
 use clu::{cli::add, common::Changelog, config, single_file::changelog};
 use std::{borrow::BorrowMut, path::Path};
 
+#[test]
+fn disabled_categories_skip_interactive_picker_and_generated_scope() {
+    let mut config = load_example_config();
+    config.use_categories = false;
+    config.categories.clear();
+    // The shared add/create-PR picker must return without accessing a terminal,
+    // even when GitHub or AI supplied a historical category suggestion.
+    assert_eq!(
+        clu::cli::inputs::get_category(&config, "OldScope").unwrap(),
+        ""
+    );
+    let entry = clu::single_file::entry::Entry::new(&config, "OldScope", "Fix a bug.", 7);
+    assert_eq!(entry.category, "");
+    assert_eq!(
+        entry.fixed,
+        "- [#7](https://github.com/evmos/evmos/pull/7) Fix a bug."
+    );
+}
+
+#[test]
+fn non_interactive_add_honors_category_setting() {
+    use std::{fs, process::Command};
+
+    for use_categories in [false, true] {
+        let dir = tempfile::tempdir().unwrap();
+        for args in [
+            vec!["init", "--quiet"],
+            vec!["config", "user.name", "Test User"],
+            vec!["config", "user.email", "test@example.com"],
+        ] {
+            assert!(Command::new("git")
+                .current_dir(dir.path())
+                .args(args)
+                .status()
+                .unwrap()
+                .success());
+        }
+        let mut config = load_example_config();
+        config.use_categories = use_categories;
+        config.legacy_version = None;
+        config.categories = if use_categories {
+            vec!["app".into()]
+        } else {
+            vec![]
+        };
+        config.export(&dir.path().join(".clconfig.json")).unwrap();
+        fs::write(
+            dir.path().join("CHANGELOG.md"),
+            "# Changelog\n\n## Unreleased\n",
+        )
+        .unwrap();
+
+        let run_add = |extra: &[&str]| {
+            Command::new(env!("CARGO_BIN_EXE_clu"))
+                .current_dir(dir.path())
+                .args([
+                    "add",
+                    "42",
+                    "--change-type",
+                    "Bug Fixes",
+                    "--description",
+                    "fix a thing",
+                ])
+                .args(extra)
+                .output()
+                .unwrap()
+        };
+        let rejected = run_add(if use_categories {
+            &[]
+        } else {
+            &["--category", "app"]
+        });
+        assert!(!rejected.status.success());
+        let error = String::from_utf8_lossy(&rejected.stderr);
+        assert!(
+            error.contains(if use_categories {
+                "also --category"
+            } else {
+                "--category cannot be used"
+            }),
+            "{error}"
+        );
+        assert!(!fs::read_to_string(dir.path().join("CHANGELOG.md"))
+            .unwrap()
+            .contains("#42"));
+
+        let output = run_add(if use_categories {
+            &["--category", "app"]
+        } else {
+            &[]
+        });
+        assert!(output.status.success(), "{:?}", output);
+        let expected = if use_categories {
+            "- (app) [#42](https://github.com/evmos/evmos/pull/42) Fix a thing."
+        } else {
+            "- [#42](https://github.com/evmos/evmos/pull/42) Fix a thing."
+        };
+        let saved = fs::read_to_string(dir.path().join("CHANGELOG.md")).unwrap();
+        assert!(saved.lines().any(|line| line == expected), "{saved}");
+        let committed = Command::new("git")
+            .current_dir(dir.path())
+            .args(["show", "HEAD:CHANGELOG.md"])
+            .output()
+            .unwrap();
+        assert!(committed.status.success());
+        assert_eq!(String::from_utf8(committed.stdout).unwrap(), saved);
+        let lint = Command::new(env!("CARGO_BIN_EXE_clu"))
+            .current_dir(dir.path())
+            .arg("lint")
+            .output()
+            .unwrap();
+        assert!(lint.status.success(), "{:?}", lint);
+    }
+}
+
 #[cfg(test)]
 fn load_example_config() -> config::Config {
     config::unpack_config(include_str!("testdata/single_file/evmos_config.json"))

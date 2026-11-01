@@ -32,6 +32,10 @@ pub fn get_pr_number(default_value: u64) -> eyre::Result<u64> {
 }
 
 pub fn get_category(config: &Config, suggestion: &str) -> eyre::Result<String> {
+    if !config.use_categories {
+        return Ok(String::new());
+    }
+
     let idx = config
         .categories
         .iter()

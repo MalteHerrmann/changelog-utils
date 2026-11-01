@@ -8,6 +8,10 @@ use regex::{Regex, RegexBuilder};
 /// Check if the category is valid and return a fixed version that addresses
 /// well-known problems.
 pub fn check_category(config: &config::Config, category: &str) -> (String, Vec<ProblemDetail>) {
+    if !config.use_categories {
+        return (category.to_string(), Vec::new());
+    }
+
     let mut problems: Vec<ProblemDetail> = Vec::new();
     let fixed = category.to_lowercase();
     if category.to_lowercase() != category {

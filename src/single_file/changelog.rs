@@ -366,6 +366,10 @@ mod changelog_tests {
 pub fn get_settings_from_existing_changelog(config: &mut Config, contents: &str) {
     let mut seen_change_types: Vec<String> = Vec::new();
     let mut seen_categories: Vec<String> = Vec::new();
+    // Discovery must accept both formats, even before categories are disabled.
+    let mut discovery_config = config.clone();
+    discovery_config.use_categories = false;
+    let mut seen_category_free_entry = false;
 
     for line in contents.lines() {
         let trimmed_line = line.trim();
@@ -380,9 +384,14 @@ pub fn get_settings_from_existing_changelog(config: &mut Config, contents: &str)
             continue;
         }
 
-        if let Ok(e) = entry::parse(config, line) {
-            if !seen_categories.contains(&e.category) {
-                seen_categories.push(e.category)
+        if let Ok(e) = entry::parse(&discovery_config, line) {
+            if e.category.is_empty() {
+                seen_category_free_entry = true;
+            } else {
+                let category = e.category.to_lowercase();
+                if !seen_categories.contains(&category) {
+                    seen_categories.push(category)
+                }
             }
         }
     }
@@ -397,7 +406,13 @@ pub fn get_settings_from_existing_changelog(config: &mut Config, contents: &str)
         });
     });
 
-    seen_categories.sort();
-    config.categories = seen_categories;
+    // A mixed history also needs optional categories so its newer entries lint.
+    if seen_category_free_entry {
+        config.use_categories = false;
+    }
+    if config.use_categories {
+        seen_categories.sort();
+        config.categories = seen_categories;
+    }
     config.change_types = change_type_configs;
 }

@@ -114,3 +114,73 @@ fn it_should_fix_the_changelog_as_expected() {
         "expected different fixed changelog"
     );
 }
+
+#[test]
+fn category_free_lint_fix_preserves_history_and_other_rules() {
+    use std::process::Command;
+
+    let dir = tempfile::tempdir().unwrap();
+    let mut config = load_test_config();
+    config.use_categories = false;
+    config.categories.clear();
+    config.legacy_version = None;
+    config.export(&dir.path().join(".clconfig.json")).unwrap();
+    let path = dir.path().join("CHANGELOG.md");
+    fs::write(&path, concat!(
+        "# Changelog\n\n## Unreleased\n\n### Bug Fixes\n\n",
+        "- [#42](https://github.com/evmos/evmos/pull/42) Fixed an issue.\n",
+        "- (Old_unknown Scope!) [#43](https://github.com/evmos/evmos/pull/43) Keep (parenthesized) description.\n",
+        "  -  [#44] (https://github.com/wrong/repo/pull/45) fix ABi\n",
+    )).unwrap();
+    let run = |command| {
+        Command::new(env!("CARGO_BIN_EXE_clu"))
+            .current_dir(dir.path())
+            .arg(command)
+            .output()
+            .unwrap()
+    };
+    let lint = run("lint");
+    assert!(!lint.status.success());
+    let problems = String::from_utf8(lint.stdout).unwrap();
+    for kind in ["[whitespace]", "[pr]", "[description]"] {
+        assert!(problems.contains(kind), "{problems}");
+    }
+    assert!(!problems.contains("[category]"), "{problems}");
+    assert!(!problems.contains("malformed entry"), "{problems}");
+
+    assert!(run("fix").status.success());
+    let fixed = fs::read_to_string(&path).unwrap();
+    for entry in [
+        "- [#42](https://github.com/evmos/evmos/pull/42) Fixed an issue.",
+        "- (Old_unknown Scope!) [#43](https://github.com/evmos/evmos/pull/43) Keep (parenthesized) description.",
+        "- [#44](https://github.com/evmos/evmos/pull/44) Fix ABI.",
+    ] {
+        assert!(fixed.lines().any(|line| line == entry), "{fixed}");
+    }
+    let lint = run("lint");
+    assert!(lint.status.success(), "{:?}", lint);
+    assert!(run("fix").status.success());
+    assert_eq!(fs::read_to_string(&path).unwrap(), fixed);
+
+    // Toggling the setting must preserve the list, not silently clear it.
+    config.categories = vec!["app".into(), "evm".into()];
+    config.export(&dir.path().join(".clconfig.json")).unwrap();
+    for value in ["true", "false"] {
+        let output = Command::new(env!("CARGO_BIN_EXE_clu"))
+            .current_dir(dir.path())
+            .args(["config", "use-categories", "set", value])
+            .output()
+            .unwrap();
+        assert!(output.status.success(), "{:?}", output);
+        let saved =
+            config::unpack_config(&fs::read_to_string(dir.path().join(".clconfig.json")).unwrap())
+                .unwrap();
+        assert_eq!(saved.categories, ["app", "evm"]);
+        assert_eq!(saved.use_categories, value == "true");
+        if value == "true" {
+            let lint = run("lint");
+            assert!(!lint.status.success());
+            assert!(String::from_utf8_lossy(&lint.stdout).contains("malformed entry"));
+        }
+    }
+}

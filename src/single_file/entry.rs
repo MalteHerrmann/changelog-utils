@@ -26,6 +26,7 @@ impl Entry {
         pr_number: u64,
     ) -> Entry {
         let link = format!("{}/pull/{}", config.target_repo, pr_number);
+        let category = if config.use_categories { category } else { "" };
         let fixed = build_fixed(category, &link, description, pr_number);
 
         Entry {
@@ -39,8 +40,8 @@ impl Entry {
 
 pub fn parse(config: &config::Config, line: &str) -> eyre::Result<Entry> {
     let entry_pattern = Regex::new(concat!(
-        r"^(?P<ws0>\s*)-(?P<ws1>\s*)\((?P<category>[a-zA-Z0-9\-]+)\)",
-        r"(?P<ws2>\s*)\[(?P<bs>\\)?#(?P<pr>\d+)]",
+        r"^(?P<ws0>\s*)-(?P<ws1>\s*)(?:\((?P<category>[^)]+)\)(?P<ws2>\s*))?",
+        r"\[(?P<bs>\\)?#(?P<pr>\d+)]",
         r"(?P<ws3>\s*)\((?P<link>[^)]*)\)(?P<ws4>\s*)(?P<desc>.+)$"
     ))
     .expect("invalid regex pattern");
@@ -50,21 +51,29 @@ pub fn parse(config: &config::Config, line: &str) -> eyre::Result<Entry> {
         .ok_or_else(|| eyre::eyre!("malformed entry: '{}'", line))?;
 
     // NOTE: calling unwrap here is okay because we checked that the pattern matched above
-    let category = matches.name("category").unwrap().as_str();
+    let category = matches.name("category").map_or("", |m| m.as_str());
+    if config.use_categories
+        && (category.is_empty()
+            || !category
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '-'))
+    {
+        eyre::bail!("malformed entry: '{}'", line);
+    }
     let description = matches.name("desc").unwrap().as_str();
     let link = matches.name("link").unwrap().as_str();
     let pr_number = matches.name("pr").unwrap().as_str().parse::<u64>().unwrap();
     let spaces = [
         matches.name("ws0").unwrap().as_str(),
         matches.name("ws1").unwrap().as_str(),
-        matches.name("ws2").unwrap().as_str(),
+        matches.name("ws2").map_or("", |m| m.as_str()),
         matches.name("ws3").unwrap().as_str(),
         matches.name("ws4").unwrap().as_str(),
     ];
 
     let mut problems: Vec<ProblemDetail> = Vec::new();
 
-    check_whitespace(spaces)
+    check_whitespace(spaces, !category.is_empty())
         .into_iter()
         .for_each(|p| problems.push(p));
 
@@ -89,17 +98,31 @@ pub fn parse(config: &config::Config, line: &str) -> eyre::Result<Entry> {
 
 /// Returns the fixed entry string based on the given building parts.
 fn build_fixed(cat: &str, link: &str, desc: &str, pr: u64) -> String {
-    format!("- ({}) [#{}]({}) {}", cat, pr, link, desc,)
+    if cat.is_empty() {
+        format!("- [#{}]({}) {}", pr, link, desc)
+    } else {
+        format!("- ({}) [#{}]({}) {}", cat, pr, link, desc)
+    }
 }
 
 /// Checks the used whitespace in the entry.
-fn check_whitespace(spaces: [&str; 5]) -> Vec<ProblemDetail> {
+fn check_whitespace(spaces: [&str; 5], has_category: bool) -> Vec<ProblemDetail> {
     let mut problems: Vec<ProblemDetail> = Vec::new();
 
-    let expected_whitespace = ["", " ", " ", "", " "];
+    let expected_whitespace = [
+        "",
+        " ",
+        if has_category { " " } else { "" },
+        "",
+        " ",
+    ];
     let errors = [
         "There should be no leading whitespace before the dash",
-        "There should be exactly one space between the leading dash and the category",
+        if has_category {
+            "There should be exactly one space between the leading dash and the category"
+        } else {
+            "There should be exactly one space between the leading dash and the PR link"
+        },
         "There should be exactly one space between the category and the PR link",
         "There should be no whitespace inside of the markdown link",
         "There should be exactly one space between the PR link and the description",
@@ -211,14 +234,14 @@ mod whitespace_tests {
     #[test]
     fn test_pass() {
         let example_spaces = ["", " ", " ", "", " "];
-        assert!(check_whitespace(example_spaces).is_empty());
+        assert!(check_whitespace(example_spaces, true).is_empty());
     }
 
     #[test]
     fn test_fail_leading_space() {
         let example_spaces = [" ", " ", " ", "", " "];
         assert_eq!(
-            check_whitespace(example_spaces),
+            check_whitespace(example_spaces, true),
             [ProblemDetail::new(
                 LintErrorType::Whitespace,
                 "There should be no leading whitespace before the dash"
@@ -230,7 +253,7 @@ mod whitespace_tests {
     fn test_fail_space_between_category_and_link() {
         let example_spaces = ["", " ", "", "", " "];
         assert_eq!(
-            check_whitespace(example_spaces),
+            check_whitespace(example_spaces, true),
             [ProblemDetail::new(
                 LintErrorType::Whitespace,
                 "There should be exactly one space between the category and the PR link"
@@ -242,7 +265,7 @@ mod whitespace_tests {
     fn test_fail_multiple_spaces() {
         let example_spaces = ["", "", " ", "", " "];
         assert_eq!(
-            check_whitespace(example_spaces),
+            check_whitespace(example_spaces, true),
             [ProblemDetail::new(
                 LintErrorType::Whitespace,
                 "There should be exactly one space between the leading dash and the category"
@@ -254,7 +277,7 @@ mod whitespace_tests {
     fn test_fail_multiple_spaces_before_description() {
         let example_spaces = ["", " ", " ", "", "  "];
         assert_eq!(
-            check_whitespace(example_spaces),
+            check_whitespace(example_spaces, true),
             [ProblemDetail::new(
                 LintErrorType::Whitespace,
                 "There should be exactly one space between the PR link and the description"
@@ -266,7 +289,7 @@ mod whitespace_tests {
     fn test_fail_space_in_link() {
         let example_spaces = ["", " ", " ", " ", " "];
         assert_eq!(
-            check_whitespace(example_spaces),
+            check_whitespace(example_spaces, true),
             [ProblemDetail::new(
                 LintErrorType::Whitespace,
                 "There should be no whitespace inside of the markdown link"
