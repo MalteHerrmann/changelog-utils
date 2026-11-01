@@ -41,12 +41,17 @@ fn resolve_non_interactive_inputs(
     }
 
     ensure!(
+        config.use_categories || args.category.is_none(),
+        "--category cannot be used when use_categories is false"
+    );
+
+    ensure!(
         args.number.is_some()
             && args.change_type.is_some()
-            && args.category.is_some()
+            && (!config.use_categories || args.category.is_some())
             && args.description.is_some(),
         "Non-interactive mode requires all of the following to be set: the PR number, \
-         --change-type, --category and --description"
+         --change-type and --description (also --category when use_categories is true)"
     );
 
     let change_type = args.change_type.clone().unwrap();
@@ -62,9 +67,9 @@ fn resolve_non_interactive_inputs(
             .join(", ")
     );
 
-    let category = args.category.clone().unwrap().to_lowercase();
+    let category = args.category.clone().unwrap_or_default().to_lowercase();
     ensure!(
-        config.categories.contains(&category),
+        !config.use_categories || config.categories.contains(&category),
         "Invalid category '{}'; allowed values are: {}",
         category,
         config.categories.join(", ")
@@ -151,12 +156,16 @@ fn get_entry_inputs(
             .wrap_err("Failed to get PR number for entry")?;
     }
 
-    let mut cat = pr_info.category.clone();
-    if !config.categories.contains(&cat) {
+    let mut cat = if config.use_categories {
+        pr_info.category.clone()
+    } else {
+        String::new()
+    };
+    if config.use_categories && !config.categories.contains(&cat) {
         get_inputs.insert("category", true);
     }
 
-    if get_inputs["category"] {
+    if config.use_categories && get_inputs["category"] {
         cat = inputs::get_category(config, &pr_info.category)
             .wrap_err("Failed to get category for entry")?;
     }
@@ -419,6 +428,24 @@ mod non_interactive_tests {
             category: None,
             description: None,
             commit_message: None,
+        }
+    }
+
+    #[test]
+    fn accepted_pr_inputs_skip_disabled_category_selection() {
+        let mut config = load_test_config();
+        config.use_categories = false;
+        config.categories.clear();
+        for category in ["", "OldScope"] {
+            let mut pr = PRInfo {
+                number: 42,
+                change_type: "Bug Fixes".into(),
+                category: category.into(),
+                description: "Fix a bug.".into(),
+            };
+            // Both single add --yes and batch add --yes use this input flow.
+            let resolved = get_entry_inputs(&config, &mut pr, true, true).unwrap();
+            assert_eq!(resolved, ("Bug Fixes".into(), 42, String::new(), "Fix a bug.".into()));
         }
     }
 

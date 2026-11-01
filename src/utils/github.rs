@@ -29,20 +29,22 @@ fn extract_pr_info(config: &Config, pr: &PullRequest) -> eyre::Result<PRInfo> {
 
     let pr_title = pr.title.clone().unwrap_or_default();
 
-    let regex = RegexBuilder::new(r"^(?P<ct>\w+)?\s*(\((?P<cat>\w+)\))?[:\s]*(?P<desc>.+)$")
+    let regex = RegexBuilder::new(r"^(?P<ct>\w+)?\s*(\((?P<cat>[\w-]+)\))?!?[:\s]*(?P<desc>.+)$")
         .build()
         .wrap_err("Failed to compile PR title regex pattern")?;
 
     if let Some(i) = regex.captures(pr_title.as_str()) {
         if let Some(ct) = i.name("ct") {
             if let Some(found_ct) = config.get_short_change_type(ct.as_str()) {
-                change_type.clone_from(&found_ct.short);
+                change_type.clone_from(&found_ct.long);
             }
         };
 
-        if let Some(cat) = i.name("cat") {
-            (category, _) = check_category(config, cat.as_str());
-        };
+        if config.use_categories {
+            if let Some(cat) = i.name("cat") {
+                (category, _) = check_category(config, cat.as_str());
+            }
+        }
 
         if let Some(desc) = i.name("desc") {
             (description, _) = check_description(config, desc.as_str());
@@ -472,6 +474,47 @@ mod tests {
     const OWNER: &str = "MalteHerrmann";
     const REPO: &str = "changelog-utils";
     const ORIGIN: &str = "https://github.com/MalteHerrmann/changelog-utils";
+
+    #[test]
+    fn test_extract_pr_info_categories() {
+        for use_categories in [true, false] {
+            let config = Config {
+                use_categories,
+                categories: vec!["cli-tools".into()],
+                ..Config::default()
+            };
+            for (title, expected_category, expected_change_type) in [
+                ("feat: add a command", "", "Features"),
+                ("fix!: repair a command", "", "Bug Fixes"),
+                ("imp(cli-tools): improve a command", "cli-tools", "Improvements"),
+                ("fix(CLI-tools)!: repair a command", "cli-tools", "Bug Fixes"),
+            ] {
+                let pr: PullRequest = serde_json::from_value(json!({
+                    "url": "https://api.github.com/repos/owner/repo/pulls/132",
+                    "id": 132, "number": 132, "title": title,
+                    "head": {"ref": "feature", "sha": "a"},
+                    "base": {"ref": "main", "sha": "b"}
+                }))
+                .unwrap();
+                let info = extract_pr_info(&config, &pr).unwrap();
+                assert_eq!(info.number, 132);
+                assert_eq!(info.change_type, expected_change_type, "{title}");
+                assert_eq!(
+                    info.category,
+                    if use_categories { expected_category } else { "" },
+                    "{title}"
+                );
+                let expected_description = if title.contains("add a") {
+                    "Add a command."
+                } else if title.contains("improve a") {
+                    "Improve a command."
+                } else {
+                    "Repair a command."
+                };
+                assert_eq!(info.description, expected_description, "{title}");
+            }
+        }
+    }
 
     #[tokio::test]
     async fn test_find_open_pr_pagination() {

@@ -8,6 +8,9 @@ and highlight the files with the most important changes.
 
 Attached to this message, you will find the configuration of the tool,
 that contains the enforced selection of categories like (cli), (tests) and change types like Features, Improvements, ...
+When use_categories is false, return an empty string for category and do not
+include a category in the title, even if the configuration still lists categories.
+When use_categories is true, select a category from the configured categories.
 
 It is required to format the returned response in the form of the following JSON:
 

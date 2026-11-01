@@ -2,6 +2,7 @@ use assert_fs::{prelude::*, TempDir};
 use clu::{
     cli::init,
     config::{self, ChangeTypeConfig},
+    single_file::changelog::{get_settings_from_existing_changelog, parse_changelog},
 };
 use predicates::prelude::*;
 use std::fs;
@@ -142,6 +143,76 @@ fn test_init_changelog_exists() {
     ];
 
     assert_eq!(config.change_types, expected_change_types);
+}
+
+#[test]
+fn test_init_discovers_optional_categories() {
+    for (categories, expected_use_categories) in [
+        (vec!["", ""], false),
+        (vec!["", "Historical-API"], false),
+        (vec!["Historical-API", ""], false),
+        (vec!["Historical-API", "cli"], true),
+        (vec![], true),
+    ] {
+        let temp_dir = TempDir::new().unwrap();
+        let mut contents = "# Changelog\n\n## Unreleased\n\n### Features\n".to_string();
+        for (index, category) in categories.iter().enumerate() {
+            let category = if category.is_empty() {
+                String::new()
+            } else {
+                format!("({category}) ")
+            };
+            contents.push_str(&format!(
+                "- {category}[#{}](https://github.com/example/repo/pull/{}) Add command.\n",
+                index + 1,
+                index + 1
+            ));
+        }
+        temp_dir.child("CHANGELOG.md").write_str(&contents).unwrap();
+        init::init_in_folder(temp_dir.path().to_path_buf()).unwrap();
+        let saved = fs::read_to_string(temp_dir.child(".clconfig.json")).unwrap();
+        let mut config = config::unpack_config(&saved).unwrap();
+        assert_eq!(config.use_categories, expected_use_categories, "{contents}");
+        assert!(!config.categories.iter().any(String::is_empty));
+        assert_eq!(config.change_types[0].long, "Features");
+        if !expected_use_categories {
+            // Disabled discovery retains the defaults instead of deriving a list
+            // from historical categories (or adding an empty category).
+            assert_eq!(config.categories, config::Config::default().categories);
+            config.target_repo = "https://github.com/example/repo".into();
+            let parsed = parse_changelog(&config, temp_dir.child("CHANGELOG.md").path()).unwrap();
+            assert!(parsed.problems.is_empty(), "{:?}", parsed.problems);
+            let entries = &parsed.releases[0].change_types[0].entries;
+            assert_eq!(entries.len(), categories.len());
+            for (entry, category) in entries.iter().zip(&categories) {
+                assert_eq!(entry.category, *category);
+                assert!(contents.lines().any(|line| line == entry.fixed));
+            }
+        } else if !categories.is_empty() {
+            assert_eq!(config.categories, vec!["cli", "historical-api"]);
+        }
+        temp_dir.child("CHANGELOG.md").assert(contents);
+    }
+}
+
+#[test]
+fn test_settings_discovery_preserves_disabled_category_list() {
+    for category in ["", "Historical-API"] {
+        let mut config = config::Config {
+            use_categories: false,
+            categories: vec!["keep-this".into(), "also-keep-this".into()],
+            target_repo: "https://github.com/example/repo".into(),
+            ..config::Config::default()
+        };
+        let contents = format!(
+            "# Changelog\n\n## Unreleased\n\n### Features\n- {}[#1](https://github.com/example/repo/pull/1) Add command.\n",
+            if category.is_empty() { String::new() } else { format!("({category}) ") }
+        );
+        get_settings_from_existing_changelog(&mut config, &contents);
+        assert!(!config.use_categories);
+        assert_eq!(config.categories, vec!["keep-this", "also-keep-this"]);
+        assert_eq!(config.change_types[0].long, "Features");
+    }
 }
 
 #[test]

@@ -59,7 +59,8 @@ in existing projects. In that case, it will only create the default configuratio
 ## Non-Interactive Usage
 
 The `add` command is interactive by default, prompting for the change type, category and
-description. This doesn't work for agentic/CI workflows that can't respond to prompts.
+description (the category prompt is skipped when `use_categories` is false).
+This doesn't work for agentic/CI workflows that can't respond to prompts.
 
 For changelogs, you can instead pass all required information
 as flags. When `--change-type`, `--category` and `--description` are all provided (together with
@@ -75,6 +76,9 @@ clu add 42 \
 ```
 
 `--commit-message` is optional and defaults to the configured commit message.
+When `use_categories` is false, omit `--category`; the PR number, `--change-type` and
+`--description` are sufficient. Explicitly passing `--category` in that state is an error,
+not an ignored value.
 
 ## Configuration
 
@@ -101,6 +105,26 @@ Commands:
 Options:
   -h, --help  Print help
 ```
+
+### Category-free changelogs
+
+Categories are enabled by default. Run `clu config use-categories set false` to disable
+them, or `clu config use-categories set true` to re-enable them. Toggling this setting
+preserves the configured category list; the list may be empty while categories are disabled.
+
+With `use_categories: false`, new entries omit the category and its parentheses:
+
+```markdown
+- [#42](https://github.com/example/repo/pull/42) Fixed an issue.
+```
+
+Interactive add, batch add, and create-PR skip category selection. New PR titles use
+`fix: Description` instead of `fix(category): Description`. Existing category prefixes are
+accepted and preserved verbatim by lint/fix/write, without category spelling or membership
+checks; disabling categories does not strip historical information or change descriptions.
+All unrelated lint rules still apply. Re-enabling categories restores the category
+requirement for all non-legacy entries, including those added while categories were disabled.
+Initialization from an existing changelog detects category-free entries automatically.
 
 ## Linter Escape Patterns
 

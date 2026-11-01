@@ -66,7 +66,11 @@ pub async fn run() -> eyre::Result<()> {
         .wrap_err("Failed to get PR description")?;
 
     let ct = config.get_long_change_type(&change_type).unwrap().short;
-    let title = format!("{ct}({cat}): {desc}");
+    let title = if config.use_categories {
+        format!("{ct}({cat}): {desc}")
+    } else {
+        format!("{ct}: {desc}")
+    };
 
     let created_pr = client
         .pulls(&git_info.owner, &git_info.repo)
