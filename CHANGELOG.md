@@ -17,6 +17,7 @@ This changelog was created using the `clu` binary
 
 ### Bug Fixes
 
+- (cli) [#133](https://github.com/MalteHerrmann/changelog-utils/pull/133) Honor disabled categories across single-file changelog workflows.
 - (cli) [#123](https://github.com/MalteHerrmann/changelog-utils/pull/123) Support SSH remotes and reliable auth for private repos.
 
 ### Chores
