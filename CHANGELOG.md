@@ -8,6 +8,7 @@ This changelog was created using the `clu` binary
 
 ### Features
 
+- (cli) [#134](https://github.com/MalteHerrmann/changelog-utils/pull/134) Add interactive initialization with repository suggestions, custom change types and optional categories.
 - (cli) [#124](https://github.com/MalteHerrmann/changelog-utils/pull/124) Add non-interactive arguments to `add` command for agentic workflows.
 - (cli) [#125](https://github.com/MalteHerrmann/changelog-utils/pull/125) Add type of lint error to linter output.
 
