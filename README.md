@@ -50,11 +50,24 @@ Options:
 
 This application is designed to be one of the first things you use within your projects' folder -
 right after creating the folder and running `git init`.
-By executing `clu init`, an empty skeleton for the changelog is generated (`CHANGELOG.md`)
-as well as a default configuration (`.clconfig.json`).
+Run `clu init` to interactively configure the repository URL, change types, and whether to use
+categories. Keep or deselect the suggested change types, optionally add custom names and short
+identifiers, and enter a comma-separated category list if categories are enabled.
+Review the configuration and confirm before any files are written. Cancelling leaves files unchanged.
 
-Note that a pre-existing changelog will not be overwritten, so you can also run this command
-in existing projects. In that case, it will only create the default configuration.
+The repository suggestion uses a GitHub remote (preferring `origin`), including SSH remotes.
+Without one, it uses Git configuration `github.user`, falling back to `user.name`, and the folder
+name when they form a supported GitHub URL. Review this suggestion: a Git author name is not
+necessarily a GitHub username. You can leave the URL empty and set it later with
+`clu config target-repo <GitHub URL>`.
+
+Initialization creates `.clconfig.json` and a `CHANGELOG.md` skeleton if no changelog exists.
+An existing changelog is preserved and supplies suggested change types and category settings.
+An existing configuration is never overwritten. New projects start with Features (`feat`),
+Improvements (`imp`), and Bug Fixes (`fix`); categories default to disabled when none are detected.
+
+Use `clu init --yes` (or `-y`) to accept detected settings and defaults without prompts, including
+in CI or agent workflows. Without that flag, a terminal is required.
 
 ## Non-Interactive Usage
 

@@ -51,8 +51,8 @@ async fn main() -> eyre::Result<()> {
                 .wrap_err("Failed to lint changelog")?;
             Ok(())
         }
-        ChangelogCLI::Init => {
-            init::run()
+        ChangelogCLI::Init(args) => {
+            init::run(args)
                 .wrap_err("Failed to initialize changelog configuration")?;
             Ok(())
         }
