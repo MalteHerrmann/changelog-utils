@@ -9,6 +9,97 @@ use std::fs;
 use std::process::Command;
 
 #[test]
+fn test_init_repository_suggestions_and_defaults() {
+    for (settings, expected) in [
+        (
+            vec![("user.name", "git-user")],
+            "https://github.com/git-user/new-project",
+        ),
+        (
+            vec![("user.name", "Full Name"), ("github.user", "github-login")],
+            "https://github.com/github-login/new-project",
+        ),
+        (
+            vec![
+                ("user.name", "git-user"),
+                ("remote.origin.url", "https://gitlab.com/other/project"),
+            ],
+            "https://github.com/git-user/new-project",
+        ),
+        (
+            vec![
+                ("remote.origin.url", "https://gitlab.com/other/project"),
+                ("remote.upstream.url", "git@github.com:upstream/project.git"),
+            ],
+            "https://github.com/upstream/project",
+        ),
+        (
+            vec![
+                ("remote.aaa.url", "https://github.com/other/project"),
+                ("remote.origin.url", "https://github.com/preferred/project"),
+                ("github.user", "ignored"),
+            ],
+            "https://github.com/preferred/project",
+        ),
+        (vec![("user.name", "Full Name")], ""),
+        (vec![], ""),
+    ] {
+        let temp = TempDir::new().unwrap();
+        let project = temp.child("new-project");
+        project.create_dir_all().unwrap();
+        let git = |args: &[&str]| {
+            let result = Command::new("git")
+                .current_dir(project.path())
+                .env("GIT_CONFIG_GLOBAL", temp.child("absent-gitconfig").path())
+                .env("GIT_CONFIG_NOSYSTEM", "1")
+                .args(args)
+                .output()
+                .unwrap();
+            assert!(result.status.success(), "{result:?}");
+        };
+        git(&["init", "--quiet"]);
+        for (key, value) in settings {
+            git(&["config", key, value]);
+        }
+        // An existing empty skeleton must not erase the default change types.
+        let skeleton = init::create_empty_changelog();
+        project.child("CHANGELOG.md").write_str(&skeleton).unwrap();
+        let output = Command::new(env!("CARGO_BIN_EXE_clu"))
+            .current_dir(project.path())
+            .env("GIT_CONFIG_GLOBAL", temp.child("absent-gitconfig").path())
+            .env("GIT_CONFIG_NOSYSTEM", "1")
+            .args(["init", "-y"])
+            .output()
+            .unwrap();
+        assert!(output.status.success(), "{output:?}");
+        let saved =
+            config::unpack_config(&fs::read_to_string(project.child(".clconfig.json")).unwrap())
+                .unwrap();
+        assert_eq!(saved.target_repo, expected);
+        assert!(!saved.use_categories);
+        assert!(saved.categories.is_empty());
+        assert_eq!(saved.change_types, config::Config::default().change_types);
+        project.child("CHANGELOG.md").assert(skeleton);
+    }
+}
+
+#[test]
+fn test_init_requires_terminal_unless_yes() {
+    let temp = TempDir::new().unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_clu"))
+        .current_dir(temp.path())
+        .arg("init")
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("clu init --yes"));
+    temp.child(".clconfig.json")
+        .assert(predicate::path::missing());
+    temp.child("CHANGELOG.md")
+        .assert(predicate::path::missing());
+}
+
+#[test]
 fn test_init_normalizes_origin() {
     for (origin, expected) in [
         (
@@ -40,7 +131,7 @@ fn test_init_normalizes_origin() {
         // Use a child process to avoid changing other tests' working directory.
         let output = Command::new(env!("CARGO_BIN_EXE_clu"))
             .current_dir(temp_dir.path())
-            .arg("init")
+            .args(["init", "--yes"])
             .output()
             .unwrap();
         assert!(output.status.success(), "{:?}", output);
@@ -69,6 +160,12 @@ fn test_init_empty_folder() {
     temp_dir
         .child(".clconfig.json")
         .assert(predicate::path::exists());
+
+    let config =
+        config::unpack_config(&fs::read_to_string(temp_dir.child(".clconfig.json")).unwrap())
+            .unwrap();
+    assert!(!config.use_categories);
+    assert_eq!(config.change_types, config::Config::default().change_types);
 }
 
 #[test]
@@ -146,13 +243,41 @@ fn test_init_changelog_exists() {
 }
 
 #[test]
+fn test_init_discovers_short_change_type_names() {
+    let temp = TempDir::new().unwrap();
+    let contents = "# Changelog\n\n## Unreleased\n\n### API\n";
+    temp.child("CHANGELOG.md").write_str(contents).unwrap();
+    init::init_in_folder(temp.path().to_path_buf()).unwrap();
+    let config =
+        config::unpack_config(&fs::read_to_string(temp.child(".clconfig.json")).unwrap()).unwrap();
+    assert_eq!(
+        config.change_types,
+        vec![ChangeTypeConfig {
+            long: "API".into(),
+            short: "api".into(),
+        }]
+    );
+    temp.child("CHANGELOG.md").assert(contents);
+}
+
+#[test]
+fn test_init_does_not_replace_unreadable_changelog() {
+    let temp = TempDir::new().unwrap();
+    temp.child("CHANGELOG.md").create_dir_all().unwrap();
+    assert!(init::init_in_folder(temp.path().to_path_buf()).is_err());
+    temp.child("CHANGELOG.md").assert(predicate::path::is_dir());
+    temp.child(".clconfig.json")
+        .assert(predicate::path::missing());
+}
+
+#[test]
 fn test_init_discovers_optional_categories() {
     for (categories, expected_use_categories) in [
         (vec!["", ""], false),
         (vec!["", "Historical-API"], false),
         (vec!["Historical-API", ""], false),
         (vec!["Historical-API", "cli"], true),
-        (vec![], true),
+        (vec![], false),
     ] {
         let temp_dir = TempDir::new().unwrap();
         let mut contents = "# Changelog\n\n## Unreleased\n\n### Features\n".to_string();

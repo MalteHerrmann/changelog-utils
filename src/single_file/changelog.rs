@@ -398,7 +398,7 @@ pub fn get_settings_from_existing_changelog(config: &mut Config, contents: &str)
 
     let mut change_type_configs: Vec<ChangeTypeConfig> = Vec::new();
     seen_change_types.into_iter().for_each(|ct| {
-        let pattern = ct[0..4].trim().to_ascii_lowercase();
+        let pattern = ct.chars().take(4).collect::<String>().trim().to_ascii_lowercase();
 
         change_type_configs.push(ChangeTypeConfig {
             short: pattern,

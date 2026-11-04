@@ -25,10 +25,11 @@ pub enum ChangelogCLI {
     Lint,
     #[command(about = "Initializes the changelog configuration in the current directory")]
     #[command(long_about = r#"
-Initializes the changelog configuration in the current directory.
-It creates an empty changelog skeleton if no existing changelog is found as well as a default configuration for the tool.
+Interactively configures the repository, change types and optional categories.
+Creates .clconfig.json and, if missing, a CHANGELOG.md skeleton after confirmation.
+Use --yes to accept detected settings and defaults without prompts.
 "#)]
-    Init,
+    Init(InitArgs),
     #[command(subcommand)]
     #[command(
         about = "Adjust the changelog configuration like allowed categories, change types or other"
@@ -36,6 +37,13 @@ It creates an empty changelog skeleton if no existing changelog is found as well
     Config(ConfigSubcommands),
     #[command(about = "Turns the Unreleased section into a new release with the given version")]
     Release(ReleaseArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct InitArgs {
+    /// Accept detected settings and defaults without interactive prompts.
+    #[arg(short, long)]
+    pub yes: bool,
 }
 
 #[derive(Args, Debug)]
